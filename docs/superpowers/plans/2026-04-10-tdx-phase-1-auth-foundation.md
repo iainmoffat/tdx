@@ -77,19 +77,17 @@ tdx/
 - Create: `internal/cli/version.go`
 - Test: `internal/cli/version_test.go`
 
-- [ ] **Step 1: Initialize Go module and add minimal dependencies**
+- [ ] **Step 1: Initialize Go module and add the dependencies this task uses**
 
 Run:
 ```bash
 cd /Users/ipm/code/tdx
 go mod init github.com/ipm/tdx
 go get github.com/spf13/cobra@latest
-go get gopkg.in/yaml.v3@latest
 go get github.com/stretchr/testify@latest
-go get golang.org/x/term@latest
 ```
 
-Expected: `go.mod` and `go.sum` exist; `go.mod` includes the four modules above.
+Expected: `go.mod` and `go.sum` exist; `go.mod` lists cobra and testify as direct dependencies. **Do not** `go get` `yaml.v3` or `golang.org/x/term` yet — they are added by Tasks 4 and 14 when first imported. **Do not** run `go mod tidy` during Phase 1; each task runs targeted `go get` calls when it introduces a new import.
 
 - [ ] **Step 2: Write a failing test for the `version` command**
 
@@ -526,6 +524,16 @@ git commit -m "feat(config): add XDG-aware paths resolver"
 **Files:**
 - Create: `internal/config/profiles.go`
 - Test: `internal/config/profiles_test.go`
+
+- [ ] **Step 0: Add the YAML dependency**
+
+This is the first task that imports `gopkg.in/yaml.v3`. Add it now so `go.sum` has the entry before the first build.
+
+Run:
+```bash
+cd /Users/ipm/code/tdx
+go get gopkg.in/yaml.v3@latest
+```
 
 - [ ] **Step 1: Write failing tests for profile store round-trip**
 
@@ -2874,6 +2882,16 @@ git commit -m "feat(cli): add tdx auth logout"
 - Modify: `internal/cli/auth/auth.go` — add login to tree
 - Test: `internal/cli/auth/login_test.go`
 - Create: `docs/manual-tests/phase-1-auth-walkthrough.md`
+
+- [ ] **Step 0: Add the golang.org/x/term dependency**
+
+This is the first task that imports `golang.org/x/term`. Add it now so `go.sum` has the entry before the first build.
+
+Run:
+```bash
+cd /Users/ipm/code/tdx
+go get golang.org/x/term@latest
+```
 
 - [ ] **Step 1: Write failing tests**
 
