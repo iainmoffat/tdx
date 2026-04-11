@@ -75,12 +75,12 @@ func decodeTimeEntry(w wireTimeEntry) (domain.TimeEntry, error) {
 			ID:   w.TimeTypeID,
 			Name: w.TimeTypeName,
 		},
-		Date:         timeDateToEasternMidnight(w.TimeDate),
+		Date:         timeDateToEasternMidnight(w.TimeDate.Time),
 		Minutes:      int(w.Minutes),
 		Description:  w.Description,
 		Billable:     w.Billable,
-		CreatedAt:    w.CreatedDate,
-		ModifiedAt:   w.ModifiedDate,
+		CreatedAt:    w.CreatedDate.Time,
+		ModifiedAt:   w.ModifiedDate.Time,
 		ReportStatus: decodeReportStatus(w.Status),
 	}, nil
 }

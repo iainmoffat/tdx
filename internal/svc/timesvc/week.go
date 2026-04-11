@@ -31,8 +31,8 @@ func (s *Service) GetWeekReport(ctx context.Context, profileName string, date ti
 	// TD returns PeriodStartDate/PeriodEndDate as midnight UTC. Converting
 	// directly with .In(EasternTZ) would yield 8pm the previous calendar day
 	// in EDT. Normalize to midnight EasternTZ by extracting the date fields.
-	periodStart := wire.PeriodStartDate.UTC()
-	periodEnd := wire.PeriodEndDate.UTC()
+	periodStart := wire.PeriodStartDate.Time.UTC()
+	periodEnd := wire.PeriodEndDate.Time.UTC()
 	ref := domain.WeekRef{
 		StartDate: time.Date(periodStart.Year(), periodStart.Month(), periodStart.Day(), 0, 0, 0, 0, domain.EasternTZ),
 		EndDate:   time.Date(periodEnd.Year(), periodEnd.Month(), periodEnd.Day(), 0, 0, 0, 0, domain.EasternTZ),
@@ -80,14 +80,14 @@ func (s *Service) GetLockedDays(ctx context.Context, profileName string, from, t
 	toStr := to.In(domain.EasternTZ).Format("2006-01-02")
 	path := fmt.Sprintf("/TDWebApi/api/time/locked?startDate=%s&endDate=%s", fromStr, toStr)
 
-	var wire []time.Time
+	var wire []tdTime
 	if err := client.DoJSON(ctx, "GET", path, nil, &wire); err != nil {
 		return nil, fmt.Errorf("get locked days: %w", err)
 	}
 
 	out := make([]domain.LockedDay, 0, len(wire))
 	for _, ts := range wire {
-		out = append(out, domain.LockedDay{Date: timeDateToEasternMidnight(ts)})
+		out = append(out, domain.LockedDay{Date: timeDateToEasternMidnight(ts.Time)})
 	}
 	return out, nil
 }
