@@ -47,6 +47,8 @@ func TestTarget_Validate(t *testing.T) {
 		{"missing itemID", Target{Kind: TargetTicket, AppID: 42}, true},
 		{"ticket task requires taskID", Target{Kind: TargetTicketTask, AppID: 42, ItemID: 12345}, true},
 		{"ticket task valid", Target{Kind: TargetTicketTask, AppID: 42, ItemID: 12345, TaskID: 7}, false},
+		{"project task requires taskID", Target{Kind: TargetProjectTask, AppID: 42, ItemID: 12345}, true},
+		{"project task valid", Target{Kind: TargetProjectTask, AppID: 42, ItemID: 12345, TaskID: 7}, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

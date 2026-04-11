@@ -3,7 +3,6 @@ package domain
 import (
 	"errors"
 	"fmt"
-	"strings"
 )
 
 // ErrInvalidTarget is returned by Target.Validate when the target is
@@ -63,7 +62,7 @@ type Target struct {
 
 // Validate returns nil if the target is structurally sound for an API call.
 func (t Target) Validate() error {
-	if strings.TrimSpace(string(t.Kind)) == "" {
+	if t.Kind == "" {
 		return fmt.Errorf("%w: kind is required", ErrInvalidTarget)
 	}
 	if !t.Kind.IsKnown() {
