@@ -15,7 +15,7 @@ func TestListTimeTypes_HappyPath(t *testing.T) {
 		require.Equal(t, "GET", r.Method)
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`[
-			{"ID":1,"Name":"Development","Code":"DEV","IsBillable":true,"IsLimited":false,"IsActive":true},
+			{"ID":1,"Name":"Development","Code":"DEV","HelpText":"Billable engineering work","IsBillable":true,"IsLimited":false,"IsActive":true},
 			{"ID":17,"Name":"General Admin","IsBillable":false,"IsLimited":false,"IsActive":true},
 			{"ID":42,"Name":"Meetings","IsBillable":false,"IsLimited":true,"IsActive":false}
 		]`))
@@ -33,6 +33,7 @@ func TestListTimeTypes_HappyPath(t *testing.T) {
 	require.True(t, types[0].Billable)
 	require.False(t, types[0].Limited)
 	require.True(t, types[0].Active)
+	require.Equal(t, "Billable engineering work", types[0].Description)
 
 	require.Equal(t, 42, types[2].ID)
 	require.True(t, types[2].Limited)
