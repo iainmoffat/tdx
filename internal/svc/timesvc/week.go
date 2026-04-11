@@ -77,9 +77,14 @@ func buildDaySummaries(ref domain.WeekRef, entries []domain.TimeEntry) []domain.
 		}
 	}
 	for _, e := range entries {
-		// e.Date is midnight EasternTZ (guaranteed by decodeTimeEntry).
-		// ref.StartDate is also midnight EasternTZ. Simple hour division works.
-		dayIdx := int(e.Date.Sub(ref.StartDate).Hours() / 24)
+		// Both e.Date and ref.StartDate are midnight EasternTZ. We can't use
+		// Sub().Hours()/24 because spring-forward weeks have a 23-hour gap and
+		// fall-back weeks have a 25-hour gap. Compare calendar dates instead.
+		ey, em, ed := e.Date.Date()
+		ry, rm, rd := ref.StartDate.Date()
+		entryDay := time.Date(ey, em, ed, 0, 0, 0, 0, time.UTC)
+		refDay := time.Date(ry, rm, rd, 0, 0, 0, 0, time.UTC)
+		dayIdx := int(entryDay.Sub(refDay).Hours() / 24)
 		if dayIdx < 0 || dayIdx >= 7 {
 			continue // entry falls outside the reported week; should not happen
 		}
