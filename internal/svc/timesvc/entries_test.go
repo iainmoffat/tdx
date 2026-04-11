@@ -132,6 +132,7 @@ func TestSearchEntries_DecodesTicketTaskEntry(t *testing.T) {
 				"Component": 25,
 				"TicketID": 12345,
 				"TimeTypeID": 1,
+				"TimeTypeName": "Development",
 				"Status": 3
 			}
 		]`))
@@ -217,4 +218,68 @@ func TestGetEntry_NotFound(t *testing.T) {
 	svc, profile := harness(t, srv.URL)
 	_, err := svc.GetEntry(context.Background(), profile, 999)
 	require.ErrorIs(t, err, domain.ErrEntryNotFound)
+}
+
+func TestSearchEntries_ResolvesTimeTypeNamesViaListTimeTypes(t *testing.T) {
+	// TD's /api/time/search returns TimeTypeID without TimeTypeName.
+	// Verify that timesvc side-joins with /api/time/types to populate
+	// the missing names so callers see fully-populated TimeType objects.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/TDWebApi/api/time/search":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[
+				{"TimeID":1,"ItemID":12345,"AppID":42,"Component":9,"TicketID":12345,"TimeDate":"2026-04-06T00:00:00Z","Minutes":120,"TimeTypeID":5,"Status":0},
+				{"TimeID":2,"ItemID":12345,"AppID":42,"Component":9,"TicketID":12345,"TimeDate":"2026-04-07T00:00:00Z","Minutes":60,"TimeTypeID":3,"Status":0}
+			]`))
+		case "/TDWebApi/api/time/types":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[
+				{"ID":3,"Name":"Leave","Code":"Leave","IsBillable":false,"IsActive":true},
+				{"ID":5,"Name":"Standard Activities","Code":"Standard","IsBillable":false,"IsActive":true}
+			]`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	entries, err := svc.SearchEntries(context.Background(), profile, domain.EntryFilter{})
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+
+	// First entry: TimeTypeID 5 → "Standard Activities"
+	require.Equal(t, 5, entries[0].TimeType.ID)
+	require.Equal(t, "Standard Activities", entries[0].TimeType.Name)
+	require.Equal(t, "Standard", entries[0].TimeType.Code)
+
+	// Second entry: TimeTypeID 3 → "Leave"
+	require.Equal(t, 3, entries[1].TimeType.ID)
+	require.Equal(t, "Leave", entries[1].TimeType.Name)
+}
+
+func TestSearchEntries_ResolveSkippedWhenNamesAlreadyPresent(t *testing.T) {
+	// If the wire response already has TimeTypeName populated (e.g. a future
+	// TD endpoint or a test fixture), the resolve helper must NOT make a
+	// second API call to /api/time/types. The test server only registers
+	// /api/time/search; if /types is hit, the test fails.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/TDWebApi/api/time/search":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[{"TimeID":1,"ItemID":12345,"AppID":42,"Component":9,"TicketID":12345,"TimeDate":"2026-04-06T00:00:00Z","Minutes":60,"TimeTypeID":5,"TimeTypeName":"Already Set","Status":0}]`))
+		case "/TDWebApi/api/time/types":
+			t.Fatalf("resolve helper should not call /api/time/types when names are already present")
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	entries, err := svc.SearchEntries(context.Background(), profile, domain.EntryFilter{})
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	require.Equal(t, "Already Set", entries[0].TimeType.Name)
 }

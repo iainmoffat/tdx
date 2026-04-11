@@ -56,6 +56,9 @@ func (s *Service) SearchEntries(ctx context.Context, profileName string, filter 
 		}
 		out = append(out, entry)
 	}
+	if err := s.resolveTimeTypeNames(ctx, profileName, out); err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 
@@ -169,6 +172,41 @@ func decodeReportStatus(s int) domain.ReportStatus {
 	}
 }
 
+// resolveTimeTypeNames populates TimeType.Name (and the rest of the
+// TimeType fields) on each entry by looking up the type by ID via
+// ListTimeTypes. TD's /api/time/search and /api/time/report responses
+// include TimeTypeID but not TimeTypeName, so this is a side join with
+// the type catalog. Skips the lookup entirely if no entries need it.
+func (s *Service) resolveTimeTypeNames(ctx context.Context, profileName string, entries []domain.TimeEntry) error {
+	needLookup := false
+	for _, e := range entries {
+		if e.TimeType.ID > 0 && e.TimeType.Name == "" {
+			needLookup = true
+			break
+		}
+	}
+	if !needLookup {
+		return nil
+	}
+
+	types, err := s.ListTimeTypes(ctx, profileName)
+	if err != nil {
+		return fmt.Errorf("resolve time type names: %w", err)
+	}
+	byID := make(map[int]domain.TimeType, len(types))
+	for _, t := range types {
+		byID[t.ID] = t
+	}
+	for i := range entries {
+		if entries[i].TimeType.ID > 0 && entries[i].TimeType.Name == "" {
+			if t, ok := byID[entries[i].TimeType.ID]; ok {
+				entries[i].TimeType = t
+			}
+		}
+	}
+	return nil
+}
+
 // GetEntry fetches a single time entry by ID. 404 → ErrEntryNotFound.
 func (s *Service) GetEntry(ctx context.Context, profileName string, id int) (domain.TimeEntry, error) {
 	client, err := s.clientFor(profileName)
@@ -185,5 +223,13 @@ func (s *Service) GetEntry(ctx context.Context, profileName string, id int) (dom
 		}
 		return domain.TimeEntry{}, fmt.Errorf("get entry: %w", err)
 	}
-	return decodeTimeEntry(wire)
+	entry, err := decodeTimeEntry(wire)
+	if err != nil {
+		return entry, err
+	}
+	single := []domain.TimeEntry{entry}
+	if err := s.resolveTimeTypeNames(ctx, profileName, single); err != nil {
+		return domain.TimeEntry{}, err
+	}
+	return single[0], nil
 }

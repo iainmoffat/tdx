@@ -46,6 +46,9 @@ func (s *Service) GetWeekReport(ctx context.Context, profileName string, date ti
 		}
 		entries = append(entries, entry)
 	}
+	if err := s.resolveTimeTypeNames(ctx, profileName, entries); err != nil {
+		return domain.WeekReport{}, err
+	}
 
 	return domain.WeekReport{
 		WeekRef:      ref,

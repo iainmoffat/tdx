@@ -80,9 +80,9 @@ func TestGetWeekReport_BucketsAcrossSpringForward(t *testing.T) {
 			"MinutesTotal": 360,
 			"TimeEntriesCount": 3,
 			"Times": [
-				{"TimeID":1,"ItemID":12345,"AppID":42,"Component":9,"TicketID":12345,"TimeDate":"2026-03-09T00:00:00Z","Minutes":60,"TimeTypeID":1,"Status":0},
-				{"TimeID":2,"ItemID":12345,"AppID":42,"Component":9,"TicketID":12345,"TimeDate":"2026-03-11T00:00:00Z","Minutes":120,"TimeTypeID":1,"Status":0},
-				{"TimeID":3,"ItemID":12345,"AppID":42,"Component":9,"TicketID":12345,"TimeDate":"2026-03-14T00:00:00Z","Minutes":180,"TimeTypeID":1,"Status":0}
+				{"TimeID":1,"ItemID":12345,"AppID":42,"Component":9,"TicketID":12345,"TimeDate":"2026-03-09T00:00:00Z","Minutes":60,"TimeTypeID":1,"TimeTypeName":"Development","Status":0},
+				{"TimeID":2,"ItemID":12345,"AppID":42,"Component":9,"TicketID":12345,"TimeDate":"2026-03-11T00:00:00Z","Minutes":120,"TimeTypeID":1,"TimeTypeName":"Development","Status":0},
+				{"TimeID":3,"ItemID":12345,"AppID":42,"Component":9,"TicketID":12345,"TimeDate":"2026-03-14T00:00:00Z","Minutes":180,"TimeTypeID":1,"TimeTypeName":"Development","Status":0}
 			]
 		}`))
 	}))
