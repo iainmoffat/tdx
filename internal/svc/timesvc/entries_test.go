@@ -175,4 +175,6 @@ func TestSearchEntries_NoUserFilterOmitsPersonUIDs(t *testing.T) {
 	require.NoError(t, err)
 	_, hasPersonUIDs := seenBody["PersonUIDs"]
 	require.False(t, hasPersonUIDs, "PersonUIDs should be omitted when UserUID is empty")
+	_, hasMaxResults := seenBody["MaxResults"]
+	require.False(t, hasMaxResults, "MaxResults should be omitted when Limit is 0")
 }
