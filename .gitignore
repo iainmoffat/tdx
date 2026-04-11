@@ -1,0 +1,17 @@
+# Compiled binary
+/tdx
+
+# Test artifacts
+*.test
+*.out
+coverage.*
+
+# Go workspaces
+go.work
+go.work.sum
+
+# Editor and OS noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
