@@ -9,6 +9,6 @@ func NewCmd() *cobra.Command {
 		Short: "List and inspect time entries",
 	}
 	cmd.AddCommand(newListCmd())
-	// `show` is added in Task 21.
+	cmd.AddCommand(newShowCmd())
 	return cmd
 }
