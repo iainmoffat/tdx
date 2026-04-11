@@ -95,6 +95,11 @@ func decodeTarget(w wireTimeEntry) (domain.Target, error) {
 		AppID:       w.AppID,
 		DisplayName: w.ItemTitle,
 	}
+	// Note: TD does not expose AppID in /api/time/search responses for any
+	// non-ticket kind (Component != 9 and != 25). Project task / project /
+	// time-off / etc. entries decode with Target.AppID = 0. Calling
+	// Target.Validate() on such an entry would fail, so we do not validate
+	// decoded entries — they're read-only outputs, not user inputs.
 	switch w.Component {
 	case componentTicketTime:
 		t.Kind = domain.TargetTicket

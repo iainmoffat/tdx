@@ -127,7 +127,7 @@ TeamDynamix tenant.
   ```
   ./tdx time entry list --ticket 12345
   ```
-  Expected: `--ticket requires --app` error, exit code 2.
+  Expected: `--ticket requires --app` error, exit code 1.
 
 - **Unknown time type name.**
   ```

@@ -44,9 +44,11 @@ func newForCmd() *cobra.Command {
 				return fmt.Errorf("invalid id %q: %w", args[1], err)
 			}
 
-			// All supported kinds require --app.
-			if appFlag <= 0 {
-				return fmt.Errorf("--app is required")
+			// Only ticket and ticketTask use AppID in TD's URL paths; the other
+			// kinds (project, projectIssue, workspace, timeoff, request) hit
+			// /component/<kind>/<id> and do not need an application context.
+			if (kind == domain.TargetTicket || kind == domain.TargetTicketTask) && appFlag <= 0 {
+				return fmt.Errorf("--app is required for kind %q", kind)
 			}
 			// Task-bearing kinds require --task. ProjectIssue uses --task as the
 			// issue ID slot (see timesvc.componentPathFor). TargetProjectTask is

@@ -129,3 +129,23 @@ func TestTypeFor_ProjectTaskRejected(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error()+out.String(), "does not support component lookup")
 }
+
+func TestTypeFor_ProjectWithoutAppWorks(t *testing.T) {
+	// project kind hits /component/project/{itemID} which has no app
+	// segment in the URL, so --app is not required.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/TDWebApi/api/time/types/component/project/9999", r.URL.Path)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[{"ID":5,"Name":"Standard","IsBillable":false,"IsActive":true}]`))
+	}))
+	defer srv.Close()
+
+	seedProfile(t, srv.URL)
+
+	var out bytes.Buffer
+	cmd := NewCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"for", "project", "9999"})
+	require.NoError(t, cmd.Execute())
+	require.Contains(t, out.String(), "Standard")
+}

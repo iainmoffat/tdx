@@ -60,10 +60,14 @@ func (s *Service) GetWeekReport(ctx context.Context, profileName string, date ti
 	}, nil
 }
 
-// timeDateToEasternMidnight converts a TD TimeDate value (returned as midnight
-// UTC) to midnight Eastern time on the same calendar date. TD always encodes
-// TimeDate as "YYYY-MM-DDT00:00:00Z"; the UTC date is the canonical date for
-// the entry regardless of what time zone the client is in.
+// timeDateToEasternMidnight converts a TD TimeDate value to midnight Eastern
+// time on the same calendar date. TD encodes TimeDate in two forms depending
+// on the endpoint: "YYYY-MM-DDT00:00:00Z" (RFC3339 with Z, used by some
+// /api/time/report responses) and "YYYY-MM-DDT00:00:00" (no zone, used by
+// /api/time/search). Both forms parse via tdTime; this helper extracts the
+// Y/M/D fields and rebuilds the instant at midnight in EasternTZ so the
+// calendar date is preserved regardless of how the parser interpreted the
+// original timezone.
 func timeDateToEasternMidnight(t time.Time) time.Time {
 	u := t.UTC()
 	return time.Date(u.Year(), u.Month(), u.Day(), 0, 0, 0, 0, domain.EasternTZ)
