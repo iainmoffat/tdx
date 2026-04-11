@@ -33,6 +33,9 @@ func newShowCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("invalid entry id %q: %w", args[0], err)
 			}
+			if id <= 0 {
+				return fmt.Errorf("entry id must be a positive integer, got %d", id)
+			}
 
 			paths, err := config.ResolvePaths()
 			if err != nil {

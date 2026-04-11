@@ -78,3 +78,27 @@ func TestEntryShow_JSON(t *testing.T) {
 	require.NoError(t, cmd.Execute())
 	require.Contains(t, out.String(), `"schema": "tdx.v1.entry"`)
 }
+
+func TestEntryShow_RejectsNonPositiveID(t *testing.T) {
+	seedProfile(t, "http://127.0.0.1/")
+
+	cases := []struct {
+		name string
+		args []string
+	}{
+		{"zero", []string{"show", "0"}},
+		{"negative", []string{"show", "--", "-5"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var out bytes.Buffer
+			cmd := NewCmd()
+			cmd.SetOut(&out)
+			cmd.SetErr(&out)
+			cmd.SetArgs(tc.args)
+			err := cmd.Execute()
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "must be a positive integer")
+		})
+	}
+}
