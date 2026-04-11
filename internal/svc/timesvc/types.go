@@ -30,32 +30,32 @@ type tdTime struct {
 // UnmarshalJSON parses a TD timestamp in either RFC3339 form (with zone)
 // or wall-clock form (no zone, interpreted as EasternTZ). Empty string and
 // JSON null both produce a zero-value tdTime.
+//
+// Note on layout choice: Go's time.Parse accepts optional fractional seconds
+// on the INPUT regardless of whether the layout string includes them. That
+// means time.RFC3339 alone handles both "2026-04-06T00:00:00Z" and
+// "2026-04-06T15:22:01.607Z", and the no-zone layout below handles both
+// "2026-04-03T15:22:01" and "2026-04-03T15:22:01.607". Two attempts cover
+// all four observed formats — zoned vs. no-zone is the only real split.
 func (t *tdTime) UnmarshalJSON(data []byte) error {
 	s := strings.Trim(string(data), `"`)
 	if s == "" || s == "null" {
 		return nil
 	}
 
-	// Try RFC3339 forms first (with optional fractional seconds and zone).
-	if parsed, err := time.Parse(time.RFC3339Nano, s); err == nil {
-		t.Time = parsed
-		return nil
-	}
+	// Try RFC3339 first (handles Z and numeric offsets, with or without
+	// fractional seconds).
 	if parsed, err := time.Parse(time.RFC3339, s); err == nil {
 		t.Time = parsed
 		return nil
 	}
 
-	// Fall back to no-zone wall-clock forms, with or without fractional
-	// seconds. Interpret as EasternTZ (TD tenant-local time).
-	for _, layout := range []string{
-		"2006-01-02T15:04:05.999999999",
-		"2006-01-02T15:04:05",
-	} {
-		if parsed, err := time.ParseInLocation(layout, s, domain.EasternTZ); err == nil {
-			t.Time = parsed
-			return nil
-		}
+	// Fall back to no-zone wall-clock form, interpreted as EasternTZ
+	// (TD tenant-local time). Handles inputs with or without fractional
+	// seconds because Go's parser auto-accepts them.
+	if parsed, err := time.ParseInLocation("2006-01-02T15:04:05", s, domain.EasternTZ); err == nil {
+		t.Time = parsed
+		return nil
 	}
 
 	return fmt.Errorf("tdTime: cannot parse %q", s)

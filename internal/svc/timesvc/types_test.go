@@ -3,6 +3,7 @@ package timesvc
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/ipm/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
@@ -14,6 +15,7 @@ func TestTdTime_UnmarshalRFC3339Z(t *testing.T) {
 	require.Equal(t, 2026, got.Time.Year())
 	require.Equal(t, 4, int(got.Time.Month()))
 	require.Equal(t, 6, got.Time.Day())
+	require.Equal(t, time.UTC, got.Time.Location())
 }
 
 func TestTdTime_UnmarshalRFC3339Nano(t *testing.T) {
@@ -21,6 +23,8 @@ func TestTdTime_UnmarshalRFC3339Nano(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(`"2026-04-06T15:22:01.607Z"`), &got))
 	require.Equal(t, 15, got.Time.Hour())
 	require.Equal(t, 22, got.Time.Minute())
+	require.Equal(t, 607000000, got.Time.Nanosecond())
+	require.Equal(t, time.UTC, got.Time.Location())
 }
 
 func TestTdTime_UnmarshalNoZoneWithFractional(t *testing.T) {
