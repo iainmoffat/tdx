@@ -3,6 +3,7 @@ package tdx
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -136,4 +137,34 @@ func parseRetryAfter(h string, cap time.Duration) time.Duration {
 func (c *Client) Ping(ctx context.Context) error {
 	_, err := c.Do(ctx, http.MethodGet, "/TDWebApi/api/time/types", nil)
 	return err
+}
+
+// DoJSON performs an authenticated request with JSON encode/decode sugar.
+// If body is non-nil, it is JSON-encoded and sent with Content-Type:
+// application/json. On 2xx, the response body is decoded into out if out
+// is non-nil. Empty response bodies are tolerated when out is nil.
+//
+// All error semantics (ErrUnauthorized, *APIError, 429 retry) are
+// inherited from Do — DoJSON is a pure convenience wrapper.
+func (c *Client) DoJSON(ctx context.Context, method, path string, body, out any) error {
+	var reqBody io.Reader
+	if body != nil {
+		data, err := json.Marshal(body)
+		if err != nil {
+			return fmt.Errorf("marshal request body: %w", err)
+		}
+		reqBody = bytes.NewReader(data)
+	}
+
+	respBody, err := c.Do(ctx, method, path, reqBody)
+	if err != nil {
+		return err
+	}
+	if out == nil || len(respBody) == 0 {
+		return nil
+	}
+	if err := json.Unmarshal(respBody, out); err != nil {
+		return fmt.Errorf("decode response body: %w", err)
+	}
+	return nil
 }

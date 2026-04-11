@@ -129,3 +129,92 @@ func TestClient_PingOnUnauthorizedReturnsErrInvalidToken(t *testing.T) {
 	err = c.Ping(context.Background())
 	require.ErrorIs(t, err, ErrUnauthorized)
 }
+
+func TestClient_DoJSON_DecodesResponseBody(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "application/json", r.Header.Get("Accept"))
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":42,"name":"widget"}`))
+	}))
+	defer srv.Close()
+
+	c, err := NewClient(srv.URL, "t")
+	require.NoError(t, err)
+
+	var got struct {
+		ID   int    `json:"id"`
+		Name string `json:"name"`
+	}
+	err = c.DoJSON(context.Background(), http.MethodGet, "/api/thing", nil, &got)
+	require.NoError(t, err)
+	require.Equal(t, 42, got.ID)
+	require.Equal(t, "widget", got.Name)
+}
+
+func TestClient_DoJSON_EncodesRequestBody(t *testing.T) {
+	var seenBody map[string]any
+	var seenCT string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seenCT = r.Header.Get("Content-Type")
+		_ = json.NewDecoder(r.Body).Decode(&seenBody)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	c, err := NewClient(srv.URL, "t")
+	require.NoError(t, err)
+
+	body := map[string]any{"q": "hello", "limit": 10}
+	var out []any
+	err = c.DoJSON(context.Background(), http.MethodPost, "/api/search", body, &out)
+	require.NoError(t, err)
+	require.Equal(t, "application/json", seenCT)
+	require.Equal(t, "hello", seenBody["q"])
+	require.Equal(t, float64(10), seenBody["limit"])
+}
+
+func TestClient_DoJSON_NilOutSkipsDecode(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	c, err := NewClient(srv.URL, "t")
+	require.NoError(t, err)
+
+	// Passing nil as `out` should not panic or error on empty body.
+	err = c.DoJSON(context.Background(), http.MethodGet, "/api/ping", nil, nil)
+	require.NoError(t, err)
+}
+
+func TestClient_DoJSON_PropagatesUnauthorized(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer srv.Close()
+
+	c, err := NewClient(srv.URL, "t")
+	require.NoError(t, err)
+
+	var out map[string]any
+	err = c.DoJSON(context.Background(), http.MethodGet, "/api/thing", nil, &out)
+	require.ErrorIs(t, err, ErrUnauthorized)
+}
+
+func TestClient_DoJSON_PropagatesAPIError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`bad request`))
+	}))
+	defer srv.Close()
+
+	c, err := NewClient(srv.URL, "t")
+	require.NoError(t, err)
+
+	var out map[string]any
+	err = c.DoJSON(context.Background(), http.MethodGet, "/api/thing", nil, &out)
+	var apiErr *APIError
+	require.ErrorAs(t, err, &apiErr)
+	require.Equal(t, http.StatusBadRequest, apiErr.Status)
+}
