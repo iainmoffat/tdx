@@ -188,6 +188,42 @@ func TestClient_DoJSON_NilOutSkipsDecode(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestClient_DoJSON_NonNilOutEmptyBodySkipsDecode(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	c, err := NewClient(srv.URL, "t")
+	require.NoError(t, err)
+
+	// 204 with a non-nil out pointer must not error and must leave out at zero value.
+	var out struct {
+		ID int `json:"id"`
+	}
+	err = c.DoJSON(context.Background(), http.MethodGet, "/api/thing", nil, &out)
+	require.NoError(t, err)
+	require.Equal(t, 0, out.ID)
+}
+
+func TestClient_DoJSON_MarshalErrorReturned(t *testing.T) {
+	// httptest server is required because NewClient validates a real URL,
+	// but the request must never reach it — Marshal fails first.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("server should not have been called")
+	}))
+	defer srv.Close()
+
+	c, err := NewClient(srv.URL, "t")
+	require.NoError(t, err)
+
+	// chan int is not JSON-marshalable.
+	body := make(chan int)
+	err = c.DoJSON(context.Background(), http.MethodPost, "/api/thing", body, nil)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "marshal request body")
+}
+
 func TestClient_DoJSON_PropagatesUnauthorized(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
