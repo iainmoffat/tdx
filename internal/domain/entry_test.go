@@ -47,6 +47,22 @@ func TestTimeEntry_DateJSON(t *testing.T) {
 	require.NotContains(t, string(blob), "T00:00:00")
 }
 
+func TestTimeEntry_DateJSON_WithTimestamps(t *testing.T) {
+	e := TimeEntry{
+		ID:         456,
+		Date:       time.Date(2026, 4, 6, 0, 0, 0, 0, EasternTZ),
+		Minutes:    60,
+		CreatedAt:  time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC),
+		ModifiedAt: time.Date(2026, 2, 1, 8, 0, 0, 0, time.UTC),
+	}
+	blob, err := json.Marshal(e)
+	require.NoError(t, err)
+	s := string(blob)
+	require.Contains(t, s, `"createdAt":"2026-01-01T12:00:00Z"`)
+	require.Contains(t, s, `"modifiedAt":"2026-02-01T08:00:00Z"`)
+	require.Contains(t, s, `"date":"2026-04-06"`)
+}
+
 func TestEntryFilter_DefaultLimit(t *testing.T) {
 	f := EntryFilter{}
 	require.Equal(t, 0, f.Limit, "zero means unset; caller decides default")
