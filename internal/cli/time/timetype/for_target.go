@@ -33,7 +33,7 @@ func newForCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			kind := domain.TargetKind(args[0])
 			if !kind.IsKnown() {
-				return fmt.Errorf("unknown kind %q: supported kinds are ticket, ticketTask, project, projectTask, projectIssue, workspace, timeoff, request", args[0])
+				return fmt.Errorf("unknown kind %q: supported kinds are ticket, ticketTask, project, projectIssue, workspace, timeoff, request", args[0])
 			}
 			if !kind.SupportsComponentLookup() {
 				return fmt.Errorf("kind %q does not support component lookup", args[0])
@@ -48,8 +48,11 @@ func newForCmd() *cobra.Command {
 			if appFlag <= 0 {
 				return fmt.Errorf("--app is required")
 			}
-			// Task-bearing kinds require --task.
-			if (kind == domain.TargetTicketTask || kind == domain.TargetProjectTask) && taskFlag <= 0 {
+			// Task-bearing kinds require --task. ProjectIssue uses --task as the
+			// issue ID slot (see timesvc.componentPathFor). TargetProjectTask is
+			// excluded by SupportsComponentLookup above; if that ever changes,
+			// re-add it here.
+			if (kind == domain.TargetTicketTask || kind == domain.TargetProjectIssue) && taskFlag <= 0 {
 				return fmt.Errorf("kind %q requires --task", kind)
 			}
 
@@ -103,7 +106,7 @@ func newForCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&profileFlag, "profile", "", "profile name (defaults to active profile)")
 	cmd.Flags().IntVar(&appFlag, "app", 0, "application ID (required)")
-	cmd.Flags().IntVar(&taskFlag, "task", 0, "task ID (required for ticketTask/projectTask)")
+	cmd.Flags().IntVar(&taskFlag, "task", 0, "task or issue ID (required for ticketTask and projectIssue)")
 	cmd.Flags().BoolVar(&jsonFlag, "json", false, "emit JSON output")
 	return cmd
 }

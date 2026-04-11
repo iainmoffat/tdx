@@ -103,3 +103,29 @@ func TestTypeFor_TicketRequiresApp(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error()+out.String(), "--app")
 }
+
+func TestTypeFor_ProjectIssueRequiresTask(t *testing.T) {
+	seedProfile(t, "http://127.0.0.1/")
+
+	var out bytes.Buffer
+	cmd := NewCmd()
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"for", "projectIssue", "9999", "--app", "42"})
+	err := cmd.Execute()
+	require.Error(t, err)
+	require.Contains(t, err.Error()+out.String(), "--task")
+}
+
+func TestTypeFor_ProjectTaskRejected(t *testing.T) {
+	seedProfile(t, "http://127.0.0.1/")
+
+	var out bytes.Buffer
+	cmd := NewCmd()
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"for", "projectTask", "9999", "--app", "42", "--task", "5"})
+	err := cmd.Execute()
+	require.Error(t, err)
+	require.Contains(t, err.Error()+out.String(), "does not support component lookup")
+}
