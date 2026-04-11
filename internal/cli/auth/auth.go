@@ -9,6 +9,7 @@ func NewCmd() *cobra.Command {
 		Short: "Manage TeamDynamix authentication",
 	}
 	cmd.AddCommand(newProfileCmd())
-	// login, logout, status are added in later tasks.
+	cmd.AddCommand(newStatusCmd())
+	// login and logout are added in later tasks.
 	return cmd
 }
