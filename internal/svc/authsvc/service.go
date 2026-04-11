@@ -93,9 +93,11 @@ func (s *Service) Logout(profileName string) error {
 // Status describes the current state of an auth profile.
 type Status struct {
 	Profile       domain.Profile
-	Authenticated bool // a token is stored
-	TokenValid    bool // the stored token was accepted by the server (only set if Authenticated)
+	Authenticated bool   // a token is stored
+	TokenValid    bool   // the stored token was accepted by the server (only set if Authenticated)
 	ValidationErr string
+	User          domain.User `json:"user,omitempty"`
+	UserErr       string      `json:"userErr,omitempty"`
 }
 
 // Status reports the state of a profile's credentials.
@@ -127,6 +129,14 @@ func (s *Service) Status(ctx context.Context, profileName string) (Status, error
 		return status, nil
 	}
 	status.TokenValid = true
+
+	// Identity lookup is additive: a failure here must not fail Status.
+	user, err := s.WhoAmI(ctx, profileName)
+	if err != nil {
+		status.UserErr = err.Error()
+		return status, nil
+	}
+	status.User = user
 	return status, nil
 }
 

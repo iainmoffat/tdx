@@ -92,8 +92,16 @@ func TestService_StatusReportsNotAuthenticatedWhenNoToken(t *testing.T) {
 
 func TestService_StatusVerifiesValidToken(t *testing.T) {
 	h := newHarness(t, func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`[]`))
+		switch r.URL.Path {
+		case "/TDWebApi/api/time/types":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[]`))
+		case "/TDWebApi/api/auth/getuser":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"ReferenceID":42,"UID":"abcd-1234","FullName":"Iain Moffat","PrimaryEmail":"ipm@ufl.edu"}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
 	})
 
 	_, err := h.svc.Login(context.Background(), LoginInput{
@@ -107,6 +115,9 @@ func TestService_StatusVerifiesValidToken(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, status.Authenticated)
 	require.True(t, status.TokenValid)
+	require.Equal(t, "Iain Moffat", status.User.FullName)
+	require.Equal(t, "ipm@ufl.edu", status.User.Email)
+	require.Empty(t, status.UserErr)
 }
 
 func TestService_StatusFlagsExpiredToken(t *testing.T) {
@@ -126,6 +137,33 @@ func TestService_StatusFlagsExpiredToken(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, status.Authenticated, "token file exists")
 	require.False(t, status.TokenValid, "but server rejects it")
+}
+
+func TestService_StatusNonFatalWhoAmIFailure(t *testing.T) {
+	h := newHarness(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/TDWebApi/api/time/types":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[]`))
+		case "/TDWebApi/api/auth/getuser":
+			w.WriteHeader(http.StatusInternalServerError)
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	})
+
+	_, err := h.svc.Login(context.Background(), LoginInput{
+		ProfileName:   "ufl-test",
+		TenantBaseURL: h.tenant,
+		Token:         "good",
+	})
+	require.NoError(t, err)
+
+	status, err := h.svc.Status(context.Background(), "ufl-test")
+	require.NoError(t, err, "whoami failure must not fail Status")
+	require.True(t, status.TokenValid)
+	require.True(t, status.User.IsZero())
+	require.NotEmpty(t, status.UserErr, "should carry a non-empty error string")
 }
 
 func TestService_LogoutClearsCredentialsOnly(t *testing.T) {
