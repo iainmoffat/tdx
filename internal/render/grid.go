@@ -14,8 +14,8 @@ const gridDayWidth = 5 // "99.9" + gutter
 const gridEmptyCell = "."
 
 // WeekGrid writes a Row × Day grid for the given week report. Rows are
-// grouped by (Target.DisplayRef, TimeType.Name). Days are always Sun..Sat
-// (seven columns). Empty cells render as "." so gaps scan cleanly.
+// grouped by (Target.DisplayRef, Target.DisplayName, TimeType.Name).
+// Days are always Sun..Sat (seven columns). Empty cells render as "." so gaps scan cleanly.
 func WeekGrid(w io.Writer, report domain.WeekReport) {
 	fmt.Fprintf(w, "Week %s — %s  (%s)\n\n",
 		report.WeekRef.StartDate.Format("2006-01-02"),
@@ -66,14 +66,17 @@ func WeekGrid(w io.Writer, report domain.WeekReport) {
 		dayIdx := int(entryDay.Sub(refDay).Hours() / 24)
 		if dayIdx >= 0 && dayIdx < 7 {
 			row.byDay[dayIdx] += e.Minutes
+			row.total += e.Minutes
 		}
-		row.total += e.Minutes
 	}
 
-	// Stable sort order: by DisplayRef then TimeType.Name.
+	// Stable sort order: by DisplayRef, DisplayName, then TimeType.Name.
 	sort.SliceStable(order, func(i, j int) bool {
 		if order[i].ref != order[j].ref {
 			return order[i].ref < order[j].ref
+		}
+		if order[i].name != order[j].name {
+			return order[i].name < order[j].name
 		}
 		return order[i].typeName < order[j].typeName
 	})
@@ -105,7 +108,7 @@ func WeekGrid(w io.Writer, report domain.WeekReport) {
 			dayTotals[i] += r.byDay[i]
 		}
 		line += "  " + formatCell(r.total)
-		fmt.Fprintln(w, line)
+		fmt.Fprintln(w, strings.TrimRight(line, " "))
 		// Sub-label row with type and app name.
 		fmt.Fprintf(w, "    └ %s\n", r.typ)
 	}
@@ -119,7 +122,7 @@ func WeekGrid(w io.Writer, report domain.WeekReport) {
 		totalLine += "  " + formatCell(dayTotals[i])
 	}
 	totalLine += "  " + formatCell(report.TotalMinutes)
-	fmt.Fprintln(w, totalLine)
+	fmt.Fprintln(w, strings.TrimRight(totalLine, " "))
 }
 
 func writeGridHeader(w io.Writer, labelWidth int) {
@@ -128,7 +131,7 @@ func writeGridHeader(w io.Writer, labelWidth int) {
 		header += "  " + padRight(d, gridDayWidth-1)
 	}
 	header += "  TOTAL"
-	fmt.Fprintln(w, header)
+	fmt.Fprintln(w, strings.TrimRight(header, " "))
 }
 
 func writeGridSeparator(w io.Writer, labelWidth int) {
