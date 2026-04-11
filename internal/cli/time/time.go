@@ -6,6 +6,7 @@ package time
 
 import (
 	"github.com/ipm/tdx/internal/cli/time/entry"
+	"github.com/ipm/tdx/internal/cli/time/timetype"
 	"github.com/ipm/tdx/internal/cli/time/week"
 	"github.com/spf13/cobra"
 )
@@ -18,6 +19,6 @@ func NewCmd() *cobra.Command {
 	}
 	cmd.AddCommand(entry.NewCmd())
 	cmd.AddCommand(week.NewCmd())
-	// timetype subtree is added in Task 23.
+	cmd.AddCommand(timetype.NewCmd())
 	return cmd
 }

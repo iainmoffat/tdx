@@ -3,6 +3,7 @@ package cli
 import (
 	"github.com/ipm/tdx/internal/cli/auth"
 	"github.com/ipm/tdx/internal/cli/config"
+	timecli "github.com/ipm/tdx/internal/cli/time"
 	"github.com/spf13/cobra"
 )
 
@@ -18,5 +19,6 @@ func NewRootCmd(version string) *cobra.Command {
 	root.AddCommand(newVersionCmd(version))
 	root.AddCommand(config.NewCmd())
 	root.AddCommand(auth.NewCmd())
+	root.AddCommand(timecli.NewCmd())
 	return root
 }
