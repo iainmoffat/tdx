@@ -254,3 +254,25 @@ func TestClient_DoJSON_PropagatesAPIError(t *testing.T) {
 	require.ErrorAs(t, err, &apiErr)
 	require.Equal(t, http.StatusBadRequest, apiErr.Status)
 }
+
+func TestClient_PreservesQueryString(t *testing.T) {
+	var seenPath, seenStart, seenEnd string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seenPath = r.URL.Path
+		seenStart = r.URL.Query().Get("startDate")
+		seenEnd = r.URL.Query().Get("endDate")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	c, err := NewClient(srv.URL, "t")
+	require.NoError(t, err)
+
+	_, err = c.Do(context.Background(), http.MethodGet, "/api/thing?startDate=2026-04-01&endDate=2026-04-30", nil)
+	require.NoError(t, err)
+
+	require.Equal(t, "/api/thing", seenPath, "the '?' must not be URL-encoded into the path")
+	require.Equal(t, "2026-04-01", seenStart)
+	require.Equal(t, "2026-04-30", seenEnd)
+}
