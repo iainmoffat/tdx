@@ -106,3 +106,42 @@ func TestGetWeekReport_BucketsAcrossSpringForward(t *testing.T) {
 	require.Equal(t, 0, report.Days[5].Minutes, "Fri")
 	require.Equal(t, 180, report.Days[6].Minutes, "Sat")
 }
+
+func TestGetLockedDays_DecodesDateArray(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/TDWebApi/api/time/locked", r.URL.Path)
+		require.Equal(t, "2026-04-01", r.URL.Query().Get("startDate"))
+		require.Equal(t, "2026-04-30", r.URL.Query().Get("endDate"))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[
+			"2026-04-06T00:00:00Z",
+			"2026-04-13T00:00:00Z"
+		]`))
+	}))
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	from := time.Date(2026, 4, 1, 0, 0, 0, 0, domain.EasternTZ)
+	to := time.Date(2026, 4, 30, 0, 0, 0, 0, domain.EasternTZ)
+	days, err := svc.GetLockedDays(context.Background(), profile, from, to)
+	require.NoError(t, err)
+	require.Len(t, days, 2)
+	require.Equal(t, "2026-04-06", days[0].Date.Format("2006-01-02"))
+	require.Equal(t, "2026-04-13", days[1].Date.Format("2006-01-02"))
+	require.Empty(t, days[0].Reason)
+}
+
+func TestGetLockedDays_EmptyRange(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	from := time.Date(2026, 5, 1, 0, 0, 0, 0, domain.EasternTZ)
+	to := time.Date(2026, 5, 31, 0, 0, 0, 0, domain.EasternTZ)
+	days, err := svc.GetLockedDays(context.Background(), profile, from, to)
+	require.NoError(t, err)
+	require.Empty(t, days)
+}

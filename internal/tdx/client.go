@@ -93,10 +93,15 @@ func (c *Client) Do(ctx context.Context, method, path string, body io.Reader) ([
 }
 
 func (c *Client) doOnce(ctx context.Context, method, path string, bodyBytes []byte) (*http.Response, error) {
-	full := c.base.ResolveReference(&url.URL{Path: strings.TrimLeft(path, "/")})
+	// Split the path on '?' so that query parameters are not URL-escaped when
+	// ResolveReference encodes the path component.
+	rawPath, rawQuery, _ := strings.Cut(path, "?")
+	ref := &url.URL{Path: strings.TrimLeft(rawPath, "/"), RawQuery: rawQuery}
+	full := c.base.ResolveReference(ref)
 	// Preserve the base path if present.
-	if c.base.Path != "" && !strings.HasPrefix(path, "/") {
-		full = c.base.ResolveReference(&url.URL{Path: path})
+	if c.base.Path != "" && !strings.HasPrefix(rawPath, "/") {
+		ref = &url.URL{Path: rawPath, RawQuery: rawQuery}
+		full = c.base.ResolveReference(ref)
 	}
 	var reader io.Reader
 	if bodyBytes != nil {

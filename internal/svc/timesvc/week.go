@@ -66,6 +66,32 @@ func timeDateToEasternMidnight(t time.Time) time.Time {
 	return time.Date(u.Year(), u.Month(), u.Day(), 0, 0, 0, 0, domain.EasternTZ)
 }
 
+// GetLockedDays returns the locked days in [from, to] inclusive. TD's
+// response is a flat array of ISO8601 date strings (midnight UTC); we
+// normalize each to midnight EasternTZ via timeDateToEasternMidnight so
+// the calendar date is preserved across the UTC→Eastern boundary.
+func (s *Service) GetLockedDays(ctx context.Context, profileName string, from, to time.Time) ([]domain.LockedDay, error) {
+	client, err := s.clientFor(profileName)
+	if err != nil {
+		return nil, err
+	}
+
+	fromStr := from.In(domain.EasternTZ).Format("2006-01-02")
+	toStr := to.In(domain.EasternTZ).Format("2006-01-02")
+	path := fmt.Sprintf("/TDWebApi/api/time/locked?startDate=%s&endDate=%s", fromStr, toStr)
+
+	var wire []time.Time
+	if err := client.DoJSON(ctx, "GET", path, nil, &wire); err != nil {
+		return nil, fmt.Errorf("get locked days: %w", err)
+	}
+
+	out := make([]domain.LockedDay, 0, len(wire))
+	for _, ts := range wire {
+		out = append(out, domain.LockedDay{Date: timeDateToEasternMidnight(ts)})
+	}
+	return out, nil
+}
+
 // buildDaySummaries produces seven consecutive DaySummary entries covering
 // Sun..Sat of the week in ref, with minutes accumulated from entries that
 // fall within each day. Days with zero entries still appear with Minutes=0.
