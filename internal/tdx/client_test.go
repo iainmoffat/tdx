@@ -114,7 +114,7 @@ func TestClient_PingCallsTimeTypes(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, c.Ping(context.Background()))
-	require.Equal(t, "/api/time/types", seenPath)
+	require.Equal(t, "/TDWebApi/api/time/types", seenPath)
 }
 
 func TestClient_PingOnUnauthorizedReturnsErrInvalidToken(t *testing.T) {

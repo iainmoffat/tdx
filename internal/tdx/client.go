@@ -129,8 +129,11 @@ func parseRetryAfter(h string, cap time.Duration) time.Duration {
 }
 
 // Ping makes a cheap authenticated call to verify the token is valid.
-// It calls GET /api/time/types and discards the body; only the status matters.
+// It calls GET /TDWebApi/api/time/types and discards the body; only the
+// status matters. All TeamDynamix tenants mount the Web API under
+// /TDWebApi/, so callers pass the tenant root (e.g. https://ufl.teamdynamix.com/)
+// as the base URL and the client adds the /TDWebApi/ prefix here.
 func (c *Client) Ping(ctx context.Context) error {
-	_, err := c.Do(ctx, http.MethodGet, "/api/time/types", nil)
+	_, err := c.Do(ctx, http.MethodGet, "/TDWebApi/api/time/types", nil)
 	return err
 }
