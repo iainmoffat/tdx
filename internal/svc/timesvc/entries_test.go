@@ -220,6 +220,45 @@ func TestGetEntry_NotFound(t *testing.T) {
 	require.ErrorIs(t, err, domain.ErrEntryNotFound)
 }
 
+func TestGetEntry_ResolvesTimeTypeName(t *testing.T) {
+	// Parallel of TestSearchEntries_ResolvesTimeTypeNamesViaListTimeTypes
+	// for the GetEntry single-entry path. TD's /api/time/{id} response
+	// has the same TimeTypeID-without-TimeTypeName issue as the search
+	// endpoint, so the side-join must fire here too.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/TDWebApi/api/time/987654":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{
+				"TimeID": 987654,
+				"ItemID": 12345,
+				"AppID": 42,
+				"Component": 9,
+				"TicketID": 12345,
+				"TimeDate": "2026-04-06T00:00:00Z",
+				"Minutes": 60,
+				"TimeTypeID": 5,
+				"Status": 0
+			}`))
+		case "/TDWebApi/api/time/types":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[{"ID":5,"Name":"Standard Activities","Code":"Standard","IsBillable":false,"IsActive":true}]`))
+		default:
+			t.Errorf("unexpected path: %s", r.URL.Path)
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+	}))
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	entry, err := svc.GetEntry(context.Background(), profile, 987654)
+	require.NoError(t, err)
+	require.Equal(t, 987654, entry.ID)
+	require.Equal(t, 5, entry.TimeType.ID)
+	require.Equal(t, "Standard Activities", entry.TimeType.Name)
+	require.Equal(t, "Standard", entry.TimeType.Code)
+}
+
 func TestSearchEntries_ResolvesTimeTypeNamesViaListTimeTypes(t *testing.T) {
 	// TD's /api/time/search returns TimeTypeID without TimeTypeName.
 	// Verify that timesvc side-joins with /api/time/types to populate
@@ -270,7 +309,12 @@ func TestSearchEntries_ResolveSkippedWhenNamesAlreadyPresent(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`[{"TimeID":1,"ItemID":12345,"AppID":42,"Component":9,"TicketID":12345,"TimeDate":"2026-04-06T00:00:00Z","Minutes":60,"TimeTypeID":5,"TimeTypeName":"Already Set","Status":0}]`))
 		case "/TDWebApi/api/time/types":
-			t.Fatalf("resolve helper should not call /api/time/types when names are already present")
+			// If the resolve early-out is ever accidentally broken, this 500 will
+			// propagate up through ListTimeTypes → resolveTimeTypeNames →
+			// SearchEntries, surfacing as an error that require.NoError catches
+			// from the test goroutine. (t.Fatalf from a goroutine other than the
+			// test goroutine doesn't actually fail the test.)
+			w.WriteHeader(http.StatusInternalServerError)
 		default:
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
