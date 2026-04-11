@@ -1,7 +1,6 @@
 package entry
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -131,8 +130,7 @@ func newListCmd() *cobra.Command {
 				filter.TimeTypeID = match.ID
 			}
 
-			ctx := context.Background()
-			entries, err := tsvc.SearchEntries(ctx, profileName, filter)
+			entries, err := tsvc.SearchEntries(cmd.Context(), profileName, filter)
 			if err != nil {
 				return err
 			}
