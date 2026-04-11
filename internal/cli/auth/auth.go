@@ -10,6 +10,7 @@ func NewCmd() *cobra.Command {
 	}
 	cmd.AddCommand(newProfileCmd())
 	cmd.AddCommand(newStatusCmd())
-	// login and logout are added in later tasks.
+	cmd.AddCommand(newLogoutCmd())
+	// login is added in the next task.
 	return cmd
 }
