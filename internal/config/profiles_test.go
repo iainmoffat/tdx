@@ -106,3 +106,11 @@ func TestProfileStore_GetProfile(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, prof, got)
 }
+
+func TestProfileStore_SetDefaultMissing(t *testing.T) {
+	p := writablePaths(t)
+	s := NewProfileStore(p)
+
+	err := s.SetDefault("nope")
+	require.ErrorIs(t, err, domain.ErrProfileNotFound)
+}
