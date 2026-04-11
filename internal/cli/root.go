@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"github.com/ipm/tdx/internal/cli/auth"
 	"github.com/ipm/tdx/internal/cli/config"
 	"github.com/spf13/cobra"
 )
@@ -16,5 +17,6 @@ func NewRootCmd(version string) *cobra.Command {
 	}
 	root.AddCommand(newVersionCmd(version))
 	root.AddCommand(config.NewCmd())
+	root.AddCommand(auth.NewCmd())
 	return root
 }
