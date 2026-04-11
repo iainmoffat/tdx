@@ -21,9 +21,13 @@ type Flags struct {
 	Human bool
 }
 
-// ResolveFormat picks the output format based on explicit flags, env, and TTY.
-// Precedence: --json > --human > TDX_FORMAT > TTY detection (TTY->Human, pipe->JSON).
-func ResolveFormat(f Flags, out *os.File) Format {
+// ResolveFormat picks the output format based on explicit flags or env.
+// Precedence: --json > --human > TDX_FORMAT > default (human).
+//
+// Unlike some CLIs, tdx does not auto-select JSON when stdout is a pipe:
+// agents that want JSON can pass --json or set TDX_FORMAT=json, and scripts
+// piping human output through tools like less keep getting human output.
+func ResolveFormat(f Flags) Format {
 	if f.JSON {
 		return FormatJSON
 	}
@@ -36,9 +40,6 @@ func ResolveFormat(f Flags, out *os.File) Format {
 		}
 		return FormatHuman
 	}
-	if out == nil || !isTerminal(out) {
-		return FormatJSON
-	}
 	return FormatHuman
 }
 
@@ -50,15 +51,8 @@ func JSON(w io.Writer, v any) error {
 }
 
 // Humanf writes a formatted line to w with a trailing newline.
+// The format string should not include a trailing newline.
 func Humanf(w io.Writer, format string, args ...any) {
 	fmt.Fprintf(w, format, args...)
 	fmt.Fprintln(w)
-}
-
-func isTerminal(f *os.File) bool {
-	info, err := f.Stat()
-	if err != nil {
-		return false
-	}
-	return info.Mode()&os.ModeCharDevice != 0
 }
