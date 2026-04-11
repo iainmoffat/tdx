@@ -22,7 +22,7 @@ func TestTargetKind_SupportsComponentLookup(t *testing.T) {
 	// These kinds have a /TDWebApi/api/time/types/component/... endpoint.
 	supported := []TargetKind{
 		TargetTicket, TargetTicketTask,
-		TargetProject, TargetProjectTask, TargetProjectIssue,
+		TargetProject, TargetProjectIssue,
 		TargetWorkspace, TargetTimeOff, TargetRequest,
 	}
 	for _, k := range supported {
@@ -31,6 +31,8 @@ func TestTargetKind_SupportsComponentLookup(t *testing.T) {
 	}
 	// Portfolio has no /component/portfolio/ endpoint.
 	require.False(t, TargetPortfolio.SupportsComponentLookup())
+	// ProjectTask requires a PlanID not yet modelled in Target.
+	require.False(t, TargetProjectTask.SupportsComponentLookup())
 	require.False(t, TargetKind("nonsense").SupportsComponentLookup())
 }
 
