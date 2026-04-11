@@ -2,6 +2,7 @@ package render
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -63,6 +64,22 @@ func TestTable_PreservesRowOrder(t *testing.T) {
 	require.Contains(t, lines[1], "z")
 	require.Contains(t, lines[2], "a")
 	require.Contains(t, lines[3], "m")
+}
+
+func TestTable_NoTrailingSpaces(t *testing.T) {
+	var buf bytes.Buffer
+	Table(&buf,
+		[]string{"DATE", "HOURS"},
+		[][]string{
+			{"2026-04-06", "2.00"},
+			{"2026-04-07", "1.50"},
+		},
+		[]string{"TOTAL", "3.50"},
+	)
+	for _, line := range splitLines(buf.String()) {
+		require.NotContains(t, line, "  \n", "trailing whitespace at end of line")
+		require.Equal(t, line, strings.TrimRight(line, " "), "row %q has trailing spaces", line)
+	}
 }
 
 func splitLines(s string) []string {

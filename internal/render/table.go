@@ -58,7 +58,9 @@ func writeRow(w io.Writer, cells []string, widths []int) {
 		}
 		parts[i] = padRight(cell, widths[i])
 	}
-	fmt.Fprintln(w, strings.Join(parts, "  "))
+	// Trim trailing spaces so callers can do exact-line equality assertions
+	// without worrying about column padding on the last cell.
+	fmt.Fprintln(w, strings.TrimRight(strings.Join(parts, "  "), " "))
 }
 
 func writeSeparator(w io.Writer, widths []int) {
