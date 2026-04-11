@@ -35,6 +35,20 @@ func TestProfile_Validate_RejectsNonHTTPSURL(t *testing.T) {
 	require.ErrorIs(t, p.Validate(), ErrInvalidProfile)
 }
 
+func TestProfile_Validate_AllowsHTTPForLoopback(t *testing.T) {
+	cases := []string{
+		"http://localhost/",
+		"http://127.0.0.1:8080/",
+		"http://[::1]:9090/",
+	}
+	for _, url := range cases {
+		t.Run(url, func(t *testing.T) {
+			p := Profile{Name: "local", TenantBaseURL: url}
+			require.NoError(t, p.Validate())
+		})
+	}
+}
+
 func TestProfile_Validate_RejectsNameWithSlash(t *testing.T) {
 	p := Profile{
 		Name:          "bad/name",
