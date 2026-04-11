@@ -42,3 +42,19 @@ func TestProfile_Validate_RejectsNameWithSlash(t *testing.T) {
 	}
 	require.ErrorIs(t, p.Validate(), ErrInvalidProfile)
 }
+
+func TestProfile_Validate_RejectsUnparseableURL(t *testing.T) {
+	p := Profile{
+		Name:          "default",
+		TenantBaseURL: "https://exa mple.com/",
+	}
+	require.ErrorIs(t, p.Validate(), ErrInvalidProfile)
+}
+
+func TestProfile_Validate_RejectsURLWithNoHost(t *testing.T) {
+	p := Profile{
+		Name:          "default",
+		TenantBaseURL: "https://",
+	}
+	require.ErrorIs(t, p.Validate(), ErrInvalidProfile)
+}

@@ -20,7 +20,7 @@ func (p Profile) Validate() error {
 	if strings.ContainsAny(p.Name, "/\\ \t") {
 		return fmt.Errorf("%w: name may not contain slashes or whitespace", ErrInvalidProfile)
 	}
-	if p.TenantBaseURL == "" {
+	if strings.TrimSpace(p.TenantBaseURL) == "" {
 		return fmt.Errorf("%w: tenantBaseURL is required", ErrInvalidProfile)
 	}
 	u, err := url.Parse(p.TenantBaseURL)
