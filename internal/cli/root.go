@@ -1,6 +1,9 @@
 package cli
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/ipm/tdx/internal/cli/config"
+	"github.com/spf13/cobra"
+)
 
 // NewRootCmd returns the top-level tdx command.
 // version is injected at build time by cmd/tdx/main.go.
@@ -12,5 +15,6 @@ func NewRootCmd(version string) *cobra.Command {
 		SilenceErrors: true,
 	}
 	root.AddCommand(newVersionCmd(version))
+	root.AddCommand(config.NewCmd())
 	return root
 }
