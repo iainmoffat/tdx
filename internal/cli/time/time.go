@@ -6,6 +6,7 @@ package time
 
 import (
 	"github.com/ipm/tdx/internal/cli/time/entry"
+	"github.com/ipm/tdx/internal/cli/time/week"
 	"github.com/spf13/cobra"
 )
 
@@ -16,6 +17,7 @@ func NewCmd() *cobra.Command {
 		Short: "Read and manage TeamDynamix time entries",
 	}
 	cmd.AddCommand(entry.NewCmd())
-	// week and timetype subtrees are added in Tasks 22 and 23.
+	cmd.AddCommand(week.NewCmd())
+	// timetype subtree is added in Task 23.
 	return cmd
 }
