@@ -40,7 +40,7 @@ func newLoginCmd(reader TokenReader) *cobra.Command {
 Log in to TeamDynamix in your browser, navigate to your user profile's
 API token view, copy the token, then run this command and paste the
 token when prompted. The token is validated against the tenant's
-/api/time/types endpoint before being saved to ~/.config/tdx/credentials.yaml.`,
+/TDWebApi/api/time/types endpoint before being saved to ~/.config/tdx/credentials.yaml.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			paths, err := config.ResolvePaths()
 			if err != nil {
