@@ -2,9 +2,12 @@ package timesvc
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/ipm/tdx/internal/domain"
+	"github.com/ipm/tdx/internal/tdx"
 )
 
 // SearchEntries runs POST /TDWebApi/api/time/search with the given filter.
@@ -164,4 +167,23 @@ func decodeReportStatus(s int) domain.ReportStatus {
 	default:
 		return domain.ReportOpen
 	}
+}
+
+// GetEntry fetches a single time entry by ID. 404 → ErrEntryNotFound.
+func (s *Service) GetEntry(ctx context.Context, profileName string, id int) (domain.TimeEntry, error) {
+	client, err := s.clientFor(profileName)
+	if err != nil {
+		return domain.TimeEntry{}, err
+	}
+	var wire wireTimeEntry
+	path := fmt.Sprintf("/TDWebApi/api/time/%d", id)
+	err = client.DoJSON(ctx, "GET", path, nil, &wire)
+	if err != nil {
+		var apiErr *tdx.APIError
+		if errors.As(err, &apiErr) && apiErr.Status == http.StatusNotFound {
+			return domain.TimeEntry{}, fmt.Errorf("%w: %d", domain.ErrEntryNotFound, id)
+		}
+		return domain.TimeEntry{}, fmt.Errorf("get entry: %w", err)
+	}
+	return decodeTimeEntry(wire)
 }

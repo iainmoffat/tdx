@@ -178,3 +178,43 @@ func TestSearchEntries_NoUserFilterOmitsPersonUIDs(t *testing.T) {
 	_, hasMaxResults := seenBody["MaxResults"]
 	require.False(t, hasMaxResults, "MaxResults should be omitted when Limit is 0")
 }
+
+func TestGetEntry_HappyPath(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/TDWebApi/api/time/987654", r.URL.Path)
+		require.Equal(t, "GET", r.Method)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{
+			"TimeID": 987654,
+			"ItemID": 12345,
+			"ItemTitle": "Ingest pipeline",
+			"AppID": 42,
+			"Component": 9,
+			"TicketID": 12345,
+			"TimeDate": "2026-04-06T00:00:00Z",
+			"Minutes": 120,
+			"TimeTypeID": 1,
+			"TimeTypeName": "Development",
+			"Status": 0
+		}`))
+	}))
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	entry, err := svc.GetEntry(context.Background(), profile, 987654)
+	require.NoError(t, err)
+	require.Equal(t, 987654, entry.ID)
+	require.Equal(t, domain.TargetTicket, entry.Target.Kind)
+}
+
+func TestGetEntry_NotFound(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`entry not found`))
+	}))
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	_, err := svc.GetEntry(context.Background(), profile, 999)
+	require.ErrorIs(t, err, domain.ErrEntryNotFound)
+}
