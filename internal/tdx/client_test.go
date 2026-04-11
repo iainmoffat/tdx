@@ -100,3 +100,32 @@ func TestClient_RejectsInvalidBaseURL(t *testing.T) {
 	_, err := NewClient("not a url", "t")
 	require.Error(t, err)
 }
+
+func TestClient_PingCallsTimeTypes(t *testing.T) {
+	var seenPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seenPath = r.URL.Path
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	c, err := NewClient(srv.URL, "t")
+	require.NoError(t, err)
+
+	require.NoError(t, c.Ping(context.Background()))
+	require.Equal(t, "/api/time/types", seenPath)
+}
+
+func TestClient_PingOnUnauthorizedReturnsErrInvalidToken(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer srv.Close()
+
+	c, err := NewClient(srv.URL, "t")
+	require.NoError(t, err)
+
+	err = c.Ping(context.Background())
+	require.ErrorIs(t, err, ErrUnauthorized)
+}

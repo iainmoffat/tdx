@@ -127,3 +127,10 @@ func parseRetryAfter(h string, cap time.Duration) time.Duration {
 	}
 	return 1 * time.Second
 }
+
+// Ping makes a cheap authenticated call to verify the token is valid.
+// It calls GET /api/time/types and discards the body; only the status matters.
+func (c *Client) Ping(ctx context.Context) error {
+	_, err := c.Do(ctx, http.MethodGet, "/api/time/types", nil)
+	return err
+}
