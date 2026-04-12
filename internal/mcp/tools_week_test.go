@@ -45,7 +45,8 @@ func TestGetWeekReport(t *testing.T) {
 	var report map[string]any
 	require.NoError(t, json.Unmarshal([]byte(text), &report))
 	require.Contains(t, report, "weekRef")
-	weekRef := report["weekRef"].(map[string]any)
+	weekRef, ok := report["weekRef"].(map[string]any)
+	require.True(t, ok, "weekRef should be a map")
 	require.Contains(t, weekRef["startDate"], "2026-04-05")
 }
 
