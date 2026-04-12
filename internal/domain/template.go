@@ -6,136 +6,117 @@ import (
 	"time"
 )
 
-// DeriveSource controls how a template row's time type is resolved when
-// applying the template to a week.
-type DeriveSource string
+// Template is a reusable weekly time pattern.
+type Template struct {
+	SchemaVersion int            `yaml:"schemaVersion" json:"schemaVersion"`
+	Name          string         `yaml:"name" json:"name"`
+	Description   string         `yaml:"description,omitempty" json:"description,omitempty"`
+	Tags          []string       `yaml:"tags,omitempty" json:"tags,omitempty"`
+	CreatedAt     time.Time      `yaml:"createdAt" json:"createdAt"`
+	ModifiedAt    time.Time      `yaml:"modifiedAt" json:"modifiedAt"`
+	DerivedFrom   *DeriveSource  `yaml:"derivedFrom,omitempty" json:"derivedFrom,omitempty"`
+	Rows          []TemplateRow  `yaml:"rows" json:"rows"`
+}
 
-const (
-	// DeriveFixed uses the TimeTypeID set explicitly on the row.
-	DeriveFixed DeriveSource = "fixed"
-	// DeriveTarget resolves the time type from the target's component lookup.
-	DeriveTarget DeriveSource = "target"
-)
+// DeriveSource records which live week a template was derived from.
+type DeriveSource struct {
+	Profile   string    `yaml:"profile" json:"profile"`
+	WeekStart time.Time `yaml:"weekStart" json:"weekStart"`
+	DerivedAt time.Time `yaml:"derivedAt" json:"derivedAt"`
+}
 
-// ResolverHints carries optional metadata that aids time-type resolution when
-// DeriveSource is DeriveTarget.
+// TemplateRow is one row in a template — a target + type + hours per day.
+type TemplateRow struct {
+	ID            string        `yaml:"id" json:"id"`
+	Label         string        `yaml:"label,omitempty" json:"label,omitempty"`
+	Target        Target        `yaml:"target" json:"target"`
+	TimeType      TimeType      `yaml:"timeType" json:"timeType"`
+	Description   string        `yaml:"description,omitempty" json:"description,omitempty"`
+	Billable      bool          `yaml:"billable" json:"billable"`
+	Hours         WeekHours     `yaml:"hours" json:"hours"`
+	ResolverHints ResolverHints `yaml:"resolverHints,omitempty" json:"resolverHints,omitempty"`
+}
+
+// ResolverHints stores display names captured at derive time for
+// re-validation and drift detection at apply time.
 type ResolverHints struct {
-	PreferBillable bool `json:"preferBillable,omitempty" yaml:"preferBillable,omitempty"`
+	TargetDisplayName string `yaml:"targetDisplayName,omitempty" json:"targetDisplayName,omitempty"`
+	TargetAppName     string `yaml:"targetAppName,omitempty" json:"targetAppName,omitempty"`
+	TimeTypeName      string `yaml:"timeTypeName,omitempty" json:"timeTypeName,omitempty"`
 }
 
 // WeekHours holds per-weekday hour allocations for a template row.
-// Fields are omitted from serialised output when zero.
+// Fields map to time.Weekday: Sun=0 through Sat=6. Zero values mean
+// "no entry for this day."
 type WeekHours struct {
-	Sun float64 `json:"sun,omitempty" yaml:"sun,omitempty"`
-	Mon float64 `json:"mon,omitempty" yaml:"mon,omitempty"`
-	Tue float64 `json:"tue,omitempty" yaml:"tue,omitempty"`
-	Wed float64 `json:"wed,omitempty" yaml:"wed,omitempty"`
-	Thu float64 `json:"thu,omitempty" yaml:"thu,omitempty"`
-	Fri float64 `json:"fri,omitempty" yaml:"fri,omitempty"`
-	Sat float64 `json:"sat,omitempty" yaml:"sat,omitempty"`
+	Sun float64 `yaml:"sun,omitempty" json:"sun,omitempty"`
+	Mon float64 `yaml:"mon,omitempty" json:"mon,omitempty"`
+	Tue float64 `yaml:"tue,omitempty" json:"tue,omitempty"`
+	Wed float64 `yaml:"wed,omitempty" json:"wed,omitempty"`
+	Thu float64 `yaml:"thu,omitempty" json:"thu,omitempty"`
+	Fri float64 `yaml:"fri,omitempty" json:"fri,omitempty"`
+	Sat float64 `yaml:"sat,omitempty" json:"sat,omitempty"`
 }
 
 // Total returns the sum of all seven day allocations.
-func (wh WeekHours) Total() float64 {
-	return wh.Sun + wh.Mon + wh.Tue + wh.Wed + wh.Thu + wh.Fri + wh.Sat
+func (h WeekHours) Total() float64 {
+	return h.Sun + h.Mon + h.Tue + h.Wed + h.Thu + h.Fri + h.Sat
 }
 
 // ForDay returns the hour allocation for the given weekday.
-// It returns 0 for any unrecognised weekday value.
-func (wh WeekHours) ForDay(d time.Weekday) float64 {
+func (h WeekHours) ForDay(d time.Weekday) float64 {
 	switch d {
 	case time.Sunday:
-		return wh.Sun
+		return h.Sun
 	case time.Monday:
-		return wh.Mon
+		return h.Mon
 	case time.Tuesday:
-		return wh.Tue
+		return h.Tue
 	case time.Wednesday:
-		return wh.Wed
+		return h.Wed
 	case time.Thursday:
-		return wh.Thu
+		return h.Thu
 	case time.Friday:
-		return wh.Fri
+		return h.Fri
 	case time.Saturday:
-		return wh.Sat
+		return h.Sat
 	}
 	return 0
 }
 
 // SetDay sets the hour allocation for the given weekday.
-// Unrecognised weekday values are silently ignored.
-func (wh *WeekHours) SetDay(d time.Weekday, hours float64) {
+func (h *WeekHours) SetDay(d time.Weekday, hours float64) {
 	switch d {
 	case time.Sunday:
-		wh.Sun = hours
+		h.Sun = hours
 	case time.Monday:
-		wh.Mon = hours
+		h.Mon = hours
 	case time.Tuesday:
-		wh.Tue = hours
+		h.Tue = hours
 	case time.Wednesday:
-		wh.Wed = hours
+		h.Wed = hours
 	case time.Thursday:
-		wh.Thu = hours
+		h.Thu = hours
 	case time.Friday:
-		wh.Fri = hours
+		h.Fri = hours
 	case time.Saturday:
-		wh.Sat = hours
+		h.Sat = hours
 	}
 }
 
 // ToMinutesExact converts the hour allocation for d to whole minutes.
-// It returns (minutes, true) only when the product is an exact integer
-// (no fractional minute). Returns (0, false) for non-exact values.
-func (wh WeekHours) ToMinutesExact(d time.Weekday) (int, bool) {
-	h := wh.ForDay(d)
-	raw := h * 60
+// Returns (minutes, true) only when the product is an exact integer.
+func (h WeekHours) ToMinutesExact(d time.Weekday) (int, bool) {
+	hours := h.ForDay(d)
+	raw := hours * 60
 	rounded := math.Round(raw)
-	if math.Abs(raw-rounded) > 1e-9 {
+	if math.Abs(raw-rounded) > 0.001 {
 		return 0, false
 	}
 	return int(rounded), true
 }
 
-// TemplateRow describes a single row in a schedule template — one line of
-// work against a specific target.
-type TemplateRow struct {
-	// ID is a short, unique key within the template (e.g. "standup", "tickets").
-	ID string `json:"id" yaml:"id"`
-
-	// Description is the optional default time-entry description.
-	Description string `json:"description,omitempty" yaml:"description,omitempty"`
-
-	// Target is the TD work item this row logs time against.
-	Target Target `json:"target" yaml:"target"`
-
-	// TimeTypeID is the explicit time type when Derive is DeriveFixed.
-	TimeTypeID int `json:"timeTypeID,omitempty" yaml:"timeTypeID,omitempty"`
-
-	// Derive controls how the time type is resolved at apply time.
-	Derive DeriveSource `json:"derive,omitempty" yaml:"derive,omitempty"`
-
-	// Hints provides additional hints for DeriveTarget resolution.
-	Hints ResolverHints `json:"hints,omitempty" yaml:"hints,omitempty"`
-
-	// Hours holds the per-weekday hour allocations for this row.
-	Hours WeekHours `json:"hours,omitempty" yaml:"hours,omitempty"`
-}
-
-// Template is a named schedule template composed of one or more rows.
-type Template struct {
-	// Name is the human-readable identifier for this template.
-	Name string `json:"name" yaml:"name"`
-
-	// Description is an optional longer description of the template's purpose.
-	Description string `json:"description,omitempty" yaml:"description,omitempty"`
-
-	// Rows is the ordered list of work rows in this template.
-	Rows []TemplateRow `json:"rows" yaml:"rows"`
-}
-
-// Validate returns nil if the template is structurally valid.
-// It checks: non-empty name, at least one row, no empty row IDs, no
-// duplicate row IDs.
+// Validate checks structural integrity of a template.
 func (t Template) Validate() error {
 	if t.Name == "" {
 		return fmt.Errorf("template name is required")

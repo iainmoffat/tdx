@@ -23,14 +23,16 @@ func testPaths(t *testing.T) config.Paths {
 
 func sampleTemplate() domain.Template {
 	return domain.Template{
-		Name:        "default-week",
-		Description: "Typical work week",
+		SchemaVersion: 1,
+		Name:          "default-week",
+		Description:   "Typical work week",
 		Rows: []domain.TemplateRow{
 			{
-				ID:         "row-01",
-				TimeTypeID: 5,
-				Target:     domain.Target{Kind: domain.TargetProject, ItemID: 54},
-				Hours:      domain.WeekHours{Mon: 8.0, Tue: 8.0, Wed: 8.0, Thu: 8.0, Fri: 8.0},
+				ID:       "row-01",
+				Label:    "Project work",
+				Target:   domain.Target{Kind: domain.TargetProject, ItemID: 54},
+				TimeType: domain.TimeType{ID: 5, Name: "Development"},
+				Hours:    domain.WeekHours{Mon: 8.0, Tue: 8.0, Wed: 8.0, Thu: 8.0, Fri: 8.0},
 			},
 		},
 	}
