@@ -268,6 +268,180 @@ func TestReconcile_DaysFilter(t *testing.T) {
 	require.False(t, days[time.Friday])
 }
 
+func TestReconcile_ReplaceMatchingMode_UpdatesExisting(t *testing.T) {
+	// Week has a matching entry on Monday (project/54, type 5) with 60 minutes
+	// instead of the template's 120 minutes. Template has Mon-Tue 2h.
+	reportJSON := `{
+		"ID": 1,
+		"PeriodStartDate": "2026-04-05T00:00:00Z",
+		"PeriodEndDate": "2026-04-11T00:00:00Z",
+		"Status": 0,
+		"TimeReportUid": "uid",
+		"UserFullName": "User",
+		"MinutesBillable": 0,
+		"MinutesNonBillable": 0,
+		"MinutesTotal": 60,
+		"TimeEntriesCount": 1,
+		"Times": [
+			{"TimeID":99,"Component":1,"ProjectID":54,"ItemID":54,"ItemTitle":"Proj","ProjectName":"Proj","TimeTypeID":5,"TimeTypeName":"","TimeDate":"2026-04-06T00:00:00Z","Minutes":60,"Description":"work","Billable":false,"Uid":"uid","Status":0,"StatusDate":"0001-01-01T00:00:00","CreatedDate":"0001-01-01T00:00:00","ModifiedDate":"0001-01-01T00:00:00","AppID":0,"AppName":"","TicketID":0,"PlanID":0,"PortfolioID":0,"Limited":false,"FunctionalRoleId":0}
+		]
+	}`
+	srv := reconcileServer(t, reportJSON, "[]", typesJSON)
+	defer srv.Close()
+
+	// Template with only Mon-Tue 2h.
+	tmpl := domain.Template{
+		SchemaVersion: 1,
+		Name:          "test-tmpl",
+		Rows: []domain.TemplateRow{
+			{
+				ID:       "row-01",
+				Target:   domain.Target{Kind: domain.TargetProject, ItemID: 54},
+				TimeType: domain.TimeType{ID: 5, Name: "Dev"},
+				Hours: domain.WeekHours{
+					Mon: 2.0, Tue: 2.0,
+				},
+				Description: "work",
+			},
+		},
+	}
+
+	paths, tsvc := tmplHarness(t, srv.URL)
+	svc := New(paths, tsvc)
+
+	diff, err := svc.Reconcile(context.Background(), "default", ReconcileInput{
+		Template: tmpl,
+		WeekRef:  testWeekRef(),
+		Mode:     domain.ModeReplaceMatching,
+		UserUID:  "test-uid",
+	})
+	require.NoError(t, err)
+
+	creates, updates, skips := diff.CountByKind()
+	require.Equal(t, 1, creates, "expected 1 create (Tue)")
+	require.Equal(t, 1, updates, "expected 1 update (Mon)")
+	require.Equal(t, 0, skips, "expected 0 skips")
+	require.Empty(t, diff.Blockers)
+
+	// Find the update action and verify it targets Monday with a minutes patch.
+	var updateAction domain.Action
+	for _, a := range diff.Actions {
+		if a.Kind == domain.ActionUpdate {
+			updateAction = a
+			break
+		}
+	}
+	require.Equal(t, time.Monday, updateAction.Date.Weekday())
+	require.Equal(t, 99, updateAction.ExistingID)
+	require.NotNil(t, updateAction.Patch.Minutes, "expected Patch.Minutes to be set")
+	require.Equal(t, 120, *updateAction.Patch.Minutes)
+
+	// Find the create action and verify it targets Tuesday.
+	var createAction domain.Action
+	for _, a := range diff.Actions {
+		if a.Kind == domain.ActionCreate {
+			createAction = a
+			break
+		}
+	}
+	require.Equal(t, time.Tuesday, createAction.Date.Weekday())
+}
+
+func TestReconcile_ReplaceMatchingMode_AlreadyMatches(t *testing.T) {
+	// Week has a matching entry on Monday with SAME values (120 minutes, same
+	// description). Mode: ModeReplaceMatching. Expect ActionSkip("alreadyMatches").
+	reportJSON := `{
+		"ID": 1,
+		"PeriodStartDate": "2026-04-05T00:00:00Z",
+		"PeriodEndDate": "2026-04-11T00:00:00Z",
+		"Status": 0,
+		"TimeReportUid": "uid",
+		"UserFullName": "User",
+		"MinutesBillable": 0,
+		"MinutesNonBillable": 0,
+		"MinutesTotal": 120,
+		"TimeEntriesCount": 1,
+		"Times": [
+			{"TimeID":99,"Component":1,"ProjectID":54,"ItemID":54,"ItemTitle":"Proj","ProjectName":"Proj","TimeTypeID":5,"TimeTypeName":"","TimeDate":"2026-04-06T00:00:00Z","Minutes":120,"Description":"work","Billable":false,"Uid":"uid","Status":0,"StatusDate":"0001-01-01T00:00:00","CreatedDate":"0001-01-01T00:00:00","ModifiedDate":"0001-01-01T00:00:00","AppID":0,"AppName":"","TicketID":0,"PlanID":0,"PortfolioID":0,"Limited":false,"FunctionalRoleId":0}
+		]
+	}`
+	srv := reconcileServer(t, reportJSON, "[]", typesJSON)
+	defer srv.Close()
+
+	// Template with only Mon 2h.
+	tmpl := domain.Template{
+		SchemaVersion: 1,
+		Name:          "test-tmpl",
+		Rows: []domain.TemplateRow{
+			{
+				ID:       "row-01",
+				Target:   domain.Target{Kind: domain.TargetProject, ItemID: 54},
+				TimeType: domain.TimeType{ID: 5, Name: "Dev"},
+				Hours: domain.WeekHours{
+					Mon: 2.0,
+				},
+				Description: "work",
+			},
+		},
+	}
+
+	paths, tsvc := tmplHarness(t, srv.URL)
+	svc := New(paths, tsvc)
+
+	diff, err := svc.Reconcile(context.Background(), "default", ReconcileInput{
+		Template: tmpl,
+		WeekRef:  testWeekRef(),
+		Mode:     domain.ModeReplaceMatching,
+		UserUID:  "test-uid",
+	})
+	require.NoError(t, err)
+
+	creates, updates, skips := diff.CountByKind()
+	require.Equal(t, 0, creates, "expected 0 creates")
+	require.Equal(t, 0, updates, "expected 0 updates")
+	require.Equal(t, 1, skips, "expected 1 skip")
+	require.Empty(t, diff.Blockers)
+	require.Len(t, diff.Actions, 1)
+
+	skipAction := diff.Actions[0]
+	require.Equal(t, domain.ActionSkip, skipAction.Kind)
+	require.Equal(t, "alreadyMatches", skipAction.SkipReason)
+	require.Equal(t, time.Monday, skipAction.Date.Weekday())
+}
+
+func TestReconcile_ReplaceMatchingMode_CreatesNew(t *testing.T) {
+	// Empty week. Template Mon-Fri 2h. Mode: ModeReplaceMatching.
+	// Expect 5 ActionCreate — same as add mode when nothing exists.
+	srv := reconcileServer(t, emptyReport(0), "[]", typesJSON)
+	defer srv.Close()
+
+	paths, tsvc := tmplHarness(t, srv.URL)
+	svc := New(paths, tsvc)
+
+	diff, err := svc.Reconcile(context.Background(), "default", ReconcileInput{
+		Template: testTemplate(),
+		WeekRef:  testWeekRef(),
+		Mode:     domain.ModeReplaceMatching,
+		UserUID:  "test-uid",
+	})
+	require.NoError(t, err)
+
+	creates, updates, skips := diff.CountByKind()
+	require.Equal(t, 5, creates, "expected 5 creates (Mon-Fri)")
+	require.Equal(t, 0, updates, "expected 0 updates")
+	require.Equal(t, 0, skips, "expected 0 skips")
+	require.Empty(t, diff.Blockers)
+	require.Len(t, diff.Actions, 5)
+
+	for _, a := range diff.Actions {
+		require.Equal(t, domain.ActionCreate, a.Kind)
+		require.Equal(t, 120, a.Entry.Minutes)
+		require.Equal(t, 5, a.Entry.TimeTypeID)
+		require.Equal(t, domain.TargetProject, a.Entry.Target.Kind)
+		require.Equal(t, 54, a.Entry.Target.ItemID)
+	}
+}
+
 func TestReconcile_DiffHashStable(t *testing.T) {
 	srv := reconcileServer(t, emptyReport(0), "[]", typesJSON)
 	defer srv.Close()
