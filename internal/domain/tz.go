@@ -3,8 +3,9 @@ package domain
 import "time"
 
 // EasternTZ is America/New_York, the canonical time zone for all date
-// computations in tdx. UFL's TeamDynamix tenant bills on Eastern time, so
-// "this week" and "today" must be computed there regardless of laptop clock.
+// computations in tdx. TeamDynamix tenants typically use Eastern time for
+// time entry dates, so "this week" and "today" must be computed there
+// regardless of laptop clock.
 //
 // The embedded tzdata import in cmd/tdx/main.go guarantees this load succeeds
 // even on minimal container images without system tzdata.

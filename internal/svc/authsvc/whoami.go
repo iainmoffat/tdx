@@ -11,7 +11,7 @@ import (
 // wireUser matches the JSON shape returned by GET /TDWebApi/api/auth/getuser.
 // TD's actual response uses ReferenceID for the integer user ID (there is
 // no top-level "ID" field) and AlternateEmail for the email fallback. These
-// names were verified against the UFL tenant on 2026-04-11.
+// field names verified against the TD Web API on 2026-04-11.
 type wireUser struct {
 	ReferenceID    int    `json:"ReferenceID"`
 	UID            string `json:"UID"`
