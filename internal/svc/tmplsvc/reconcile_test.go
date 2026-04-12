@@ -1,0 +1,293 @@
+package tmplsvc
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/ipm/tdx/internal/domain"
+	"github.com/stretchr/testify/require"
+)
+
+// reconcileServer builds an httptest.Server that serves the endpoints needed by
+// Reconcile: GET /api/time/report/{date}, GET /api/time/locked, and GET
+// /api/time/types. The caller supplies the week report JSON, locked-days JSON,
+// and time-types JSON; the server routes accordingly.
+func reconcileServer(t *testing.T, reportJSON, lockedJSON, typesJSON string) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/TDWebApi/api/time/report/"):
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(reportJSON))
+
+		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/time/locked":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(lockedJSON))
+
+		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/time/types":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(typesJSON))
+
+		default:
+			t.Logf("reconcileServer: unhandled %s %s", r.Method, r.URL)
+			http.NotFound(w, r)
+		}
+	}))
+}
+
+// emptyReport returns a week report JSON for a Sun 2026-04-05 .. Sat 2026-04-11
+// week with no time entries and the given status code.
+func emptyReport(statusCode int) string {
+	return fmt.Sprintf(`{
+		"ID": 1,
+		"PeriodStartDate": "2026-04-05T00:00:00Z",
+		"PeriodEndDate": "2026-04-11T00:00:00Z",
+		"Status": %d,
+		"TimeReportUid": "uid",
+		"UserFullName": "User",
+		"MinutesBillable": 0,
+		"MinutesNonBillable": 0,
+		"MinutesTotal": 0,
+		"TimeEntriesCount": 0,
+		"Times": []
+	}`, statusCode)
+}
+
+// typesJSON is a minimal time-types response with one active type (ID=5).
+const typesJSON = `[{"ID":5,"Name":"Dev","IsActive":true}]`
+
+// testTemplate returns a template with one row targeting project/54, type 5,
+// Mon-Fri 2h each.
+func testTemplate() domain.Template {
+	return domain.Template{
+		SchemaVersion: 1,
+		Name:          "test-tmpl",
+		Rows: []domain.TemplateRow{
+			{
+				ID:       "row-01",
+				Target:   domain.Target{Kind: domain.TargetProject, ItemID: 54},
+				TimeType: domain.TimeType{ID: 5, Name: "Dev"},
+				Hours: domain.WeekHours{
+					Mon: 2.0, Tue: 2.0, Wed: 2.0, Thu: 2.0, Fri: 2.0,
+				},
+				Description: "work",
+			},
+		},
+	}
+}
+
+// weekRef returns a WeekRef for the Sun 2026-04-05 .. Sat 2026-04-11 week.
+func testWeekRef() domain.WeekRef {
+	return domain.WeekRef{
+		StartDate: time.Date(2026, 4, 5, 0, 0, 0, 0, domain.EasternTZ),
+		EndDate:   time.Date(2026, 4, 11, 0, 0, 0, 0, domain.EasternTZ),
+	}
+}
+
+func TestReconcile_AddMode_AllCreate(t *testing.T) {
+	srv := reconcileServer(t, emptyReport(0), "[]", typesJSON)
+	defer srv.Close()
+
+	paths, tsvc := tmplHarness(t, srv.URL)
+	svc := New(paths, tsvc)
+
+	diff, err := svc.Reconcile(context.Background(), "default", ReconcileInput{
+		Template: testTemplate(),
+		WeekRef:  testWeekRef(),
+		Mode:     domain.ModeAdd,
+		UserUID:  "test-uid",
+	})
+	require.NoError(t, err)
+
+	// 5 Create actions for Mon-Fri, 0 blockers, 0 skips.
+	creates, updates, skips := diff.CountByKind()
+	require.Equal(t, 5, creates, "expected 5 creates")
+	require.Equal(t, 0, updates, "expected 0 updates")
+	require.Equal(t, 0, skips, "expected 0 skips")
+	require.Empty(t, diff.Blockers)
+	require.Len(t, diff.Actions, 5)
+
+	// Actions should be sorted by (RowID, Date).
+	for i := 1; i < len(diff.Actions); i++ {
+		prev := diff.Actions[i-1]
+		curr := diff.Actions[i]
+		require.True(t, prev.RowID < curr.RowID ||
+			(prev.RowID == curr.RowID && !prev.Date.After(curr.Date)),
+			"actions should be sorted by (RowID, Date)")
+	}
+
+	// Each create action should have the correct EntryInput.
+	for _, a := range diff.Actions {
+		require.Equal(t, domain.ActionCreate, a.Kind)
+		require.Equal(t, "row-01", a.RowID)
+		require.Equal(t, "test-uid", a.Entry.UserUID)
+		require.Equal(t, 120, a.Entry.Minutes) // 2h = 120m
+		require.Equal(t, 5, a.Entry.TimeTypeID)
+		require.Equal(t, domain.TargetProject, a.Entry.Target.Kind)
+		require.Equal(t, 54, a.Entry.Target.ItemID)
+		require.Equal(t, "work", a.Entry.Description)
+	}
+
+	// DiffHash must be non-empty.
+	require.NotEmpty(t, diff.DiffHash)
+}
+
+func TestReconcile_AddMode_ExistingSkipped(t *testing.T) {
+	// Week report has one matching entry on Monday (project/54, type 5).
+	reportJSON := `{
+		"ID": 1,
+		"PeriodStartDate": "2026-04-05T00:00:00Z",
+		"PeriodEndDate": "2026-04-11T00:00:00Z",
+		"Status": 0,
+		"TimeReportUid": "uid",
+		"UserFullName": "User",
+		"MinutesBillable": 0,
+		"MinutesNonBillable": 0,
+		"MinutesTotal": 120,
+		"TimeEntriesCount": 1,
+		"Times": [
+			{"TimeID":99,"Component":1,"ProjectID":54,"ItemID":54,"ItemTitle":"Proj","ProjectName":"Proj","TimeTypeID":5,"TimeTypeName":"","TimeDate":"2026-04-06T00:00:00Z","Minutes":120,"Description":"existing","Billable":false,"Uid":"uid","Status":0,"StatusDate":"0001-01-01T00:00:00","CreatedDate":"0001-01-01T00:00:00","ModifiedDate":"0001-01-01T00:00:00","AppID":0,"AppName":"","TicketID":0,"PlanID":0,"PortfolioID":0,"Limited":false,"FunctionalRoleId":0}
+		]
+	}`
+	srv := reconcileServer(t, reportJSON, "[]", typesJSON)
+	defer srv.Close()
+
+	paths, tsvc := tmplHarness(t, srv.URL)
+	svc := New(paths, tsvc)
+
+	diff, err := svc.Reconcile(context.Background(), "default", ReconcileInput{
+		Template: testTemplate(),
+		WeekRef:  testWeekRef(),
+		Mode:     domain.ModeAdd,
+		UserUID:  "test-uid",
+	})
+	require.NoError(t, err)
+
+	creates, _, skips := diff.CountByKind()
+	require.Equal(t, 4, creates, "expected 4 creates (Tue-Fri)")
+	require.Equal(t, 1, skips, "expected 1 skip (Mon)")
+	require.Empty(t, diff.Blockers)
+
+	// Find the skip action and verify reason.
+	var skipAction domain.Action
+	for _, a := range diff.Actions {
+		if a.Kind == domain.ActionSkip {
+			skipAction = a
+			break
+		}
+	}
+	require.Equal(t, "alreadyExists", skipAction.SkipReason)
+	// Monday is 2026-04-06.
+	require.Equal(t, time.Monday, skipAction.Date.Weekday())
+}
+
+func TestReconcile_LockedDayBlocker(t *testing.T) {
+	// Monday 2026-04-06 is locked.
+	lockedJSON := `["2026-04-06T00:00:00Z"]`
+	srv := reconcileServer(t, emptyReport(0), lockedJSON, typesJSON)
+	defer srv.Close()
+
+	paths, tsvc := tmplHarness(t, srv.URL)
+	svc := New(paths, tsvc)
+
+	diff, err := svc.Reconcile(context.Background(), "default", ReconcileInput{
+		Template: testTemplate(),
+		WeekRef:  testWeekRef(),
+		Mode:     domain.ModeAdd,
+		UserUID:  "test-uid",
+	})
+	require.NoError(t, err)
+
+	creates, _, _ := diff.CountByKind()
+	require.Equal(t, 4, creates, "expected 4 creates (Tue-Fri)")
+	require.Len(t, diff.Blockers, 1)
+	require.Equal(t, domain.BlockerLocked, diff.Blockers[0].Kind)
+	require.Equal(t, time.Monday, diff.Blockers[0].Date.Weekday())
+	require.Equal(t, "row-01", diff.Blockers[0].RowID)
+}
+
+func TestReconcile_SubmittedWeekBlocker(t *testing.T) {
+	// Status=1 means submitted.
+	srv := reconcileServer(t, emptyReport(1), "[]", typesJSON)
+	defer srv.Close()
+
+	paths, tsvc := tmplHarness(t, srv.URL)
+	svc := New(paths, tsvc)
+
+	diff, err := svc.Reconcile(context.Background(), "default", ReconcileInput{
+		Template: testTemplate(),
+		WeekRef:  testWeekRef(),
+		Mode:     domain.ModeAdd,
+		UserUID:  "test-uid",
+	})
+	require.NoError(t, err)
+
+	// All 5 days should be blockers (submitted), 0 actions.
+	require.Empty(t, diff.Actions)
+	require.Len(t, diff.Blockers, 5)
+	for _, b := range diff.Blockers {
+		require.Equal(t, domain.BlockerSubmitted, b.Kind)
+	}
+}
+
+func TestReconcile_DaysFilter(t *testing.T) {
+	srv := reconcileServer(t, emptyReport(0), "[]", typesJSON)
+	defer srv.Close()
+
+	paths, tsvc := tmplHarness(t, srv.URL)
+	svc := New(paths, tsvc)
+
+	diff, err := svc.Reconcile(context.Background(), "default", ReconcileInput{
+		Template:   testTemplate(),
+		WeekRef:    testWeekRef(),
+		Mode:       domain.ModeAdd,
+		DaysFilter: []time.Weekday{time.Monday, time.Tuesday, time.Wednesday},
+		UserUID:    "test-uid",
+	})
+	require.NoError(t, err)
+
+	creates, _, _ := diff.CountByKind()
+	require.Equal(t, 3, creates, "expected 3 creates (Mon-Wed)")
+	require.Empty(t, diff.Blockers)
+	require.Len(t, diff.Actions, 3)
+
+	// Verify only Mon, Tue, Wed are present.
+	days := make(map[time.Weekday]bool)
+	for _, a := range diff.Actions {
+		days[a.Date.Weekday()] = true
+	}
+	require.True(t, days[time.Monday])
+	require.True(t, days[time.Tuesday])
+	require.True(t, days[time.Wednesday])
+	require.False(t, days[time.Thursday])
+	require.False(t, days[time.Friday])
+}
+
+func TestReconcile_DiffHashStable(t *testing.T) {
+	srv := reconcileServer(t, emptyReport(0), "[]", typesJSON)
+	defer srv.Close()
+
+	paths, tsvc := tmplHarness(t, srv.URL)
+	svc := New(paths, tsvc)
+
+	input := ReconcileInput{
+		Template: testTemplate(),
+		WeekRef:  testWeekRef(),
+		Mode:     domain.ModeAdd,
+		UserUID:  "test-uid",
+	}
+
+	diff1, err := svc.Reconcile(context.Background(), "default", input)
+	require.NoError(t, err)
+
+	diff2, err := svc.Reconcile(context.Background(), "default", input)
+	require.NoError(t, err)
+
+	require.Equal(t, diff1.DiffHash, diff2.DiffHash, "DiffHash should be deterministic")
+	require.NotEmpty(t, diff1.DiffHash)
+}
