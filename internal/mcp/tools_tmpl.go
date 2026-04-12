@@ -12,37 +12,37 @@ import (
 )
 
 type listTemplatesArgs struct {
-	Profile string `json:"profile,omitempty" jsonschema:"description=profile name"`
+	Profile string `json:"profile,omitempty" jsonschema:"profile name"`
 }
 
 type getTemplateArgs struct {
-	Name    string `json:"name" jsonschema:"required,description=template name"`
-	Profile string `json:"profile,omitempty" jsonschema:"description=profile name"`
+	Name    string `json:"name" jsonschema:"template name"`
+	Profile string `json:"profile,omitempty" jsonschema:"profile name"`
 }
 
 type createTemplateArgs struct {
-	Name        string `json:"name" jsonschema:"required"`
+	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
-	Rows        string `json:"rows" jsonschema:"required,description=JSON array of template rows"`
-	Confirm     bool   `json:"confirm" jsonschema:"required"`
+	Rows        string `json:"rows" jsonschema:"JSON array of template rows"`
+	Confirm     bool   `json:"confirm" jsonschema:"must be true to execute"`
 }
 
 type updateTemplateArgs struct {
-	Name        string `json:"name" jsonschema:"required"`
+	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
-	Confirm     bool   `json:"confirm" jsonschema:"required"`
+	Confirm     bool   `json:"confirm" jsonschema:"must be true to execute"`
 }
 
 type deleteTemplateArgs struct {
-	Name    string `json:"name" jsonschema:"required"`
-	Confirm bool   `json:"confirm" jsonschema:"required"`
+	Name    string `json:"name"`
+	Confirm bool   `json:"confirm" jsonschema:"must be true to execute"`
 }
 
 type deriveTemplateArgs struct {
-	Name        string `json:"name" jsonschema:"required"`
-	FromWeek    string `json:"fromWeek" jsonschema:"required,description=source week YYYY-MM-DD"`
+	Name        string `json:"name"`
+	FromWeek    string `json:"fromWeek" jsonschema:"source week YYYY-MM-DD"`
 	Description string `json:"description,omitempty"`
-	Confirm     bool   `json:"confirm" jsonschema:"required"`
+	Confirm     bool   `json:"confirm" jsonschema:"must be true to execute"`
 	Profile     string `json:"profile,omitempty"`
 }
 

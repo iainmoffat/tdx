@@ -12,50 +12,50 @@ import (
 )
 
 type listEntriesArgs struct {
-	From     string `json:"from" jsonschema:"required,description=start date YYYY-MM-DD"`
-	To       string `json:"to" jsonschema:"required,description=end date YYYY-MM-DD"`
-	TicketID int    `json:"ticketID,omitempty" jsonschema:"description=filter by ticket ID"`
-	AppID    int    `json:"appID,omitempty" jsonschema:"description=app ID (with ticketID)"`
-	TypeID   int    `json:"typeID,omitempty" jsonschema:"description=filter by time type ID"`
-	UserUID  string `json:"userUID,omitempty" jsonschema:"description=filter by user UID"`
-	Limit    int    `json:"limit,omitempty" jsonschema:"description=max results (default 100)"`
-	Profile  string `json:"profile,omitempty" jsonschema:"description=profile name"`
+	From     string `json:"from" jsonschema:"start date YYYY-MM-DD"`
+	To       string `json:"to" jsonschema:"end date YYYY-MM-DD"`
+	TicketID int    `json:"ticketID,omitempty" jsonschema:"filter by ticket ID"`
+	AppID    int    `json:"appID,omitempty" jsonschema:"app ID (with ticketID)"`
+	TypeID   int    `json:"typeID,omitempty" jsonschema:"filter by time type ID"`
+	UserUID  string `json:"userUID,omitempty" jsonschema:"filter by user UID"`
+	Limit    int    `json:"limit,omitempty" jsonschema:"max results (default 100)"`
+	Profile  string `json:"profile,omitempty" jsonschema:"profile name"`
 }
 
 type getEntryArgs struct {
-	ID      int    `json:"id" jsonschema:"required,description=time entry ID"`
-	Profile string `json:"profile,omitempty" jsonschema:"description=profile name"`
+	ID      int    `json:"id" jsonschema:"time entry ID"`
+	Profile string `json:"profile,omitempty" jsonschema:"profile name"`
 }
 
 type createEntryArgs struct {
-	Date        string  `json:"date" jsonschema:"required,description=entry date YYYY-MM-DD"`
-	Hours       float64 `json:"hours,omitempty" jsonschema:"description=duration in hours"`
-	Minutes     int     `json:"minutes,omitempty" jsonschema:"description=duration in minutes"`
-	TypeID      int     `json:"typeID" jsonschema:"required,description=time type ID"`
-	Kind        string  `json:"kind" jsonschema:"required,description=target kind"`
-	ItemID      int     `json:"itemID" jsonschema:"required,description=work item ID"`
+	Date        string  `json:"date" jsonschema:"entry date YYYY-MM-DD"`
+	Hours       float64 `json:"hours,omitempty" jsonschema:"duration in hours"`
+	Minutes     int     `json:"minutes,omitempty" jsonschema:"duration in minutes"`
+	TypeID      int     `json:"typeID" jsonschema:"time type ID"`
+	Kind        string  `json:"kind" jsonschema:"target kind (ticket/project/workspace)"`
+	ItemID      int     `json:"itemID" jsonschema:"work item ID"`
 	AppID       int     `json:"appID,omitempty"`
 	TaskID      int     `json:"taskID,omitempty"`
 	Description string  `json:"description,omitempty"`
 	Billable    bool    `json:"billable,omitempty"`
-	Confirm     bool    `json:"confirm" jsonschema:"required,description=must be true to execute"`
+	Confirm     bool    `json:"confirm" jsonschema:"must be true to execute"`
 	Profile     string  `json:"profile,omitempty"`
 }
 
 type updateEntryArgs struct {
-	ID          int     `json:"id" jsonschema:"required"`
+	ID          int     `json:"id"`
 	Date        string  `json:"date,omitempty"`
 	Hours       float64 `json:"hours,omitempty"`
 	Minutes     int     `json:"minutes,omitempty"`
 	TypeID      int     `json:"typeID,omitempty"`
 	Description string  `json:"description,omitempty"`
-	Confirm     bool    `json:"confirm" jsonschema:"required"`
+	Confirm     bool    `json:"confirm" jsonschema:"must be true to execute"`
 	Profile     string  `json:"profile,omitempty"`
 }
 
 type deleteEntryArgs struct {
-	ID      int    `json:"id" jsonschema:"required"`
-	Confirm bool   `json:"confirm" jsonschema:"required"`
+	ID      int    `json:"id"`
+	Confirm bool   `json:"confirm" jsonschema:"must be true to execute"`
 	Profile string `json:"profile,omitempty"`
 }
 

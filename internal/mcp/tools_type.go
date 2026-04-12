@@ -9,15 +9,15 @@ import (
 )
 
 type listTypesArgs struct {
-	Profile string `json:"profile,omitempty" jsonschema:"description=profile name"`
+	Profile string `json:"profile,omitempty" jsonschema:"profile name"`
 }
 
 type typesForTargetArgs struct {
-	Kind    string `json:"kind" jsonschema:"required,description=target kind (ticket/project/workspace/etc)"`
-	ItemID  int    `json:"itemID" jsonschema:"required,description=work item ID"`
-	AppID   int    `json:"appID,omitempty" jsonschema:"description=app ID (required for tickets)"`
-	TaskID  int    `json:"taskID,omitempty" jsonschema:"description=task ID"`
-	Profile string `json:"profile,omitempty" jsonschema:"description=profile name"`
+	Kind    string `json:"kind" jsonschema:"target kind (ticket/project/workspace/etc)"`
+	ItemID  int    `json:"itemID" jsonschema:"work item ID"`
+	AppID   int    `json:"appID,omitempty" jsonschema:"app ID (required for tickets)"`
+	TaskID  int    `json:"taskID,omitempty" jsonschema:"task ID"`
+	Profile string `json:"profile,omitempty" jsonschema:"profile name"`
 }
 
 // RegisterTypeTools registers time-type lookup MCP tools.

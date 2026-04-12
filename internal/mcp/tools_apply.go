@@ -19,30 +19,30 @@ var dayNames = map[string]time.Weekday{
 }
 
 type compareArgs struct {
-	Name    string `json:"name" jsonschema:"required,description=template name"`
-	Week    string `json:"week" jsonschema:"required,description=any date in target week YYYY-MM-DD"`
-	Mode    string `json:"mode,omitempty" jsonschema:"description=apply mode: add (default) / replace-matching / replace-mine"`
-	Days    string `json:"days,omitempty" jsonschema:"description=day filter: mon-thu or mon,wed,fri"`
+	Name    string `json:"name" jsonschema:"template name"`
+	Week    string `json:"week" jsonschema:"any date in target week YYYY-MM-DD"`
+	Mode    string `json:"mode,omitempty" jsonschema:"apply mode: add (default) / replace-matching / replace-mine"`
+	Days    string `json:"days,omitempty" jsonschema:"day filter: mon-thu or mon,wed,fri"`
 	Profile string `json:"profile,omitempty"`
 }
 
 type previewArgs struct {
-	Name      string   `json:"name" jsonschema:"required,description=template name"`
-	Week      string   `json:"week" jsonschema:"required,description=target week YYYY-MM-DD"`
+	Name      string   `json:"name" jsonschema:"template name"`
+	Week      string   `json:"week" jsonschema:"target week YYYY-MM-DD"`
 	Mode      string   `json:"mode,omitempty"`
 	Days      string   `json:"days,omitempty"`
-	Overrides []string `json:"overrides,omitempty" jsonschema:"description=hour overrides e.g. row-01:fri=4"`
+	Overrides []string `json:"overrides,omitempty" jsonschema:"hour overrides e.g. row-01:fri=4"`
 	Profile   string   `json:"profile,omitempty"`
 }
 
 type applyTemplateArgs struct {
-	Name             string   `json:"name" jsonschema:"required"`
-	Week             string   `json:"week" jsonschema:"required"`
+	Name             string   `json:"name"`
+	Week             string   `json:"week"`
 	Mode             string   `json:"mode,omitempty"`
 	Days             string   `json:"days,omitempty"`
 	Overrides        []string `json:"overrides,omitempty"`
-	ExpectedDiffHash string   `json:"expectedDiffHash" jsonschema:"required,description=hash from preview_apply_time_template"`
-	Confirm          bool     `json:"confirm" jsonschema:"required"`
+	ExpectedDiffHash string   `json:"expectedDiffHash" jsonschema:"hash from preview_apply_time_template"`
+	Confirm          bool     `json:"confirm" jsonschema:"must be true to execute"`
 	Profile          string   `json:"profile,omitempty"`
 }
 

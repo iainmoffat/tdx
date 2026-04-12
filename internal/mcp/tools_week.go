@@ -10,14 +10,14 @@ import (
 )
 
 type weekReportArgs struct {
-	Date    string `json:"date" jsonschema:"required,description=any date in the target week YYYY-MM-DD"`
-	Profile string `json:"profile,omitempty" jsonschema:"description=profile name"`
+	Date    string `json:"date" jsonschema:"any date in the target week YYYY-MM-DD"`
+	Profile string `json:"profile,omitempty" jsonschema:"profile name"`
 }
 
 type lockedDaysArgs struct {
-	From    string `json:"from" jsonschema:"required,description=start date YYYY-MM-DD"`
-	To      string `json:"to" jsonschema:"required,description=end date YYYY-MM-DD"`
-	Profile string `json:"profile,omitempty" jsonschema:"description=profile name"`
+	From    string `json:"from" jsonschema:"start date YYYY-MM-DD"`
+	To      string `json:"to" jsonschema:"end date YYYY-MM-DD"`
+	Profile string `json:"profile,omitempty" jsonschema:"profile name"`
 }
 
 // RegisterWeekTools registers week-view MCP tools.

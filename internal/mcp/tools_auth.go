@@ -8,7 +8,7 @@ import (
 )
 
 type whoamiArgs struct {
-	Profile string `json:"profile,omitempty" jsonschema:"description=profile name (defaults to active)"`
+	Profile string `json:"profile,omitempty" jsonschema:"profile name (defaults to active profile)"`
 }
 
 type whoamiResponse struct {
