@@ -17,4 +17,11 @@ var (
 
 	// ErrInvalidToken indicates a token failed server-side validation.
 	ErrInvalidToken = errors.New("invalid token")
+
+	// ErrEntryNotFound indicates a GET /time/{id} returned 404.
+	ErrEntryNotFound = errors.New("time entry not found")
+
+	// ErrUnsupportedTargetKind indicates a TargetKind has no component-lookup
+	// endpoint, so `tdx time type for` cannot handle it.
+	ErrUnsupportedTargetKind = errors.New("unsupported target kind")
 )

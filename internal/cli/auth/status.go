@@ -18,6 +18,9 @@ type statusJSON struct {
 	Authenticated bool   `json:"authenticated"`
 	TokenValid    bool   `json:"tokenValid"`
 	Error         string `json:"error,omitempty"`
+	FullName      string `json:"fullName,omitempty"`
+	Email         string `json:"email,omitempty"`
+	UserError     string `json:"userError,omitempty"`
 }
 
 func newStatusCmd() *cobra.Command {
@@ -51,6 +54,9 @@ func newStatusCmd() *cobra.Command {
 					Authenticated: status.Authenticated,
 					TokenValid:    status.TokenValid,
 					Error:         status.ValidationErr,
+					FullName:      status.User.FullName,
+					Email:         status.User.Email,
+					UserError:     status.UserErr,
 				})
 			}
 
@@ -68,6 +74,17 @@ func newStatusCmd() *cobra.Command {
 			} else {
 				fmt.Fprintf(w, "token:    invalid (%s)\n", status.ValidationErr)
 				fmt.Fprintln(w, "          run 'tdx auth login' to refresh")
+				return nil
+			}
+
+			// Identity lines — only when we have a valid token.
+			if status.UserErr != "" {
+				fmt.Fprintf(w, "user:     (lookup failed: %s)\n", status.UserErr)
+			} else if !status.User.IsZero() {
+				fmt.Fprintf(w, "user:     %s\n", status.User.DisplayName())
+				if status.User.Email != "" {
+					fmt.Fprintf(w, "email:    %s\n", status.User.Email)
+				}
 			}
 			return nil
 		},

@@ -129,3 +129,150 @@ func TestClient_PingOnUnauthorizedReturnsErrInvalidToken(t *testing.T) {
 	err = c.Ping(context.Background())
 	require.ErrorIs(t, err, ErrUnauthorized)
 }
+
+func TestClient_DoJSON_DecodesResponseBody(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "application/json", r.Header.Get("Accept"))
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":42,"name":"widget"}`))
+	}))
+	defer srv.Close()
+
+	c, err := NewClient(srv.URL, "t")
+	require.NoError(t, err)
+
+	var got struct {
+		ID   int    `json:"id"`
+		Name string `json:"name"`
+	}
+	err = c.DoJSON(context.Background(), http.MethodGet, "/api/thing", nil, &got)
+	require.NoError(t, err)
+	require.Equal(t, 42, got.ID)
+	require.Equal(t, "widget", got.Name)
+}
+
+func TestClient_DoJSON_EncodesRequestBody(t *testing.T) {
+	var seenBody map[string]any
+	var seenCT string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seenCT = r.Header.Get("Content-Type")
+		_ = json.NewDecoder(r.Body).Decode(&seenBody)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	c, err := NewClient(srv.URL, "t")
+	require.NoError(t, err)
+
+	body := map[string]any{"q": "hello", "limit": 10}
+	var out []any
+	err = c.DoJSON(context.Background(), http.MethodPost, "/api/search", body, &out)
+	require.NoError(t, err)
+	require.Equal(t, "application/json", seenCT)
+	require.Equal(t, "hello", seenBody["q"])
+	require.Equal(t, float64(10), seenBody["limit"])
+}
+
+func TestClient_DoJSON_NilOutSkipsDecode(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	c, err := NewClient(srv.URL, "t")
+	require.NoError(t, err)
+
+	// Passing nil as `out` should not panic or error on empty body.
+	err = c.DoJSON(context.Background(), http.MethodGet, "/api/ping", nil, nil)
+	require.NoError(t, err)
+}
+
+func TestClient_DoJSON_NonNilOutEmptyBodySkipsDecode(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	c, err := NewClient(srv.URL, "t")
+	require.NoError(t, err)
+
+	// 204 with a non-nil out pointer must not error and must leave out at zero value.
+	var out struct {
+		ID int `json:"id"`
+	}
+	err = c.DoJSON(context.Background(), http.MethodGet, "/api/thing", nil, &out)
+	require.NoError(t, err)
+	require.Equal(t, 0, out.ID)
+}
+
+func TestClient_DoJSON_MarshalErrorReturned(t *testing.T) {
+	// httptest server is required because NewClient validates a real URL,
+	// but the request must never reach it — Marshal fails first.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("server should not have been called")
+	}))
+	defer srv.Close()
+
+	c, err := NewClient(srv.URL, "t")
+	require.NoError(t, err)
+
+	// chan int is not JSON-marshalable.
+	body := make(chan int)
+	err = c.DoJSON(context.Background(), http.MethodPost, "/api/thing", body, nil)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "marshal request body")
+}
+
+func TestClient_DoJSON_PropagatesUnauthorized(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer srv.Close()
+
+	c, err := NewClient(srv.URL, "t")
+	require.NoError(t, err)
+
+	var out map[string]any
+	err = c.DoJSON(context.Background(), http.MethodGet, "/api/thing", nil, &out)
+	require.ErrorIs(t, err, ErrUnauthorized)
+}
+
+func TestClient_DoJSON_PropagatesAPIError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`bad request`))
+	}))
+	defer srv.Close()
+
+	c, err := NewClient(srv.URL, "t")
+	require.NoError(t, err)
+
+	var out map[string]any
+	err = c.DoJSON(context.Background(), http.MethodGet, "/api/thing", nil, &out)
+	var apiErr *APIError
+	require.ErrorAs(t, err, &apiErr)
+	require.Equal(t, http.StatusBadRequest, apiErr.Status)
+}
+
+func TestClient_PreservesQueryString(t *testing.T) {
+	var seenPath, seenStart, seenEnd string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seenPath = r.URL.Path
+		seenStart = r.URL.Query().Get("startDate")
+		seenEnd = r.URL.Query().Get("endDate")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	c, err := NewClient(srv.URL, "t")
+	require.NoError(t, err)
+
+	_, err = c.Do(context.Background(), http.MethodGet, "/api/thing?startDate=2026-04-01&endDate=2026-04-30", nil)
+	require.NoError(t, err)
+
+	require.Equal(t, "/api/thing", seenPath, "the '?' must not be URL-encoded into the path")
+	require.Equal(t, "2026-04-01", seenStart)
+	require.Equal(t, "2026-04-30", seenEnd)
+}
