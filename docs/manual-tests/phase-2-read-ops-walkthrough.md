@@ -19,10 +19,29 @@ TeamDynamix tenant.
    Expected: `tdx 0.1.0-dev`.
 
 2. **Sign in (skip if already signed in).**
-   ```
-   ./tdx auth login --profile default --url https://ufl.teamdynamix.com/
-   ```
-   Paste your API token when prompted.
+
+   Three options:
+
+   - **SSO (recommended for end users):**
+     ```
+     ./tdx auth login --sso --profile default --url https://ufl.teamdynamix.com/
+     ```
+     This opens `https://ufl.teamdynamix.com/TDWebApi/api/auth/loginsso` in
+     your browser. Complete the SSO flow if prompted, then copy the token
+     shown on the resulting page and paste it back at the CLI prompt.
+
+   - **Manual paste (Phase 1 default — works without --sso):**
+     ```
+     ./tdx auth login --profile default --url https://ufl.teamdynamix.com/
+     ```
+     Find a token in the TD admin UI and paste it when prompted.
+
+   - **Scripted (CI / walkthrough automation):**
+     ```
+     echo "$TOKEN" | ./tdx auth login --token-stdin --profile default --url https://ufl.teamdynamix.com/
+     ```
+     Reads the token from stdin without a TTY prompt. Used by
+     `scripts/walkthrough.sh`.
 
 3. **Confirm auth status now shows identity.**
    ```
