@@ -232,13 +232,23 @@ func (s *Service) Reconcile(ctx context.Context, profileName string, input Recon
 			case domain.ModeReplaceMatching:
 				if found {
 					patch := buildPatch(existing, entry)
-					actions = append(actions, domain.Action{
-						Kind:       domain.ActionUpdate,
-						RowID:      row.ID,
-						Date:       date,
-						ExistingID: existing.ID,
-						Patch:      patch,
-					})
+					if patch.IsEmpty() {
+						actions = append(actions, domain.Action{
+							Kind:       domain.ActionSkip,
+							RowID:      row.ID,
+							Date:       date,
+							ExistingID: existing.ID,
+							SkipReason: "alreadyMatches",
+						})
+					} else {
+						actions = append(actions, domain.Action{
+							Kind:       domain.ActionUpdate,
+							RowID:      row.ID,
+							Date:       date,
+							ExistingID: existing.ID,
+							Patch:      patch,
+						})
+					}
 				} else {
 					actions = append(actions, domain.Action{
 						Kind:  domain.ActionCreate,
@@ -250,15 +260,28 @@ func (s *Service) Reconcile(ctx context.Context, profileName string, input Recon
 
 			case domain.ModeReplaceMine:
 				if found {
-					if input.Checker != nil && input.Checker.IsOwned(existing, input.Template.Name, row.ID) {
+					if input.Checker == nil {
+						return domain.ReconcileDiff{}, fmt.Errorf("reconcile: replace-mine mode requires an ownership checker")
+					}
+					if input.Checker.IsOwned(existing, input.Template.Name, row.ID) {
 						patch := buildPatch(existing, entry)
-						actions = append(actions, domain.Action{
-							Kind:       domain.ActionUpdate,
-							RowID:      row.ID,
-							Date:       date,
-							ExistingID: existing.ID,
-							Patch:      patch,
-						})
+						if patch.IsEmpty() {
+							actions = append(actions, domain.Action{
+								Kind:       domain.ActionSkip,
+								RowID:      row.ID,
+								Date:       date,
+								ExistingID: existing.ID,
+								SkipReason: "alreadyMatches",
+							})
+						} else {
+							actions = append(actions, domain.Action{
+								Kind:       domain.ActionUpdate,
+								RowID:      row.ID,
+								Date:       date,
+								ExistingID: existing.ID,
+								Patch:      patch,
+							})
+						}
 					} else {
 						actions = append(actions, domain.Action{
 							Kind:       domain.ActionSkip,
@@ -279,12 +302,18 @@ func (s *Service) Reconcile(ctx context.Context, profileName string, input Recon
 		}
 	}
 
-	// 8. Sort actions by (RowID, Date).
+	// 8. Sort actions and blockers by (RowID, Date) for stable hashing.
 	sort.SliceStable(actions, func(i, j int) bool {
 		if actions[i].RowID != actions[j].RowID {
 			return actions[i].RowID < actions[j].RowID
 		}
 		return actions[i].Date.Before(actions[j].Date)
+	})
+	sort.SliceStable(blockers, func(i, j int) bool {
+		if blockers[i].RowID != blockers[j].RowID {
+			return blockers[i].RowID < blockers[j].RowID
+		}
+		return blockers[i].Date.Before(blockers[j].Date)
 	})
 
 	// 9. Compute DiffHash.
@@ -333,13 +362,15 @@ type diffHashInput struct {
 }
 
 type diffHashAction struct {
-	Kind       string `json:"kind"`
-	RowID      string `json:"rowID"`
-	Date       string `json:"date"`
-	Minutes    int    `json:"minutes,omitempty"`
-	TimeTypeID int    `json:"timeTypeID,omitempty"`
-	ExistingID int    `json:"existingID,omitempty"`
-	SkipReason string `json:"skipReason,omitempty"`
+	Kind        string `json:"kind"`
+	RowID       string `json:"rowID"`
+	Date        string `json:"date"`
+	Minutes     int    `json:"minutes,omitempty"`
+	TimeTypeID  int    `json:"timeTypeID,omitempty"`
+	Billable    *bool  `json:"billable,omitempty"`
+	Description string `json:"description,omitempty"`
+	ExistingID  int    `json:"existingID,omitempty"`
+	SkipReason  string `json:"skipReason,omitempty"`
 }
 
 type diffHashBlocker struct {
@@ -368,12 +399,19 @@ func computeDiffHash(actions []domain.Action, blockers []domain.Blocker, mode do
 		case domain.ActionCreate:
 			ha.Minutes = a.Entry.Minutes
 			ha.TimeTypeID = a.Entry.TimeTypeID
+			b := a.Entry.Billable
+			ha.Billable = &b
+			ha.Description = a.Entry.Description
 		case domain.ActionUpdate:
 			if a.Patch.Minutes != nil {
 				ha.Minutes = *a.Patch.Minutes
 			}
 			if a.Patch.TimeTypeID != nil {
 				ha.TimeTypeID = *a.Patch.TimeTypeID
+			}
+			ha.Billable = a.Patch.Billable
+			if a.Patch.Description != nil {
+				ha.Description = *a.Patch.Description
 			}
 		}
 		input.Actions[i] = ha
