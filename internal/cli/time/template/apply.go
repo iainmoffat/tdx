@@ -134,14 +134,14 @@ func newApplyCmd() *cobra.Command {
 
 			if format == render.FormatJSON {
 				return render.JSON(w, struct {
-					Schema   string                `json:"schema"`
-					DiffHash string                `json:"diffHash"`
-					Creates  int                   `json:"creates"`
-					Updates  int                   `json:"updates"`
-					Skips    int                    `json:"skips"`
-					Blockers int                   `json:"blockers"`
-					Actions  []domain.Action       `json:"actions"`
-					BlockerList []domain.Blocker   `json:"blockerList,omitempty"`
+					Schema      string           `json:"schema"`
+					DiffHash    string           `json:"diffHash"`
+					Creates     int              `json:"creates"`
+					Updates     int              `json:"updates"`
+					Skips       int              `json:"skips"`
+					Blockers    int              `json:"blockers"`
+					Actions     []domain.Action  `json:"actions"`
+					BlockerList []domain.Blocker `json:"blockerList,omitempty"`
 				}{
 					Schema:      "tdx.v1.templateApplyPreview",
 					DiffHash:    diff.DiffHash,
@@ -158,7 +158,7 @@ func newApplyCmd() *cobra.Command {
 			render.Grid(w, diffToGridData(tmpl, diff))
 
 			// Summary line.
-			fmt.Fprintf(w, "\n%d to create, %d to update, %d skipped, %d blocked\n",
+			_, _ = fmt.Fprintf(w, "\n%d to create, %d to update, %d skipped, %d blocked\n",
 				creates, updates, skips, blockers)
 
 			// Dry-run: stop here.
@@ -168,7 +168,7 @@ func newApplyCmd() *cobra.Command {
 
 			// If neither --yes nor --dry-run, instruct user.
 			if !yesFlag {
-				fmt.Fprintf(w, "\nUse --yes to apply, or --dry-run to preview without changes.\n")
+				_, _ = fmt.Fprintf(w, "\nUse --yes to apply, or --dry-run to preview without changes.\n")
 				return nil
 			}
 
@@ -178,16 +178,16 @@ func newApplyCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Fprintf(w, "\napplied: %d created, %d updated, %d skipped",
+			_, _ = fmt.Fprintf(w, "\napplied: %d created, %d updated, %d skipped",
 				result.Created, result.Updated, result.Skipped)
 			if len(result.Failed) > 0 {
-				fmt.Fprintf(w, ", %d failed", len(result.Failed))
+				_, _ = fmt.Fprintf(w, ", %d failed", len(result.Failed))
 			}
-			fmt.Fprintln(w)
+			_, _ = fmt.Fprintln(w)
 
 			// Report individual failures.
 			for _, f := range result.Failed {
-				fmt.Fprintf(w, "  FAIL %s %s: %s\n", f.RowID, f.Date, f.Message)
+				_, _ = fmt.Fprintf(w, "  FAIL %s %s: %s\n", f.RowID, f.Date, f.Message)
 			}
 
 			if len(result.Failed) > 0 {

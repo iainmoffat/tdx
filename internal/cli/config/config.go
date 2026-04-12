@@ -29,10 +29,10 @@ func newPathCmd() *cobra.Command {
 				return err
 			}
 			w := cmd.OutOrStdout()
-			fmt.Fprintf(w, "root:         %s\n", p.Root)
-			fmt.Fprintf(w, "config:       %s\n", p.ConfigFile)
-			fmt.Fprintf(w, "credentials:  %s\n", p.CredentialsFile)
-			fmt.Fprintf(w, "templates:    %s\n", p.TemplatesDir)
+			_, _ = fmt.Fprintf(w, "root:         %s\n", p.Root)
+			_, _ = fmt.Fprintf(w, "config:       %s\n", p.ConfigFile)
+			_, _ = fmt.Fprintf(w, "credentials:  %s\n", p.CredentialsFile)
+			_, _ = fmt.Fprintf(w, "templates:    %s\n", p.TemplatesDir)
 			return nil
 		},
 	}
@@ -50,7 +50,7 @@ func newInitCmd() *cobra.Command {
 			if err := p.EnsureRoot(); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "initialised %s\n", p.Root)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "initialised %s\n", p.Root)
 			return nil
 		},
 	}
@@ -72,14 +72,14 @@ func newShowCmd() *cobra.Command {
 			}
 			w := cmd.OutOrStdout()
 			if len(cfg.Profiles) == 0 {
-				fmt.Fprintln(w, "no profiles configured")
-				fmt.Fprintln(w, "run 'tdx auth login' to create one")
+				_, _ = fmt.Fprintln(w, "no profiles configured")
+				_, _ = fmt.Fprintln(w, "run 'tdx auth login' to create one")
 				return nil
 			}
-			fmt.Fprintf(w, "default profile: %s\n", cfg.DefaultProfile)
-			fmt.Fprintln(w, "profiles:")
+			_, _ = fmt.Fprintf(w, "default profile: %s\n", cfg.DefaultProfile)
+			_, _ = fmt.Fprintln(w, "profiles:")
 			for _, prof := range cfg.Profiles {
-				fmt.Fprintf(w, "  - %s  %s\n", prof.Name, prof.TenantBaseURL)
+				_, _ = fmt.Fprintf(w, "  - %s  %s\n", prof.Name, prof.TenantBaseURL)
 			}
 			return nil
 		},

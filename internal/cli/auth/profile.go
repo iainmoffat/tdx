@@ -35,7 +35,7 @@ func newProfileListCmd() *cobra.Command {
 			}
 			w := cmd.OutOrStdout()
 			if len(cfg.Profiles) == 0 {
-				fmt.Fprintln(w, "no profiles configured")
+				_, _ = fmt.Fprintln(w, "no profiles configured")
 				return nil
 			}
 			for _, p := range cfg.Profiles {
@@ -43,7 +43,7 @@ func newProfileListCmd() *cobra.Command {
 				if p.Name == cfg.DefaultProfile {
 					marker = "* "
 				}
-				fmt.Fprintf(w, "%s%s  %s\n", marker, p.Name, p.TenantBaseURL)
+				_, _ = fmt.Fprintf(w, "%s%s  %s\n", marker, p.Name, p.TenantBaseURL)
 			}
 			return nil
 		},
@@ -65,11 +65,11 @@ func newProfileAddCmd() *cobra.Command {
 			if err := store.AddProfile(p); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "added profile %q\n", args[0])
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "added profile %q\n", args[0])
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&url, "url", "", "tenant base URL (e.g. https://ufl.teamdynamix.com/)")
+	cmd.Flags().StringVar(&url, "url", "", "tenant base URL (e.g. https://yourorg.teamdynamix.com/)")
 	_ = cmd.MarkFlagRequired("url")
 	return cmd
 }
@@ -87,7 +87,7 @@ func newProfileRemoveCmd() *cobra.Command {
 			if err := store.RemoveProfile(args[0]); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "removed profile %q\n", args[0])
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "removed profile %q\n", args[0])
 			return nil
 		},
 	}
@@ -106,7 +106,7 @@ func newProfileUseCmd() *cobra.Command {
 			if err := store.SetDefault(args[0]); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "default profile set to %q\n", args[0])
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "default profile set to %q\n", args[0])
 			return nil
 		},
 	}

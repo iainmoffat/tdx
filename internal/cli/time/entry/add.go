@@ -196,14 +196,14 @@ func runAdd(cmd *cobra.Command, f addFlags) error {
 
 	w := cmd.OutOrStdout()
 	if f.dryRun {
-		fmt.Fprintf(w, "dry run: would create entry\n")
-		fmt.Fprintf(w, "  date:        %s\n", date.Format("2006-01-02"))
-		fmt.Fprintf(w, "  minutes:     %d\n", durationMinutes)
-		fmt.Fprintf(w, "  hours:       %.2f\n", float64(durationMinutes)/60.0)
-		fmt.Fprintf(w, "  type:        %s\n", tt.Name)
-		fmt.Fprintf(w, "  target:      %s (kind=%s)\n", targetSummary(target), target.Kind)
+		_, _ = fmt.Fprintf(w, "dry run: would create entry\n")
+		_, _ = fmt.Fprintf(w, "  date:        %s\n", date.Format("2006-01-02"))
+		_, _ = fmt.Fprintf(w, "  minutes:     %d\n", durationMinutes)
+		_, _ = fmt.Fprintf(w, "  hours:       %.2f\n", float64(durationMinutes)/60.0)
+		_, _ = fmt.Fprintf(w, "  type:        %s\n", tt.Name)
+		_, _ = fmt.Fprintf(w, "  target:      %s (kind=%s)\n", targetSummary(target), target.Kind)
 		if f.description != "" {
-			fmt.Fprintf(w, "  description: %s\n", f.description)
+			_, _ = fmt.Fprintf(w, "  description: %s\n", f.description)
 		}
 		return nil
 	}
@@ -225,7 +225,7 @@ func runAdd(cmd *cobra.Command, f addFlags) error {
 		})
 	}
 
-	fmt.Fprintf(w, "created entry %d\n", entry.ID)
+	_, _ = fmt.Fprintf(w, "created entry %d\n", entry.ID)
 	printEntry(w, entry)
 	return nil
 }

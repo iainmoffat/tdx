@@ -92,7 +92,7 @@ func runDelete(cmd *cobra.Command, ids []int, f deleteFlags) error {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(w, "dry run: would delete entry %d\n", id)
+			_, _ = fmt.Fprintf(w, "dry run: would delete entry %d\n", id)
 			printEntry(w, entry)
 		}
 		return nil
@@ -115,7 +115,7 @@ func runDelete(cmd *cobra.Command, ids []int, f deleteFlags) error {
 			})
 		}
 
-		fmt.Fprintf(w, "deleted entry %d\n", id)
+		_, _ = fmt.Fprintf(w, "deleted entry %d\n", id)
 		return nil
 	}
 
@@ -140,13 +140,13 @@ func runDelete(cmd *cobra.Command, ids []int, f deleteFlags) error {
 
 	switch {
 	case result.FullSuccess():
-		fmt.Fprintf(w, "deleted %d entries\n", len(result.Succeeded))
+		_, _ = fmt.Fprintf(w, "deleted %d entries\n", len(result.Succeeded))
 
 	case result.PartialSuccess():
-		fmt.Fprintf(w, "deleted %d entries\n", len(result.Succeeded))
-		fmt.Fprintf(w, "failed to delete %d entries:\n", len(result.Failed))
+		_, _ = fmt.Fprintf(w, "deleted %d entries\n", len(result.Succeeded))
+		_, _ = fmt.Fprintf(w, "failed to delete %d entries:\n", len(result.Failed))
 		for _, bf := range result.Failed {
-			fmt.Fprintf(w, "  entry %d: %s\n", bf.ID, bf.Message)
+			_, _ = fmt.Fprintf(w, "  entry %d: %s\n", bf.ID, bf.Message)
 		}
 		return &ErrPartialDelete{
 			Succeeded: len(result.Succeeded),
@@ -161,4 +161,3 @@ func runDelete(cmd *cobra.Command, ids []int, f deleteFlags) error {
 
 	return nil
 }
-

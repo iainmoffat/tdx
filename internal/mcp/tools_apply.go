@@ -48,9 +48,9 @@ type applyTemplateArgs struct {
 
 // applyResult is the JSON shape returned by the apply tool.
 type applyResult struct {
-	Created int                  `json:"created"`
-	Updated int                  `json:"updated"`
-	Skipped int                  `json:"skipped"`
+	Created int                    `json:"created"`
+	Updated int                    `json:"updated"`
+	Skipped int                    `json:"skipped"`
 	Failed  []tmplsvc.ApplyFailure `json:"failed,omitempty"`
 }
 

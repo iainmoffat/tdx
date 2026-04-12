@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # scripts/walkthrough.sh
 #
-# Drives the Phase 2 walkthrough commands non-interactively against the live
-# UFL TeamDynamix tenant. Used by Claude (and humans) to validate the binary
+# Drives the Phase 2 walkthrough commands non-interactively against
+# a live TeamDynamix tenant. Used by Claude (and humans) to validate the binary
 # after each phase of work without manual command typing.
 #
-# Required env vars:
+# Required env vars (all must be set — no defaults):
 #   TDX_WALKTHROUGH_TOKEN  — a valid TD API JWT (e.g. fetched via tdx auth login --sso)
+#   TDX_WALKTHROUGH_URL    — tenant base URL (e.g. https://yourorg.teamdynamix.com/)
+#   TDX_WALKTHROUGH_WEEK   — a week date with known data (e.g. 2026-04-01)
 #
 # Optional env vars:
-#   TDX_WALKTHROUGH_URL    — tenant base URL (default https://ufl.teamdynamix.com/)
-#   TDX_WALKTHROUGH_WEEK   — a week date with known data (default 2026-04-01)
 #   TDX_WALKTHROUGH_BIN    — path to the tdx binary (default ./tdx)
 #
 # Behavior:
@@ -23,15 +23,26 @@
 set -euo pipefail
 
 # ---------- config ----------
-TENANT_URL="${TDX_WALKTHROUGH_URL:-https://ufl.teamdynamix.com/}"
-WEEK_DATE="${TDX_WALKTHROUGH_WEEK:-2026-04-01}"
 BIN="${TDX_WALKTHROUGH_BIN:-./tdx}"
-BUILT_OUR_OWN_BIN=0
 
-if [[ -z "${TDX_WALKTHROUGH_TOKEN:-}" ]]; then
-  echo "ERROR: TDX_WALKTHROUGH_TOKEN env var is required" >&2
-  exit 2
-fi
+# All walkthrough env vars are required — no defaults.
+# Set them for your TD tenant before running.
+required_vars=(
+  TDX_WALKTHROUGH_TOKEN
+  TDX_WALKTHROUGH_URL
+  TDX_WALKTHROUGH_WEEK
+)
+for var in "${required_vars[@]}"; do
+  if [[ -z "${!var:-}" ]]; then
+    echo "ERROR: $var env var is required" >&2
+    echo "  Example: export TDX_WALKTHROUGH_URL=https://yourorg.teamdynamix.com/" >&2
+    exit 2
+  fi
+done
+
+TENANT_URL="$TDX_WALKTHROUGH_URL"
+WEEK_DATE="$TDX_WALKTHROUGH_WEEK"
+BUILT_OUR_OWN_BIN=0
 
 # ---------- temp config dir ----------
 WALK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/tdx-walkthrough-XXXXXX")"
@@ -148,9 +159,16 @@ step "Step 14c: type list --json" \
 # Phase 3: Write operations (create → read → update → read → delete → verify)
 # ---------------------------------------------------------------------------
 
-WALKTHROUGH_PROJECT="${TDX_WALKTHROUGH_PROJECT:-54}"
-WALKTHROUGH_PLAN="${TDX_WALKTHROUGH_PLAN:-2091}"
-WALKTHROUGH_TASK="${TDX_WALKTHROUGH_TASK:-2612}"
+# Phase 3+ write steps require target IDs for your tenant.
+for var in TDX_WALKTHROUGH_PROJECT TDX_WALKTHROUGH_PLAN TDX_WALKTHROUGH_TASK; do
+  if [[ -z "${!var:-}" ]]; then
+    echo "ERROR: $var env var is required for write operation steps" >&2
+    exit 2
+  fi
+done
+WALKTHROUGH_PROJECT="$TDX_WALKTHROUGH_PROJECT"
+WALKTHROUGH_PLAN="$TDX_WALKTHROUGH_PLAN"
+WALKTHROUGH_TASK="$TDX_WALKTHROUGH_TASK"
 
 CREATED_ENTRY_ID=""
 
@@ -228,7 +246,11 @@ fi
 # ---------------------------------------------------------------------------
 
 TEMPLATE_NAME="walkthrough-test"
-WALKTHROUGH_APPLY_WEEK="${TDX_WALKTHROUGH_APPLY_WEEK:-2026-04-08}"
+if [[ -z "${TDX_WALKTHROUGH_APPLY_WEEK:-}" ]]; then
+  echo "ERROR: TDX_WALKTHROUGH_APPLY_WEEK env var is required for template steps" >&2
+  exit 2
+fi
+WALKTHROUGH_APPLY_WEEK="$TDX_WALKTHROUGH_APPLY_WEEK"
 
 # Cleanup trap for template.
 original_p4_cleanup=$(trap -p EXIT | sed "s/^trap -- '//;s/' EXIT$//")

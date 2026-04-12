@@ -605,3 +605,141 @@ func TestReconcile_DiffHashStable(t *testing.T) {
 	require.Equal(t, diff1.DiffHash, diff2.DiffHash, "DiffHash should be deterministic")
 	require.NotEmpty(t, diff1.DiffHash)
 }
+
+func TestReconcile_ZeroHourRowSkipped(t *testing.T) {
+	// Template row with all zero hours should produce no actions.
+	srv := reconcileServer(t, emptyReport(0), "[]", typesJSON)
+	defer srv.Close()
+
+	tmpl := domain.Template{
+		SchemaVersion: 1,
+		Name:          "zero-hours",
+		Rows: []domain.TemplateRow{
+			{
+				ID:       "row-zero",
+				Target:   domain.Target{Kind: domain.TargetProject, ItemID: 54},
+				TimeType: domain.TimeType{ID: 5, Name: "Dev"},
+				Hours:    domain.WeekHours{}, // all zeros
+			},
+		},
+	}
+
+	paths, tsvc := tmplHarness(t, srv.URL)
+	svc := New(paths, tsvc)
+
+	diff, err := svc.Reconcile(context.Background(), "default", ReconcileInput{
+		Template: tmpl,
+		WeekRef:  testWeekRef(),
+		Mode:     domain.ModeAdd,
+		UserUID:  "test-uid",
+	})
+	require.NoError(t, err)
+	require.Empty(t, diff.Actions, "zero-hour row should produce no actions")
+	require.Empty(t, diff.Blockers)
+}
+
+func TestReconcile_OverrideToZeroSkips(t *testing.T) {
+	// Template has Mon=2h, but override sets Mon=0 → Mon is skipped.
+	srv := reconcileServer(t, emptyReport(0), "[]", typesJSON)
+	defer srv.Close()
+
+	// Template with only Mon 2h.
+	tmpl := domain.Template{
+		SchemaVersion: 1,
+		Name:          "override-zero",
+		Rows: []domain.TemplateRow{
+			{
+				ID:          "row-01",
+				Target:      domain.Target{Kind: domain.TargetProject, ItemID: 54},
+				TimeType:    domain.TimeType{ID: 5, Name: "Dev"},
+				Hours:       domain.WeekHours{Mon: 2.0},
+				Description: "work",
+			},
+		},
+	}
+
+	paths, tsvc := tmplHarness(t, srv.URL)
+	svc := New(paths, tsvc)
+
+	diff, err := svc.Reconcile(context.Background(), "default", ReconcileInput{
+		Template: tmpl,
+		WeekRef:  testWeekRef(),
+		Mode:     domain.ModeAdd,
+		UserUID:  "test-uid",
+		Overrides: []Override{
+			{RowID: "row-01", Day: time.Monday, Hours: 0},
+		},
+	})
+	require.NoError(t, err)
+	require.Empty(t, diff.Actions, "override to zero should produce no actions")
+	require.Empty(t, diff.Blockers)
+}
+
+func TestReconcile_RoundingAllowed(t *testing.T) {
+	// Template with 1.333h (non-integer minutes) and Round=true → rounds to 80 min.
+	srv := reconcileServer(t, emptyReport(0), "[]", typesJSON)
+	defer srv.Close()
+
+	tmpl := domain.Template{
+		SchemaVersion: 1,
+		Name:          "rounding",
+		Rows: []domain.TemplateRow{
+			{
+				ID:          "row-round",
+				Target:      domain.Target{Kind: domain.TargetProject, ItemID: 54},
+				TimeType:    domain.TimeType{ID: 5, Name: "Dev"},
+				Hours:       domain.WeekHours{Mon: 1.333},
+				Description: "fractional",
+			},
+		},
+	}
+
+	paths, tsvc := tmplHarness(t, srv.URL)
+	svc := New(paths, tsvc)
+
+	diff, err := svc.Reconcile(context.Background(), "default", ReconcileInput{
+		Template: tmpl,
+		WeekRef:  testWeekRef(),
+		Mode:     domain.ModeAdd,
+		UserUID:  "test-uid",
+		Round:    true,
+	})
+	require.NoError(t, err)
+	require.Len(t, diff.Actions, 1)
+	// 1.333 * 60 = 79.98, math.Round → 80
+	require.Equal(t, 80, diff.Actions[0].Entry.Minutes)
+}
+
+func TestReconcile_RoundingRejected(t *testing.T) {
+	// Same template with Round=false → error.
+	srv := reconcileServer(t, emptyReport(0), "[]", typesJSON)
+	defer srv.Close()
+
+	tmpl := domain.Template{
+		SchemaVersion: 1,
+		Name:          "rounding",
+		Rows: []domain.TemplateRow{
+			{
+				ID:          "row-round",
+				Target:      domain.Target{Kind: domain.TargetProject, ItemID: 54},
+				TimeType:    domain.TimeType{ID: 5, Name: "Dev"},
+				Hours:       domain.WeekHours{Mon: 1.333},
+				Description: "fractional",
+			},
+		},
+	}
+
+	paths, tsvc := tmplHarness(t, srv.URL)
+	svc := New(paths, tsvc)
+
+	_, err := svc.Reconcile(context.Background(), "default", ReconcileInput{
+		Template: tmpl,
+		WeekRef:  testWeekRef(),
+		Mode:     domain.ModeAdd,
+		UserUID:  "test-uid",
+		Round:    false,
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "non-integer minutes")
+	require.Contains(t, err.Error(), "--round")
+}

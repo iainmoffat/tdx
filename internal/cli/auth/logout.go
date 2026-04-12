@@ -27,7 +27,7 @@ func newLogoutCmd() *cobra.Command {
 			if err := svc.Logout(profileName); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "logged out of profile %q\n", profileName)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "logged out of profile %q\n", profileName)
 			return nil
 		},
 	}

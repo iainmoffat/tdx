@@ -93,8 +93,8 @@ func (s *Service) Logout(profileName string) error {
 // Status describes the current state of an auth profile.
 type Status struct {
 	Profile       domain.Profile
-	Authenticated bool   // a token is stored
-	TokenValid    bool   // the stored token was accepted by the server (only set if Authenticated)
+	Authenticated bool // a token is stored
+	TokenValid    bool // the stored token was accepted by the server (only set if Authenticated)
 	ValidationErr string
 	User          domain.User `json:"user,omitempty"`
 	UserErr       string      `json:"userErr,omitempty"`

@@ -17,13 +17,13 @@ const gridEmptyCell = "."
 // grouped by (Target.DisplayRef, Target.DisplayName, TimeType.Name).
 // Days are always Sun..Sat (seven columns). Empty cells render as "." so gaps scan cleanly.
 func WeekGrid(w io.Writer, report domain.WeekReport) {
-	fmt.Fprintf(w, "Week %s — %s  (%s)\n\n",
+	_, _ = fmt.Fprintf(w, "Week %s — %s  (%s)\n\n",
 		report.WeekRef.StartDate.Format("2006-01-02"),
 		report.WeekRef.EndDate.Format("2006-01-02"),
 		report.Status)
 
 	if len(report.Entries) == 0 {
-		fmt.Fprintln(w, "  no entries in this week")
+		_, _ = fmt.Fprintln(w, "  no entries in this week")
 		return
 	}
 
@@ -108,9 +108,9 @@ func WeekGrid(w io.Writer, report domain.WeekReport) {
 			dayTotals[i] += r.byDay[i]
 		}
 		line += "  " + formatCell(r.total)
-		fmt.Fprintln(w, strings.TrimRight(line, " "))
+		_, _ = fmt.Fprintln(w, strings.TrimRight(line, " "))
 		// Sub-label row with type and app name.
-		fmt.Fprintf(w, "    └ %s\n", r.typ)
+		_, _ = fmt.Fprintf(w, "    └ %s\n", r.typ)
 	}
 
 	// Separator before totals.
@@ -122,7 +122,7 @@ func WeekGrid(w io.Writer, report domain.WeekReport) {
 		totalLine += "  " + formatCell(dayTotals[i])
 	}
 	totalLine += "  " + formatCell(report.TotalMinutes)
-	fmt.Fprintln(w, strings.TrimRight(totalLine, " "))
+	_, _ = fmt.Fprintln(w, strings.TrimRight(totalLine, " "))
 }
 
 func writeGridHeader(w io.Writer, labelWidth int) {
@@ -131,13 +131,13 @@ func writeGridHeader(w io.Writer, labelWidth int) {
 		header += "  " + padRight(d, gridDayWidth-1)
 	}
 	header += "  TOTAL"
-	fmt.Fprintln(w, strings.TrimRight(header, " "))
+	_, _ = fmt.Fprintln(w, strings.TrimRight(header, " "))
 }
 
 func writeGridSeparator(w io.Writer, labelWidth int) {
 	// Label + (7 days × (2 gutter + width)) + TOTAL column (7 chars including gutter).
 	total := labelWidth + 7*(2+gridDayWidth-1) + 2 + len("TOTAL")
-	fmt.Fprintln(w, strings.Repeat("─", total))
+	_, _ = fmt.Fprintln(w, strings.Repeat("─", total))
 }
 
 func formatCell(minutes int) string {
@@ -159,22 +159,22 @@ type GridData struct {
 type GridRow struct {
 	Label   string
 	Detail  string
-	Ref     string      // e.g. "(project)" or "(ticket #12345)"
-	Hours   [7]float64  // index 0=Sun .. 6=Sat
-	Markers [7]string   // "", "+", "=", "~", "✗" — per-cell annotations
+	Ref     string     // e.g. "(project)" or "(ticket #12345)"
+	Hours   [7]float64 // index 0=Sun .. 6=Sat
+	Markers [7]string  // "", "+", "=", "~", "✗" — per-cell annotations
 }
 
 // Grid writes a Row × Day grid to w from abstract GridData. Used for
 // template show, apply preview, and compare output.
 func Grid(w io.Writer, data GridData) {
-	fmt.Fprintln(w, data.Title)
+	_, _ = fmt.Fprintln(w, data.Title)
 	if data.Subtitle != "" {
-		fmt.Fprintln(w, data.Subtitle)
+		_, _ = fmt.Fprintln(w, data.Subtitle)
 	}
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 
 	if len(data.Rows) == 0 {
-		fmt.Fprintln(w, "  no rows")
+		_, _ = fmt.Fprintln(w, "  no rows")
 		return
 	}
 
@@ -210,9 +210,9 @@ func Grid(w io.Writer, data GridData) {
 			rowTotal += r.Hours[i]
 		}
 		line += "  " + padRight(fmt.Sprintf("%.1f", rowTotal), gridDayWidth-1)
-		fmt.Fprintln(w, strings.TrimRight(line, " "))
+		_, _ = fmt.Fprintln(w, strings.TrimRight(line, " "))
 		if r.Detail != "" {
-			fmt.Fprintf(w, "    └ %s\n", r.Detail)
+			_, _ = fmt.Fprintf(w, "    └ %s\n", r.Detail)
 		}
 	}
 
@@ -225,7 +225,7 @@ func Grid(w io.Writer, data GridData) {
 		grandTotal += dayTotals[i]
 	}
 	totalLine += "  " + padRight(fmt.Sprintf("%.1f", grandTotal), gridDayWidth-1)
-	fmt.Fprintln(w, strings.TrimRight(totalLine, " "))
+	_, _ = fmt.Fprintln(w, strings.TrimRight(totalLine, " "))
 }
 
 // formatGridCell formats a single cell with optional marker prefix.

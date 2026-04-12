@@ -23,7 +23,7 @@ func TestSession_HasToken(t *testing.T) {
 			want:    true,
 		},
 		{
-			name:    "session with profile and token",
+			name: "session with profile and token",
 			session: Session{
 				Profile: Profile{Name: "default", TenantBaseURL: "https://ufl.teamdynamix.com/"},
 				Token:   "xyz",
@@ -31,7 +31,7 @@ func TestSession_HasToken(t *testing.T) {
 			want: true,
 		},
 		{
-			name:    "session with profile but no token",
+			name: "session with profile but no token",
 			session: Session{
 				Profile: Profile{Name: "default", TenantBaseURL: "https://ufl.teamdynamix.com/"},
 			},

@@ -65,10 +65,10 @@ func monDayTemplate() domain.Template {
 		Name:          "mon-tmpl",
 		Rows: []domain.TemplateRow{
 			{
-				ID:       "row-01",
-				Target:   domain.Target{Kind: domain.TargetProject, ItemID: 54},
-				TimeType: domain.TimeType{ID: 5, Name: "Dev"},
-				Hours:    domain.WeekHours{Mon: 2.0},
+				ID:          "row-01",
+				Target:      domain.Target{Kind: domain.TargetProject, ItemID: 54},
+				TimeType:    domain.TimeType{ID: 5, Name: "Dev"},
+				Hours:       domain.WeekHours{Mon: 2.0},
 				Description: "work",
 			},
 		},
@@ -83,10 +83,10 @@ func monTueDayTemplate() domain.Template {
 		Name:          "mon-tue-tmpl",
 		Rows: []domain.TemplateRow{
 			{
-				ID:       "row-01",
-				Target:   domain.Target{Kind: domain.TargetProject, ItemID: 54},
-				TimeType: domain.TimeType{ID: 5, Name: "Dev"},
-				Hours:    domain.WeekHours{Mon: 2.0, Tue: 2.0},
+				ID:          "row-01",
+				Target:      domain.Target{Kind: domain.TargetProject, ItemID: 54},
+				TimeType:    domain.TimeType{ID: 5, Name: "Dev"},
+				Hours:       domain.WeekHours{Mon: 2.0, Tue: 2.0},
 				Description: "work",
 			},
 		},

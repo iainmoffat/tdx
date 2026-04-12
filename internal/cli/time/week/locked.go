@@ -80,14 +80,14 @@ func newLockedCmd() *cobra.Command {
 
 			w := cmd.OutOrStdout()
 			if len(days) == 0 {
-				fmt.Fprintln(w, "no locked days in range")
+				_, _ = fmt.Fprintln(w, "no locked days in range")
 				return nil
 			}
 			for _, d := range days {
 				if d.Reason != "" {
-					fmt.Fprintf(w, "%s  %s\n", d.Date.Format("2006-01-02"), d.Reason)
+					_, _ = fmt.Fprintf(w, "%s  %s\n", d.Date.Format("2006-01-02"), d.Reason)
 				} else {
-					fmt.Fprintln(w, d.Date.Format("2006-01-02"))
+					_, _ = fmt.Fprintln(w, d.Date.Format("2006-01-02"))
 				}
 			}
 			return nil

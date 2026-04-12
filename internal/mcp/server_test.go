@@ -38,7 +38,7 @@ func TestNewServer_RegistersAllTools(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		_ = cs.Close()
-		ss.Wait()
+		_ = ss.Wait()
 	})
 
 	result, err := cs.ListTools(ctx, nil)

@@ -23,10 +23,10 @@ type rowKey struct {
 
 // rowAccumulator holds the in-progress state for one template row group.
 type rowAccumulator struct {
-	target      domain.Target
-	timeType    domain.TimeType
-	billable    bool
-	hours       domain.WeekHours
+	target       domain.Target
+	timeType     domain.TimeType
+	billable     bool
+	hours        domain.WeekHours
 	descriptions map[string]int // description → occurrence count
 }
 
@@ -133,11 +133,11 @@ func (s *Service) Derive(ctx context.Context, profileName, templateName string, 
 		}
 
 		rows = append(rows, domain.TemplateRow{
-			Label:    label,
-			Target:   acc.target,
-			TimeType: acc.timeType,
-			Billable: acc.billable,
-			Hours:    acc.hours,
+			Label:       label,
+			Target:      acc.target,
+			TimeType:    acc.timeType,
+			Billable:    acc.billable,
+			Hours:       acc.hours,
 			Description: desc,
 			ResolverHints: domain.ResolverHints{
 				TargetDisplayName: acc.target.DisplayName,

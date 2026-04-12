@@ -153,16 +153,16 @@ func TestAddCmd_ProjectTaskSuccess(t *testing.T) {
 
 func TestAddCmd_LockedDayRejection(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/TDWebApi/api/auth/getuser":
+		switch r.URL.Path {
+		case "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"ReferenceID":42,"UID":"user-abc","FullName":"Test User","PrimaryEmail":"test@example.com"}`))
 
-		case r.URL.Path == "/TDWebApi/api/time/types":
+		case "/TDWebApi/api/time/types":
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`[{"ID":10,"Name":"Development","IsActive":true,"IsBillable":false}]`))
 
-		case r.URL.Path == "/TDWebApi/api/time/locked":
+		case "/TDWebApi/api/time/locked":
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`["2026-04-11T00:00:00Z"]`))
 

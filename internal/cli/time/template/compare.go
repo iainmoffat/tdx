@@ -125,12 +125,12 @@ no --yes or --dry-run flags.`,
 
 			if format == render.FormatJSON {
 				return render.JSON(w, struct {
-					Schema      string          `json:"schema"`
-					DiffHash    string          `json:"diffHash"`
-					Creates     int             `json:"creates"`
-					Updates     int             `json:"updates"`
-					Skips       int             `json:"skips"`
-					Blockers    int             `json:"blockers"`
+					Schema      string           `json:"schema"`
+					DiffHash    string           `json:"diffHash"`
+					Creates     int              `json:"creates"`
+					Updates     int              `json:"updates"`
+					Skips       int              `json:"skips"`
+					Blockers    int              `json:"blockers"`
 					Actions     []domain.Action  `json:"actions"`
 					BlockerList []domain.Blocker `json:"blockerList,omitempty"`
 				}{
@@ -149,7 +149,7 @@ no --yes or --dry-run flags.`,
 			render.Grid(w, diffToGridData(tmpl, diff))
 
 			// Summary line.
-			fmt.Fprintf(w, "\n%d to create, %d to update, %d skipped, %d blocked\n",
+			_, _ = fmt.Fprintf(w, "\n%d to create, %d to update, %d skipped, %d blocked\n",
 				creates, updates, skips, blockers)
 
 			return nil

@@ -62,7 +62,7 @@ func newListCmd() *cobra.Command {
 			}
 
 			if len(templates) == 0 {
-				fmt.Fprintln(w, "no templates saved")
+				_, _ = fmt.Fprintln(w, "no templates saved")
 				return nil
 			}
 

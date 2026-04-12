@@ -110,19 +110,18 @@ before being saved to ~/.config/tdx/credentials.yaml.`,
 				}
 			}
 			if tenantURL == "" {
-				tenantURL = "https://ufl.teamdynamix.com/"
-				fmt.Fprintf(cmd.ErrOrStderr(), "no --url given; defaulting to %s\n", tenantURL)
+				return fmt.Errorf("--url is required (no existing profile to inherit from)\n  Example: tdx auth login --url https://yourorg.teamdynamix.com/")
 			}
 
-			fmt.Fprintf(cmd.ErrOrStderr(), "Signing in to %s as profile %q.\n", tenantURL, profileName)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Signing in to %s as profile %q.\n", tenantURL, profileName)
 
 			// --sso: open the browser to the loginsso URL (best effort).
 			if ssoFlag {
 				ssoURL := strings.TrimRight(tenantURL, "/") + "/TDWebApi/api/auth/loginsso"
-				fmt.Fprintf(cmd.ErrOrStderr(), "Opening %s in your browser.\n", ssoURL)
-				fmt.Fprintln(cmd.ErrOrStderr(), "Complete the SSO flow if prompted, then copy the token shown.")
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Opening %s in your browser.\n", ssoURL)
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "Complete the SSO flow if prompted, then copy the token shown.")
 				if err := openBrowser(ssoURL); err != nil {
-					fmt.Fprintf(cmd.ErrOrStderr(), "(could not open browser automatically: %s — please open the URL manually)\n", err)
+					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "(could not open browser automatically: %s — please open the URL manually)\n", err)
 				}
 			}
 
@@ -134,7 +133,7 @@ before being saved to ~/.config/tdx/credentials.yaml.`,
 			if tokenStdinFlag {
 				activeReader = stdinReader{in: stdinSource}
 			} else {
-				fmt.Fprintln(cmd.ErrOrStderr(), "Paste your TD API token and press Enter:")
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "Paste your TD API token and press Enter:")
 			}
 
 			raw, err := activeReader.ReadToken("Token: ")
@@ -151,12 +150,12 @@ before being saved to ~/.config/tdx/credentials.yaml.`,
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "signed in as profile %q (%s)\n", sess.Profile.Name, sess.Profile.TenantBaseURL)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "signed in as profile %q (%s)\n", sess.Profile.Name, sess.Profile.TenantBaseURL)
 			return nil
 		},
 	}
 	cmd.Flags().StringVar(&profileFlag, "profile", "", "profile name to sign in as (default: existing default or 'default')")
-	cmd.Flags().StringVar(&urlFlag, "url", "", "tenant base URL (default: existing profile or https://ufl.teamdynamix.com/)")
+	cmd.Flags().StringVar(&urlFlag, "url", "", "tenant base URL (required for first login; inherited from existing profile afterward)")
 	cmd.Flags().BoolVar(&ssoFlag, "sso", false, "open the TD SSO URL in your browser before prompting for the token")
 	cmd.Flags().BoolVar(&tokenStdinFlag, "token-stdin", false, "read the token from stdin instead of prompting on the TTY (for scripts/CI)")
 	return cmd

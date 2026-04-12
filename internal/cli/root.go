@@ -22,5 +22,6 @@ func NewRootCmd(version string) *cobra.Command {
 	root.AddCommand(auth.NewCmd())
 	root.AddCommand(timecli.NewCmd())
 	root.AddCommand(mcpcli.NewCmd())
+	root.AddCommand(newCompletionCmd())
 	return root
 }
