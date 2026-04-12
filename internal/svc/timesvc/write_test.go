@@ -159,3 +159,90 @@ func TestUpdateEntry_NotFound(t *testing.T) {
 	_, err := svc.UpdateEntry(context.Background(), profile, 9999, update)
 	require.Error(t, err)
 }
+
+func TestDeleteEntry_Success(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, http.MethodDelete, r.Method)
+		require.Equal(t, "/TDWebApi/api/time/999", r.URL.Path)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	err := svc.DeleteEntry(context.Background(), profile, 999)
+	require.NoError(t, err)
+}
+
+func TestDeleteEntry_NotFound(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	err := svc.DeleteEntry(context.Background(), profile, 9999)
+	require.Error(t, err)
+}
+
+func TestDeleteEntries_AllSucceed(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, http.MethodPost, r.Method)
+		require.Equal(t, "/TDWebApi/api/time/delete", r.URL.Path)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"Succeeded":[{"Index":0,"ID":1},{"Index":1,"ID":2}],"Failed":[]}`))
+	}))
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	result, err := svc.DeleteEntries(context.Background(), profile, []int{1, 2})
+	require.NoError(t, err)
+	require.True(t, result.FullSuccess())
+	require.Len(t, result.Succeeded, 2)
+}
+
+func TestDeleteEntries_PartialFailure(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"Succeeded":[{"Index":0,"ID":1}],"Failed":[{"Index":1,"TimeEntryID":2,"ErrorMessage":"Could not find a time entry with an ID of 2","ErrorCode":10,"ErrorCodeName":"InvalidTimeEntryID"}]}`))
+	}))
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	result, err := svc.DeleteEntries(context.Background(), profile, []int{1, 2})
+	require.NoError(t, err)
+	require.True(t, result.PartialSuccess())
+	require.Len(t, result.Failed, 1)
+	require.Equal(t, 2, result.Failed[0].ID)
+}
+
+func TestDeleteEntries_AutoSplitAt50(t *testing.T) {
+	callCount := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		body, _ := io.ReadAll(r.Body)
+		var ids []int
+		require.NoError(t, json.Unmarshal(body, &ids))
+		require.LessOrEqual(t, len(ids), 50, "batch size must not exceed 50")
+
+		var succeeded []wireBulkSuccess
+		for i, id := range ids {
+			succeeded = append(succeeded, wireBulkSuccess{Index: i, ID: id})
+		}
+		result := wireBulkResult{Succeeded: succeeded}
+		resp, _ := json.Marshal(result)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(resp)
+	}))
+	defer srv.Close()
+
+	ids := make([]int, 51)
+	for i := range ids {
+		ids[i] = i + 1
+	}
+
+	svc, profile := harness(t, srv.URL)
+	result, err := svc.DeleteEntries(context.Background(), profile, ids)
+	require.NoError(t, err)
+	require.Equal(t, 2, callCount, "51 IDs should require 2 API calls")
+	require.Len(t, result.Succeeded, 51)
+}

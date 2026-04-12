@@ -104,3 +104,61 @@ func (s *Service) UpdateEntry(ctx context.Context, profileName string, id int, u
 	}
 	return single[0], nil
 }
+
+const maxBatchSize = 50
+
+// DeleteEntry deletes a single time entry by ID.
+func (s *Service) DeleteEntry(ctx context.Context, profileName string, id int) error {
+	client, err := s.clientFor(profileName)
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf("/TDWebApi/api/time/%d", id)
+	if err := client.DoJSON(ctx, "DELETE", path, nil, nil); err != nil {
+		return fmt.Errorf("delete entry %d: %w", id, err)
+	}
+	return nil
+}
+
+// DeleteEntries deletes multiple time entries in batches of 50.
+// Returns a BatchResult with succeeded and failed IDs.
+func (s *Service) DeleteEntries(ctx context.Context, profileName string, ids []int) (domain.BatchResult, error) {
+	client, err := s.clientFor(profileName)
+	if err != nil {
+		return domain.BatchResult{}, err
+	}
+
+	var result domain.BatchResult
+
+	for i := 0; i < len(ids); i += maxBatchSize {
+		end := i + maxBatchSize
+		if end > len(ids) {
+			end = len(ids)
+		}
+		chunk := ids[i:end]
+
+		var bulk wireBulkResult
+		if err := client.DoJSON(ctx, "POST", "/TDWebApi/api/time/delete", chunk, &bulk); err != nil {
+			for _, id := range chunk {
+				result.Failed = append(result.Failed, domain.BatchFailure{
+					ID:      id,
+					Message: err.Error(),
+				})
+			}
+			continue
+		}
+
+		for _, s := range bulk.Succeeded {
+			result.Succeeded = append(result.Succeeded, s.ID)
+		}
+		for _, f := range bulk.Failed {
+			result.Failed = append(result.Failed, domain.BatchFailure{
+				ID:      f.TimeEntryID,
+				Message: f.ErrorMessage,
+			})
+		}
+	}
+
+	return result, nil
+}
