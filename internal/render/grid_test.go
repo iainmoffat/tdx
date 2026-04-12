@@ -192,3 +192,92 @@ func TestWeekGrid_SpringForwardBucketing(t *testing.T) {
 	require.True(t, len(dataLine) > sunIdx, "data line shorter than expected")
 	require.Equal(t, byte('.'), dataLine[sunIdx], "Sunday cell should be empty (.); got %q at idx %d in %q", dataLine[sunIdx], sunIdx, dataLine)
 }
+
+func TestGrid_BasicTemplate(t *testing.T) {
+	data := GridData{
+		Title: "default-week — Typical work week",
+		Rows: []GridRow{
+			{
+				Label:  "Platform standup",
+				Detail: "General Admin · Platform Services",
+				Ref:    "(project)",
+				Hours:  [7]float64{0, 1.0, 1.0, 1.0, 1.0, 1.0, 0},
+			},
+			{
+				Label:  "Ingest pipeline",
+				Detail: "Development · IT Help Desk",
+				Ref:    "(ticket #12345)",
+				Hours:  [7]float64{0, 3.0, 3.0, 3.0, 3.0, 3.0, 0},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	Grid(&buf, data)
+	got := buf.String()
+
+	require.Contains(t, got, "default-week")
+	require.Contains(t, got, "Platform standup")
+	require.Contains(t, got, "Ingest pipeline")
+	require.Contains(t, got, "General Admin")
+	require.Contains(t, got, "SUN")
+	require.Contains(t, got, "SAT")
+	require.Contains(t, got, "DAY TOTAL")
+	require.Contains(t, got, "20.0") // 5+15 total
+}
+
+func TestGrid_WithMarkers(t *testing.T) {
+	data := GridData{
+		Title: "Apply preview",
+		Rows: []GridRow{
+			{
+				Label:   "Work item",
+				Detail:  "Dev",
+				Hours:   [7]float64{0, 2.0, 2.0, 0, 0, 0, 0},
+				Markers: [7]string{"", "+", "=", "", "", "", ""},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	Grid(&buf, data)
+	got := buf.String()
+
+	require.Contains(t, got, "+2.0")
+	require.Contains(t, got, "=2.0")
+}
+
+func TestGrid_EmptyRows(t *testing.T) {
+	data := GridData{
+		Title: "Empty",
+		Rows:  nil,
+	}
+
+	var buf bytes.Buffer
+	Grid(&buf, data)
+	got := buf.String()
+
+	require.Contains(t, got, "Empty")
+	require.Contains(t, got, "no rows")
+}
+
+func TestGrid_WithSubtitle(t *testing.T) {
+	data := GridData{
+		Title:    "test-template — My template",
+		Subtitle: "(derived from 2026-03-15)",
+		Rows: []GridRow{
+			{
+				Label: "Row 1",
+				Hours: [7]float64{0, 8.0, 8.0, 8.0, 8.0, 8.0, 0},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	Grid(&buf, data)
+	got := buf.String()
+
+	require.Contains(t, got, "test-template")
+	require.Contains(t, got, "(derived from 2026-03-15)")
+	require.Contains(t, got, "40.0") // 5*8 total
+}

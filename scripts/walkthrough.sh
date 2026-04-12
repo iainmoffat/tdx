@@ -223,6 +223,45 @@ if [[ -n "$CREATED_ENTRY_ID" ]]; then
     1
 fi
 
+# ---------------------------------------------------------------------------
+# Phase 4: Template operations (derive → show → compare → apply dry-run → cleanup)
+# ---------------------------------------------------------------------------
+
+TEMPLATE_NAME="walkthrough-test"
+WALKTHROUGH_APPLY_WEEK="${TDX_WALKTHROUGH_APPLY_WEEK:-2026-04-08}"
+
+# Cleanup trap for template.
+original_p4_cleanup=$(trap -p EXIT | sed "s/^trap -- '//;s/' EXIT$//")
+cleanup_template() {
+  "$BIN" time template delete "$TEMPLATE_NAME" 2>/dev/null || true
+  eval "$original_p4_cleanup"
+}
+trap cleanup_template EXIT INT TERM
+
+step "Template: derive from week" \
+  "$BIN time template derive $TEMPLATE_NAME --from-week $WEEK_DATE --profile default" \
+  "derived template"
+
+step "Template: list" \
+  "$BIN time template list" \
+  "$TEMPLATE_NAME"
+
+step "Template: show (grid)" \
+  "$BIN time template show $TEMPLATE_NAME" \
+  "ROW"
+
+step "Template: compare vs next week" \
+  "$BIN time template compare $TEMPLATE_NAME --week $WALKTHROUGH_APPLY_WEEK --profile default" \
+  "create"
+
+step "Template: apply dry-run" \
+  "$BIN time template apply $TEMPLATE_NAME --week $WALKTHROUGH_APPLY_WEEK --dry-run --profile default" \
+  "create"
+
+step "Template: delete" \
+  "$BIN time template delete $TEMPLATE_NAME" \
+  "deleted"
+
 # ---------- failure cases ----------
 step "F-A: ticket without app" \
   "$BIN time entry list --ticket 12345" \

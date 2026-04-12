@@ -146,3 +146,100 @@ func formatCell(minutes int) string {
 	}
 	return padRight(fmt.Sprintf("%.1f", float64(minutes)/60.0), gridDayWidth-1)
 }
+
+// GridData is the abstract input for the grid renderer. Both templates and
+// week reports can be converted to this format.
+type GridData struct {
+	Title    string
+	Subtitle string
+	Rows     []GridRow
+}
+
+// GridRow is one row in the grid.
+type GridRow struct {
+	Label   string
+	Detail  string
+	Ref     string      // e.g. "(project)" or "(ticket #12345)"
+	Hours   [7]float64  // index 0=Sun .. 6=Sat
+	Markers [7]string   // "", "+", "=", "~", "✗" — per-cell annotations
+}
+
+// Grid writes a Row × Day grid to w from abstract GridData. Used for
+// template show, apply preview, and compare output.
+func Grid(w io.Writer, data GridData) {
+	fmt.Fprintln(w, data.Title)
+	if data.Subtitle != "" {
+		fmt.Fprintln(w, data.Subtitle)
+	}
+	fmt.Fprintln(w)
+
+	if len(data.Rows) == 0 {
+		fmt.Fprintln(w, "  no rows")
+		return
+	}
+
+	// Compute label column width.
+	labelWidth := len("  ROW")
+	for _, r := range data.Rows {
+		label := "  " + r.Label
+		if r.Ref != "" {
+			label += " " + r.Ref
+		}
+		if len(label) > labelWidth {
+			labelWidth = len(label)
+		}
+	}
+
+	// Header + separator.
+	writeGridHeader(w, labelWidth)
+	writeGridSeparator(w, labelWidth)
+
+	// Data rows.
+	var dayTotals [7]float64
+	for _, r := range data.Rows {
+		label := "  " + r.Label
+		if r.Ref != "" {
+			label += " " + r.Ref
+		}
+		line := padRight(label, labelWidth)
+		rowTotal := 0.0
+		for i := 0; i < 7; i++ {
+			cell := formatGridCell(r.Hours[i], r.Markers[i])
+			line += "  " + cell
+			dayTotals[i] += r.Hours[i]
+			rowTotal += r.Hours[i]
+		}
+		line += "  " + padRight(fmt.Sprintf("%.1f", rowTotal), gridDayWidth-1)
+		fmt.Fprintln(w, strings.TrimRight(line, " "))
+		if r.Detail != "" {
+			fmt.Fprintf(w, "    └ %s\n", r.Detail)
+		}
+	}
+
+	// Separator + day totals.
+	writeGridSeparator(w, labelWidth)
+	totalLine := padRight("  DAY TOTAL", labelWidth)
+	grandTotal := 0.0
+	for i := 0; i < 7; i++ {
+		totalLine += "  " + formatGridCell(dayTotals[i], "")
+		grandTotal += dayTotals[i]
+	}
+	totalLine += "  " + padRight(fmt.Sprintf("%.1f", grandTotal), gridDayWidth-1)
+	fmt.Fprintln(w, strings.TrimRight(totalLine, " "))
+}
+
+// formatGridCell formats a single cell with optional marker prefix.
+// Used by Grid() — the older WeekGrid() uses formatCell() instead.
+func formatGridCell(hours float64, marker string) string {
+	if hours == 0 && marker == "" {
+		return padRight(gridEmptyCell, gridDayWidth-1)
+	}
+	if hours == 0 && marker != "" {
+		return padRight(marker, gridDayWidth-1)
+	}
+	val := fmt.Sprintf("%.1f", hours)
+	if marker != "" {
+		val = marker + val
+	}
+	return padRight(val, gridDayWidth-1)
+}
