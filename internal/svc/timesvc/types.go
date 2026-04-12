@@ -153,3 +153,42 @@ type wireTimeSearch struct {
 	PersonUIDs     []string   `json:"PersonUIDs,omitempty"`
 	MaxResults     int        `json:"MaxResults,omitempty"`
 }
+
+// wireTimeEntryWrite is the request body for POST/PUT /api/time.
+// Field names verified against live UFL tenant during Phase 3 Step 0 probing.
+type wireTimeEntryWrite struct {
+	TimeID      int     `json:"TimeID,omitempty"`
+	Uid         string  `json:"Uid"`
+	TimeDate    string  `json:"TimeDate"`
+	Minutes     float64 `json:"Minutes"`
+	TimeTypeID  int     `json:"TimeTypeID"`
+	Component   int     `json:"Component"`
+	TicketID    int     `json:"TicketID,omitempty"`
+	ProjectID   int     `json:"ProjectID,omitempty"`
+	PlanID      int     `json:"PlanID,omitempty"`
+	PortfolioID int     `json:"PortfolioID,omitempty"`
+	ItemID      int     `json:"ItemID,omitempty"`
+	AppID       int     `json:"AppID,omitempty"`
+	Description string  `json:"Description"`
+	Billable    bool    `json:"Billable"`
+}
+
+// wireBulkResult is the response from batch POST /api/time and POST /api/time/delete.
+// Shape verified against live UFL tenant during Phase 3 Step 0 probing.
+type wireBulkResult struct {
+	Succeeded []wireBulkSuccess `json:"Succeeded"`
+	Failed    []wireBulkFailure `json:"Failed"`
+}
+
+type wireBulkSuccess struct {
+	Index int `json:"Index"`
+	ID    int `json:"ID"`
+}
+
+type wireBulkFailure struct {
+	Index         int    `json:"Index"`
+	TimeEntryID   int    `json:"TimeEntryID"`
+	ErrorMessage  string `json:"ErrorMessage"`
+	ErrorCode     int    `json:"ErrorCode"`
+	ErrorCodeName string `json:"ErrorCodeName"`
+}
