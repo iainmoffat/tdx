@@ -107,7 +107,7 @@ func newForCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&profileFlag, "profile", "", "profile name (defaults to active profile)")
-	cmd.Flags().IntVar(&appFlag, "app", 0, "application ID (required)")
+	cmd.Flags().IntVar(&appFlag, "app", 0, "application ID (required for ticket and ticketTask kinds; ignored otherwise)")
 	cmd.Flags().IntVar(&taskFlag, "task", 0, "task or issue ID (required for ticketTask and projectIssue)")
 	cmd.Flags().BoolVar(&jsonFlag, "json", false, "emit JSON output")
 	return cmd
