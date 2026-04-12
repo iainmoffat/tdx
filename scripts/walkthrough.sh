@@ -262,6 +262,14 @@ step "Template: delete" \
   "$BIN time template delete $TEMPLATE_NAME" \
   "deleted"
 
+# ---------------------------------------------------------------------------
+# Phase 5: MCP server (verify wiring)
+# ---------------------------------------------------------------------------
+
+step "MCP: serve help" \
+  "$BIN mcp serve --help" \
+  "Start the MCP server"
+
 # ---------- failure cases ----------
 step "F-A: ticket without app" \
   "$BIN time entry list --ticket 12345" \
