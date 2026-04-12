@@ -1,8 +1,10 @@
 package auth
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -28,6 +30,29 @@ func (ttyReader) ReadToken(prompt string) (string, error) {
 		return "", err
 	}
 	return string(b), nil
+}
+
+// stdinReader reads a token from an io.Reader (typically os.Stdin) without
+// any TTY check. Used by --token-stdin for scripted/CI use where there is
+// no terminal. Reads the FIRST line only and trims surrounding whitespace,
+// so a trailing newline from `echo "$TOKEN"` is handled cleanly.
+type stdinReader struct {
+	in io.Reader
+}
+
+func (r stdinReader) ReadToken(prompt string) (string, error) {
+	scanner := bufio.NewScanner(r.in)
+	if !scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			return "", fmt.Errorf("read token from stdin: %w", err)
+		}
+		return "", fmt.Errorf("empty token on stdin")
+	}
+	tok := strings.TrimSpace(scanner.Text())
+	if tok == "" {
+		return "", fmt.Errorf("empty token on stdin")
+	}
+	return tok, nil
 }
 
 func newLoginCmd(reader TokenReader) *cobra.Command {

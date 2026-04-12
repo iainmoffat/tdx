@@ -78,3 +78,24 @@ func TestLogin_ServerRejectsToken(t *testing.T) {
 	_, err = creds.GetToken("default")
 	require.Error(t, err, "no token should be written on failure")
 }
+
+func TestStdinReader_ReadToken_TrimsWhitespace(t *testing.T) {
+	r := stdinReader{in: strings.NewReader("  abc-123-token  \n")}
+	got, err := r.ReadToken("ignored prompt")
+	require.NoError(t, err)
+	require.Equal(t, "abc-123-token", got)
+}
+
+func TestStdinReader_ReadToken_EmptyInputErrors(t *testing.T) {
+	r := stdinReader{in: strings.NewReader("")}
+	_, err := r.ReadToken("ignored")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "empty token")
+}
+
+func TestStdinReader_ReadToken_HandlesMultilineByTakingFirstLine(t *testing.T) {
+	r := stdinReader{in: strings.NewReader("line-one-token\nline-two-noise\n")}
+	got, err := r.ReadToken("ignored")
+	require.NoError(t, err)
+	require.Equal(t, "line-one-token", got)
+}
