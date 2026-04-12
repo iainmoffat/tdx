@@ -10,6 +10,9 @@ coverage.*
 go.work
 go.work.sum
 
+# Superpowers plans/specs (local working docs)
+docs/superpowers/
+
 # Editor and OS noise
 .DS_Store
 .idea/
