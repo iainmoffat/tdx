@@ -51,6 +51,16 @@ func TestTarget_Validate(t *testing.T) {
 		{"ticket task valid", Target{Kind: TargetTicketTask, AppID: 42, ItemID: 12345, TaskID: 7}, false},
 		{"project task requires taskID", Target{Kind: TargetProjectTask, AppID: 42, ItemID: 12345}, true},
 		{"project task valid", Target{Kind: TargetProjectTask, AppID: 42, ItemID: 12345, TaskID: 7}, false},
+		// Ticket kinds require AppID; non-ticket kinds do not.
+		{"ticket requires appID", Target{Kind: TargetTicket, ItemID: 12345}, true},
+		{"ticketTask requires appID", Target{Kind: TargetTicketTask, ItemID: 12345, TaskID: 7}, true},
+		// Project and related kinds legitimately have AppID=0.
+		{"project valid without appID", Target{Kind: TargetProject, ItemID: 100}, false},
+		{"projectTask valid without appID", Target{Kind: TargetProjectTask, ItemID: 100, TaskID: 5}, false},
+		{"projectIssue valid without appID", Target{Kind: TargetProjectIssue, ItemID: 100}, false},
+		{"workspace valid without appID", Target{Kind: TargetWorkspace, ItemID: 100}, false},
+		{"timeoff valid without appID", Target{Kind: TargetTimeOff, ItemID: 100}, false},
+		{"portfolio valid without appID", Target{Kind: TargetPortfolio, ItemID: 100}, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

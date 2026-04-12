@@ -144,6 +144,85 @@ step "Step 14c: type list --json" \
   "$BIN time type list --json" \
   '"schema": "tdx.v1.timeTypes"'
 
+# ---------------------------------------------------------------------------
+# Phase 3: Write operations (create → read → update → read → delete → verify)
+# ---------------------------------------------------------------------------
+
+WALKTHROUGH_PROJECT="${TDX_WALKTHROUGH_PROJECT:-54}"
+WALKTHROUGH_PLAN="${TDX_WALKTHROUGH_PLAN:-2091}"
+WALKTHROUGH_TASK="${TDX_WALKTHROUGH_TASK:-2612}"
+
+CREATED_ENTRY_ID=""
+
+# Cleanup trap: delete the test entry if it was created.
+# Chain with existing cleanup function.
+original_cleanup=$(trap -p EXIT | sed "s/^trap -- '//;s/' EXIT$//")
+cleanup_entry() {
+  if [[ -n "$CREATED_ENTRY_ID" ]]; then
+    echo "Cleaning up: deleting test entry $CREATED_ENTRY_ID"
+    "$BIN" time entry delete "$CREATED_ENTRY_ID" --profile default 2>/dev/null || true
+    CREATED_ENTRY_ID=""
+  fi
+  eval "$original_cleanup"
+}
+trap cleanup_entry EXIT INT TERM
+
+echo
+echo "=== Write: entry add ==="
+ADD_OUTPUT=$("$BIN" time entry add \
+  --date "$WEEK_DATE" \
+  --minutes 15 \
+  --type "Development" \
+  --project "$WALKTHROUGH_PROJECT" \
+  --plan "$WALKTHROUGH_PLAN" \
+  --task "$WALKTHROUGH_TASK" \
+  -d "walkthrough test entry" \
+  --profile default 2>&1)
+ADD_EXIT=$?
+
+if [[ "$ADD_EXIT" -ne 0 ]]; then
+  echo "FAIL: entry add (exit $ADD_EXIT)"
+  echo "$ADD_OUTPUT"
+  FAIL_COUNT=$((FAIL_COUNT + 1))
+else
+  CREATED_ENTRY_ID=$(echo "$ADD_OUTPUT" | grep -o 'created entry [0-9]*' | grep -o '[0-9]*')
+  if [[ -z "$CREATED_ENTRY_ID" ]]; then
+    echo "FAIL: could not extract entry ID from add output"
+    echo "$ADD_OUTPUT"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+  else
+    PASS_COUNT=$((PASS_COUNT + 1))
+    echo "PASS (created entry $CREATED_ENTRY_ID)"
+  fi
+fi
+
+if [[ -n "$CREATED_ENTRY_ID" ]]; then
+  step "Write: entry show created" \
+    "$BIN time entry show $CREATED_ENTRY_ID --profile default" \
+    "walkthrough test entry"
+
+  step "Write: entry update description" \
+    "$BIN time entry update $CREATED_ENTRY_ID -d 'updated by walkthrough' --profile default" \
+    "updated entry $CREATED_ENTRY_ID"
+
+  step "Write: entry show after update" \
+    "$BIN time entry show $CREATED_ENTRY_ID --profile default" \
+    "updated by walkthrough"
+
+  step "Write: entry delete" \
+    "$BIN time entry delete $CREATED_ENTRY_ID --profile default" \
+    "deleted entry $CREATED_ENTRY_ID"
+
+  # Clear so cleanup trap doesn't try to delete again.
+  DELETED_ID="$CREATED_ENTRY_ID"
+  CREATED_ENTRY_ID=""
+
+  step "Write: entry show after delete (expect not found)" \
+    "$BIN time entry show $DELETED_ID --profile default" \
+    "not found" \
+    1
+fi
+
 # ---------- failure cases ----------
 step "F-A: ticket without app" \
   "$BIN time entry list --ticket 12345" \
