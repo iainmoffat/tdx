@@ -104,6 +104,20 @@ func TestTypeFor_TicketRequiresApp(t *testing.T) {
 	require.Contains(t, err.Error()+out.String(), "--app")
 }
 
+func TestTypeFor_TicketTaskRequiresApp(t *testing.T) {
+	seedProfile(t, "http://127.0.0.1/")
+
+	var out bytes.Buffer
+	cmd := NewCmd()
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	// ticketTask also needs --task; pass it so the only missing piece is --app.
+	cmd.SetArgs([]string{"for", "ticketTask", "12345", "--task", "5"})
+	err := cmd.Execute()
+	require.Error(t, err)
+	require.Contains(t, err.Error()+out.String(), "--app")
+}
+
 func TestTypeFor_ProjectIssueRequiresTask(t *testing.T) {
 	seedProfile(t, "http://127.0.0.1/")
 
