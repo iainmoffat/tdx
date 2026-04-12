@@ -155,7 +155,7 @@ type wireTimeSearch struct {
 }
 
 // wireTimeEntryWrite is the request body for POST/PUT /api/time.
-// Field names verified against live UFL tenant during Phase 3 Step 0 probing.
+// Field names verified against the TD Web API during Phase 3 Step 0 probing.
 type wireTimeEntryWrite struct {
 	TimeID      int     `json:"TimeID,omitempty"`
 	Uid         string  `json:"Uid"`
@@ -174,7 +174,7 @@ type wireTimeEntryWrite struct {
 }
 
 // wireBulkResult is the response from batch POST /api/time and POST /api/time/delete.
-// Shape verified against live UFL tenant during Phase 3 Step 0 probing.
+// Shape verified against the TD Web API during Phase 3 Step 0 probing.
 type wireBulkResult struct {
 	Succeeded []wireBulkSuccess `json:"Succeeded"`
 	Failed    []wireBulkFailure `json:"Failed"`

@@ -69,7 +69,7 @@ func newProfileAddCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&url, "url", "", "tenant base URL (e.g. https://ufl.teamdynamix.com/)")
+	cmd.Flags().StringVar(&url, "url", "", "tenant base URL (e.g. https://yourorg.teamdynamix.com/)")
 	_ = cmd.MarkFlagRequired("url")
 	return cmd
 }

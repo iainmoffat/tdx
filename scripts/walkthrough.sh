@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scripts/walkthrough.sh
 #
-# Drives the Phase 2 walkthrough commands non-interactively against the live
+# Drives the Phase 2 walkthrough commands non-interactively against
 # a live TeamDynamix tenant. Used by Claude (and humans) to validate the binary
 # after each phase of work without manual command typing.
 #
@@ -9,6 +9,8 @@
 #   TDX_WALKTHROUGH_TOKEN  — a valid TD API JWT (e.g. fetched via tdx auth login --sso)
 #   TDX_WALKTHROUGH_URL    — tenant base URL (e.g. https://yourorg.teamdynamix.com/)
 #   TDX_WALKTHROUGH_WEEK   — a week date with known data (e.g. 2026-04-01)
+#
+# Optional env vars:
 #   TDX_WALKTHROUGH_BIN    — path to the tdx binary (default ./tdx)
 #
 # Behavior:
