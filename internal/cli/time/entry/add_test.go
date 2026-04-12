@@ -80,6 +80,117 @@ func TestAddCmd_TicketSuccess(t *testing.T) {
 	require.Contains(t, got, "created entry 999")
 }
 
+func TestAddCmd_ProjectTaskSuccess(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/TDWebApi/api/auth/getuser":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"ReferenceID":42,"UID":"user-abc","FullName":"Test User","PrimaryEmail":"test@example.com"}`))
+
+		case r.URL.Path == "/TDWebApi/api/time/types":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[{"ID":10,"Name":"Development","IsActive":true,"IsBillable":false}]`))
+
+		case r.URL.Path == "/TDWebApi/api/time/locked":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[]`))
+
+		case strings.HasPrefix(r.URL.Path, "/TDWebApi/api/time/report/"):
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"ID":1,"PeriodStartDate":"2026-04-05T00:00:00Z","PeriodEndDate":"2026-04-11T00:00:00Z","Status":0,"Times":[],"TimeReportUid":"user-abc","UserFullName":"Test User","MinutesBillable":0,"MinutesNonBillable":0,"MinutesTotal":0,"TimeEntriesCount":0}`))
+
+		case r.URL.Path == "/TDWebApi/api/time" && r.Method == "POST":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"Succeeded":[{"Index":0,"ID":888}],"Failed":[]}`))
+
+		case r.URL.Path == "/TDWebApi/api/time/888" && r.Method == "GET":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{
+				"TimeID": 888,
+				"ItemID": 2612,
+				"ItemTitle": "Task",
+				"AppID": 0,
+				"Component": 2,
+				"TicketID": 0,
+				"ProjectID": 54,
+				"ProjectName": "Proj",
+				"PlanID": 2091,
+				"TimeDate": "2026-04-11T00:00:00Z",
+				"Minutes": 30,
+				"Description": "task work",
+				"TimeTypeID": 10,
+				"TimeTypeName": "Development",
+				"Status": 0,
+				"Billable": false
+			}`))
+
+		default:
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	seedProfile(t, srv.URL)
+
+	var out bytes.Buffer
+	cmd := NewCmd()
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{
+		"add",
+		"--date", "2026-04-11",
+		"--minutes", "30",
+		"--type", "Development",
+		"--project", "54",
+		"--plan", "2091",
+		"--task", "2612",
+		"-d", "task work",
+	})
+	require.NoError(t, cmd.Execute())
+	require.Contains(t, out.String(), "created entry 888")
+}
+
+func TestAddCmd_LockedDayRejection(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/TDWebApi/api/auth/getuser":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"ReferenceID":42,"UID":"user-abc","FullName":"Test User","PrimaryEmail":"test@example.com"}`))
+
+		case r.URL.Path == "/TDWebApi/api/time/types":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[{"ID":10,"Name":"Development","IsActive":true,"IsBillable":false}]`))
+
+		case r.URL.Path == "/TDWebApi/api/time/locked":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`["2026-04-11T00:00:00Z"]`))
+
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	seedProfile(t, srv.URL)
+
+	var out bytes.Buffer
+	cmd := NewCmd()
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{
+		"add",
+		"--date", "2026-04-11",
+		"--hours", "1",
+		"--type", "Development",
+		"--ticket", "100",
+		"--app", "5",
+	})
+	err := cmd.Execute()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "day is locked")
+}
+
 func TestAddCmd_MissingRequiredFlags(t *testing.T) {
 	cases := []struct {
 		name    string

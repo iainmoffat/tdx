@@ -91,6 +91,9 @@ func runAdd(cmd *cobra.Command, f addFlags) error {
 	} else {
 		durationMinutes = f.minutes
 	}
+	if durationMinutes <= 0 {
+		return fmt.Errorf("duration must be positive")
+	}
 
 	if f.typeName == "" {
 		return fmt.Errorf("--type is required")
@@ -217,7 +220,7 @@ func runAdd(cmd *cobra.Command, f addFlags) error {
 	format := render.ResolveFormat(render.Flags{JSON: f.json})
 	if format == render.FormatJSON {
 		return render.JSON(w, entryAddJSON{
-			Schema: "tdx.v1.entry",
+			Schema: "tdx.v1.entryAdd",
 			Entry:  entry,
 		})
 	}
