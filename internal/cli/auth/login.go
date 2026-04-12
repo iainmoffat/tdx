@@ -32,6 +32,11 @@ func (ttyReader) ReadToken(prompt string) (string, error) {
 	return string(b), nil
 }
 
+// stdinSource is the io.Reader that stdinReader reads from when --token-stdin
+// is set. Production points it at os.Stdin; tests override it via save/restore.
+// Mirrors the openBrowser package var pattern from browser.go.
+var stdinSource io.Reader = os.Stdin
+
 // stdinReader reads a token from an io.Reader (typically os.Stdin) without
 // any TTY check. Used by --token-stdin for scripted/CI use where there is
 // no terminal. Reads the FIRST line only and trims surrounding whitespace,
@@ -57,15 +62,30 @@ func (r stdinReader) ReadToken(prompt string) (string, error) {
 
 func newLoginCmd(reader TokenReader) *cobra.Command {
 	var profileFlag, urlFlag string
+	var ssoFlag, tokenStdinFlag bool
 	cmd := &cobra.Command{
 		Use:   "login",
-		Short: "Sign in to TeamDynamix via paste-token flow",
-		Long: `Paste-token login.
+		Short: "Sign in to TeamDynamix via paste-token, --sso, or --token-stdin",
+		Long: `Paste-token login (default), or use --sso to open the TD SSO URL in
+your browser, or --token-stdin to read the token from stdin (for scripted use).
 
-Log in to TeamDynamix in your browser, navigate to your user profile's
-API token view, copy the token, then run this command and paste the
-token when prompted. The token is validated against the tenant's
-/TDWebApi/api/time/types endpoint before being saved to ~/.config/tdx/credentials.yaml.`,
+Default flow: log in to TeamDynamix in your browser, navigate to your user
+profile's API token view, copy the token, then run this command and paste the
+token when prompted.
+
+--sso flow: opens https://<tenant>/TDWebApi/api/auth/loginsso in your browser.
+After SSO completes, copy the token shown and paste it here. The loginsso
+endpoint issues a fresh 24-hour JWT each time it is called with a valid TD
+session cookie.
+
+--token-stdin flow: reads the token from stdin instead of prompting on the TTY.
+Useful for CI/scripts: ` + "`" + `echo "$TOKEN" | tdx auth login --token-stdin --profile default --url https://...` + "`" + `
+
+--sso and --token-stdin can be combined: open the browser, then read the token
+from stdin.
+
+The token is validated against the tenant's /TDWebApi/api/time/types endpoint
+before being saved to ~/.config/tdx/credentials.yaml.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			paths, err := config.ResolvePaths()
 			if err != nil {
@@ -95,9 +115,29 @@ token when prompted. The token is validated against the tenant's
 			}
 
 			fmt.Fprintf(cmd.ErrOrStderr(), "Signing in to %s as profile %q.\n", tenantURL, profileName)
-			fmt.Fprintln(cmd.ErrOrStderr(), "Open TeamDynamix in your browser, copy your API token, and paste it here.")
 
-			raw, err := reader.ReadToken("Token: ")
+			// --sso: open the browser to the loginsso URL (best effort).
+			if ssoFlag {
+				ssoURL := strings.TrimRight(tenantURL, "/") + "/TDWebApi/api/auth/loginsso"
+				fmt.Fprintf(cmd.ErrOrStderr(), "Opening %s in your browser.\n", ssoURL)
+				fmt.Fprintln(cmd.ErrOrStderr(), "Complete the SSO flow if prompted, then copy the token shown.")
+				if err := openBrowser(ssoURL); err != nil {
+					fmt.Fprintf(cmd.ErrOrStderr(), "(could not open browser automatically: %s — please open the URL manually)\n", err)
+				}
+			}
+
+			// Pick TokenReader: --token-stdin uses stdinReader, otherwise the
+			// TTY reader passed in via newLoginCmd's parameter (which is what
+			// the existing Phase 1 NewCmdWithTokenReader entry point already
+			// does for fake-reader tests).
+			activeReader := reader
+			if tokenStdinFlag {
+				activeReader = stdinReader{in: stdinSource}
+			} else {
+				fmt.Fprintln(cmd.ErrOrStderr(), "Paste your TD API token and press Enter:")
+			}
+
+			raw, err := activeReader.ReadToken("Token: ")
 			if err != nil {
 				return err
 			}
@@ -117,5 +157,7 @@ token when prompted. The token is validated against the tenant's
 	}
 	cmd.Flags().StringVar(&profileFlag, "profile", "", "profile name to sign in as (default: existing default or 'default')")
 	cmd.Flags().StringVar(&urlFlag, "url", "", "tenant base URL (default: existing profile or https://ufl.teamdynamix.com/)")
+	cmd.Flags().BoolVar(&ssoFlag, "sso", false, "open the TD SSO URL in your browser before prompting for the token")
+	cmd.Flags().BoolVar(&tokenStdinFlag, "token-stdin", false, "read the token from stdin instead of prompting on the TTY (for scripts/CI)")
 	return cmd
 }
