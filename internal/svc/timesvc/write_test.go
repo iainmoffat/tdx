@@ -91,3 +91,71 @@ func TestAddEntry_ServerFailure(t *testing.T) {
 	require.Error(t, err)
 	require.True(t, strings.Contains(err.Error(), "Day is locked"), "error should contain 'Day is locked', got: %v", err)
 }
+
+func TestUpdateEntry_Success(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/time/999":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{
+				"TimeID":999,"ItemID":2612,"ItemTitle":"Test Task",
+				"Uid":"uid-abc","TimeTypeID":5,"TimeTypeName":"","Billable":false,
+				"AppID":0,"AppName":"None","Component":2,
+				"TicketID":0,"ProjectID":54,"ProjectName":"Proj",
+				"PlanID":2091,"TimeDate":"2026-04-11T00:00:00Z",
+				"Minutes":60.0,"Description":"original",
+				"Status":0,"StatusDate":"0001-01-01T00:00:00",
+				"PortfolioID":0,"Limited":false,"FunctionalRoleId":70,
+				"CreatedDate":"0001-01-01T00:00:00","ModifiedDate":"0001-01-01T00:00:00"
+			}`))
+
+		case r.Method == http.MethodPut && r.URL.Path == "/TDWebApi/api/time/999":
+			body, _ := io.ReadAll(r.Body)
+			require.True(t, strings.Contains(string(body), `"Description":"updated"`),
+				"PUT body should contain updated description, got: %s", body)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{
+				"TimeID":999,"ItemID":2612,"ItemTitle":"Test Task",
+				"Uid":"uid-abc","TimeTypeID":5,"TimeTypeName":"","Billable":false,
+				"AppID":0,"AppName":"None","Component":2,
+				"TicketID":0,"ProjectID":54,"ProjectName":"Proj",
+				"PlanID":2091,"TimeDate":"2026-04-11T00:00:00Z",
+				"Minutes":60.0,"Description":"updated",
+				"Status":0,"StatusDate":"0001-01-01T00:00:00",
+				"PortfolioID":0,"Limited":false,"FunctionalRoleId":70,
+				"CreatedDate":"0001-01-01T00:00:00","ModifiedDate":"0001-01-01T00:00:00"
+			}`))
+
+		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/time/types":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[{"ID":5,"Name":"Development","IsActive":true}]`))
+
+		default:
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	desc := "updated"
+	update := domain.EntryUpdate{Description: &desc}
+	entry, err := svc.UpdateEntry(context.Background(), profile, 999, update)
+	require.NoError(t, err)
+	require.Equal(t, 999, entry.ID)
+	require.Equal(t, "updated", entry.Description)
+}
+
+func TestUpdateEntry_NotFound(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`"Time entry not found."`))
+	}))
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	desc := "updated"
+	update := domain.EntryUpdate{Description: &desc}
+	_, err := svc.UpdateEntry(context.Background(), profile, 9999, update)
+	require.Error(t, err)
+}
