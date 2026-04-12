@@ -51,7 +51,7 @@ func TestWhoami_Success(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/TDWebApi/api/auth/getuser" {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@ufl.edu","ReferenceID":1,"AlternateEmail":""}`))
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@ufl.edu","ReferenceID":1,"AlternateEmail":""}`))
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)
@@ -75,7 +75,7 @@ func TestWhoami_Success(t *testing.T) {
 func TestWhoami_AuthError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`"Invalid token"`))
+		_, _ = w.Write([]byte(`"Invalid token"`))
 	}))
 	defer srv.Close()
 

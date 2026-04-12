@@ -28,14 +28,12 @@ func Table(w io.Writer, headers []string, rows [][]string, summary []string) {
 			}
 		}
 	}
-	if summary != nil {
-		for i, cell := range summary {
-			if i >= len(widths) {
-				continue
-			}
-			if len(cell) > widths[i] {
-				widths[i] = len(cell)
-			}
+	for i, cell := range summary {
+		if i >= len(widths) {
+			continue
+		}
+		if len(cell) > widths[i] {
+			widths[i] = len(cell)
 		}
 	}
 
@@ -43,7 +41,7 @@ func Table(w io.Writer, headers []string, rows [][]string, summary []string) {
 	for _, row := range rows {
 		writeRow(w, row, widths)
 	}
-	if summary != nil {
+	if len(summary) > 0 {
 		writeSeparator(w, widths)
 		writeRow(w, summary, widths)
 	}
@@ -60,7 +58,7 @@ func writeRow(w io.Writer, cells []string, widths []int) {
 	}
 	// Trim trailing spaces so callers can do exact-line equality assertions
 	// without worrying about column padding on the last cell.
-	fmt.Fprintln(w, strings.TrimRight(strings.Join(parts, "  "), " "))
+	_, _ = fmt.Fprintln(w, strings.TrimRight(strings.Join(parts, "  "), " "))
 }
 
 func writeSeparator(w io.Writer, widths []int) {
@@ -72,7 +70,7 @@ func writeSeparator(w io.Writer, widths []int) {
 	if len(widths) > 1 {
 		total += 2 * (len(widths) - 1)
 	}
-	fmt.Fprintln(w, strings.Repeat("─", total))
+	_, _ = fmt.Fprintln(w, strings.Repeat("─", total))
 }
 
 func padRight(s string, width int) string {

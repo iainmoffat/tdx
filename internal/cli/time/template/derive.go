@@ -77,7 +77,7 @@ func newDeriveCmd() *cobra.Command {
 			for _, r := range tmpl.Rows {
 				totalHours += r.Hours.Total()
 			}
-			fmt.Fprintf(w, "derived template %q from week of %s (%d rows, %.1f hours)\n",
+			_, _ = fmt.Fprintf(w, "derived template %q from week of %s (%d rows, %.1f hours)\n",
 				tmpl.Name, tmpl.DerivedFrom.WeekStart.Format("2006-01-02"),
 				len(tmpl.Rows), totalHours)
 			return nil

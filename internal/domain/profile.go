@@ -32,7 +32,7 @@ func (p Profile) Validate() error {
 	}
 	// Allow http only for loopback hosts so tests and local fixtures can use
 	// httptest.NewServer. Real tenants must always be https.
-	if u.Scheme != "https" && !(u.Scheme == "http" && isLoopbackHost(u.Hostname())) {
+	if u.Scheme != "https" && (u.Scheme != "http" || !isLoopbackHost(u.Hostname())) {
 		return fmt.Errorf("%w: tenantBaseURL must use https", ErrInvalidProfile)
 	}
 	return nil

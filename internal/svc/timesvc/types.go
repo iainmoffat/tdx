@@ -100,18 +100,18 @@ type wireTimeType struct {
 // wireTimeEntry matches GET /TDWebApi/api/time/{id} and the response body
 // of POST /TDWebApi/api/time/search (which is a TimeEntry[]).
 type wireTimeEntry struct {
-	TimeID        int       `json:"TimeID"`
-	ItemID        int       `json:"ItemID"`
-	ItemTitle     string    `json:"ItemTitle"`
-	AppID         int       `json:"AppID"`
-	AppName       string    `json:"AppName"`
-	Component     int       `json:"Component"`
-	TicketID      int       `json:"TicketID"`
-	ProjectID     int       `json:"ProjectID"`
-	ProjectName   string    `json:"ProjectName"`
-	PlanID        int       `json:"PlanID"`
-	PortfolioID   int       `json:"PortfolioID"`
-	PortfolioName string    `json:"PortfolioName"`
+	TimeID        int     `json:"TimeID"`
+	ItemID        int     `json:"ItemID"`
+	ItemTitle     string  `json:"ItemTitle"`
+	AppID         int     `json:"AppID"`
+	AppName       string  `json:"AppName"`
+	Component     int     `json:"Component"`
+	TicketID      int     `json:"TicketID"`
+	ProjectID     int     `json:"ProjectID"`
+	ProjectName   string  `json:"ProjectName"`
+	PlanID        int     `json:"PlanID"`
+	PortfolioID   int     `json:"PortfolioID"`
+	PortfolioName string  `json:"PortfolioName"`
 	TimeDate      tdTime  `json:"TimeDate"`
 	Minutes       float64 `json:"Minutes"`
 	Description   string  `json:"Description"`

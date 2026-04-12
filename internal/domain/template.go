@@ -8,14 +8,14 @@ import (
 
 // Template is a reusable weekly time pattern.
 type Template struct {
-	SchemaVersion int            `yaml:"schemaVersion" json:"schemaVersion"`
-	Name          string         `yaml:"name" json:"name"`
-	Description   string         `yaml:"description,omitempty" json:"description,omitempty"`
-	Tags          []string       `yaml:"tags,omitempty" json:"tags,omitempty"`
-	CreatedAt     time.Time      `yaml:"createdAt" json:"createdAt"`
-	ModifiedAt    time.Time      `yaml:"modifiedAt" json:"modifiedAt"`
-	DerivedFrom   *DeriveSource  `yaml:"derivedFrom,omitempty" json:"derivedFrom,omitempty"`
-	Rows          []TemplateRow  `yaml:"rows" json:"rows"`
+	SchemaVersion int           `yaml:"schemaVersion" json:"schemaVersion"`
+	Name          string        `yaml:"name" json:"name"`
+	Description   string        `yaml:"description,omitempty" json:"description,omitempty"`
+	Tags          []string      `yaml:"tags,omitempty" json:"tags,omitempty"`
+	CreatedAt     time.Time     `yaml:"createdAt" json:"createdAt"`
+	ModifiedAt    time.Time     `yaml:"modifiedAt" json:"modifiedAt"`
+	DerivedFrom   *DeriveSource `yaml:"derivedFrom,omitempty" json:"derivedFrom,omitempty"`
+	Rows          []TemplateRow `yaml:"rows" json:"rows"`
 }
 
 // DeriveSource records which live week a template was derived from.

@@ -61,29 +61,29 @@ func newStatusCmd() *cobra.Command {
 			}
 
 			w := cmd.OutOrStdout()
-			fmt.Fprintf(w, "profile:  %s\n", status.Profile.Name)
-			fmt.Fprintf(w, "tenant:   %s\n", status.Profile.TenantBaseURL)
+			_, _ = fmt.Fprintf(w, "profile:  %s\n", status.Profile.Name)
+			_, _ = fmt.Fprintf(w, "tenant:   %s\n", status.Profile.TenantBaseURL)
 			if !status.Authenticated {
-				fmt.Fprintln(w, "state:    not authenticated")
-				fmt.Fprintln(w, "          run 'tdx auth login' to sign in")
+				_, _ = fmt.Fprintln(w, "state:    not authenticated")
+				_, _ = fmt.Fprintln(w, "          run 'tdx auth login' to sign in")
 				return nil
 			}
-			fmt.Fprintln(w, "state:    authenticated")
+			_, _ = fmt.Fprintln(w, "state:    authenticated")
 			if status.TokenValid {
-				fmt.Fprintln(w, "token:    valid")
+				_, _ = fmt.Fprintln(w, "token:    valid")
 			} else {
-				fmt.Fprintf(w, "token:    invalid (%s)\n", status.ValidationErr)
-				fmt.Fprintln(w, "          run 'tdx auth login' to refresh")
+				_, _ = fmt.Fprintf(w, "token:    invalid (%s)\n", status.ValidationErr)
+				_, _ = fmt.Fprintln(w, "          run 'tdx auth login' to refresh")
 				return nil
 			}
 
 			// Identity lines — only when we have a valid token.
 			if status.UserErr != "" {
-				fmt.Fprintf(w, "user:     (lookup failed: %s)\n", status.UserErr)
+				_, _ = fmt.Fprintf(w, "user:     (lookup failed: %s)\n", status.UserErr)
 			} else if !status.User.IsZero() {
-				fmt.Fprintf(w, "user:     %s\n", status.User.DisplayName())
+				_, _ = fmt.Fprintf(w, "user:     %s\n", status.User.DisplayName())
 				if status.User.Email != "" {
-					fmt.Fprintf(w, "email:    %s\n", status.User.Email)
+					_, _ = fmt.Fprintf(w, "email:    %s\n", status.User.Email)
 				}
 			}
 			return nil

@@ -53,6 +53,6 @@ func JSON(w io.Writer, v any) error {
 // Humanf writes a formatted line to w with a trailing newline.
 // The format string should not include a trailing newline.
 func Humanf(w io.Writer, format string, args ...any) {
-	fmt.Fprintf(w, format, args...)
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintf(w, format, args...)
+	_, _ = fmt.Fprintln(w)
 }

@@ -23,7 +23,7 @@ func newDeleteCmd() *cobra.Command {
 			if err := store.Delete(args[0]); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "deleted template %q\n", args[0])
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "deleted template %q\n", args[0])
 			return nil
 		},
 	}

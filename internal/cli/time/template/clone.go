@@ -41,7 +41,7 @@ func newCloneCmd() *cobra.Command {
 			if err := store.Save(tmpl); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "cloned %q → %q\n", src, dst)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "cloned %q → %q\n", src, dst)
 			return nil
 		},
 	}

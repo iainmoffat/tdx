@@ -206,7 +206,7 @@ func applyWriteServer(t *testing.T) *httptest.Server {
 			id := nextID
 			nextID++
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(fmt.Sprintf(`{"Succeeded":[{"Index":0,"ID":%d}],"Failed":[]}`, id)))
+			_, _ = fmt.Fprintf(w, `{"Succeeded":[{"Index":0,"ID":%d}],"Failed":[]}`, id)
 
 		case r.Method == http.MethodGet && len(r.URL.Path) > len("/TDWebApi/api/time/"):
 			w.WriteHeader(http.StatusOK)

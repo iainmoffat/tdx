@@ -171,18 +171,18 @@ func runUpdate(cmd *cobra.Command, id int, f updateFlags) error {
 	// ---- 7. Dry run ----
 
 	if f.dryRun {
-		fmt.Fprintf(w, "dry run: would update entry %d\n", id)
+		_, _ = fmt.Fprintf(w, "dry run: would update entry %d\n", id)
 		if update.Description != nil {
-			fmt.Fprintf(w, "  description: %q → %q\n", existing.Description, *update.Description)
+			_, _ = fmt.Fprintf(w, "  description: %q → %q\n", existing.Description, *update.Description)
 		}
 		if update.Date != nil {
-			fmt.Fprintf(w, "  date: %s → %s\n", existing.Date.Format("2006-01-02"), update.Date.Format("2006-01-02"))
+			_, _ = fmt.Fprintf(w, "  date: %s → %s\n", existing.Date.Format("2006-01-02"), update.Date.Format("2006-01-02"))
 		}
 		if update.Minutes != nil {
-			fmt.Fprintf(w, "  minutes: %d → %d\n", existing.Minutes, *update.Minutes)
+			_, _ = fmt.Fprintf(w, "  minutes: %d → %d\n", existing.Minutes, *update.Minutes)
 		}
 		if update.TimeTypeID != nil {
-			fmt.Fprintf(w, "  type id: %d → %d\n", existing.TimeType.ID, *update.TimeTypeID)
+			_, _ = fmt.Fprintf(w, "  type id: %d → %d\n", existing.TimeType.ID, *update.TimeTypeID)
 		}
 		return nil
 	}
@@ -204,7 +204,7 @@ func runUpdate(cmd *cobra.Command, id int, f updateFlags) error {
 		})
 	}
 
-	fmt.Fprintf(w, "updated entry %d\n", entry.ID)
+	_, _ = fmt.Fprintf(w, "updated entry %d\n", entry.ID)
 	printEntry(w, entry)
 	return nil
 }
