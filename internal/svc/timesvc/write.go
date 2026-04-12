@@ -72,7 +72,7 @@ func (s *Service) UpdateEntry(ctx context.Context, profileName string, id int, u
 
 	// Apply non-nil update fields.
 	if update.Date != nil {
-		w.TimeDate = update.Date.Format("2006-01-02") + "T00:00:00"
+		w.TimeDate = update.Date.UTC().Format("2006-01-02") + "T00:00:00"
 	}
 	if update.Minutes != nil {
 		w.Minutes = float64(*update.Minutes)
