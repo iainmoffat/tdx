@@ -10,7 +10,7 @@ coverage.*
 go.work
 go.work.sum
 
-# Superpowers plans/specs (local working docs)
+# Legacy superpowers directory (moved to docs/specs + docs/plans)
 docs/superpowers/
 
 # Editor and OS noise
