@@ -442,6 +442,146 @@ func TestReconcile_ReplaceMatchingMode_CreatesNew(t *testing.T) {
 	}
 }
 
+func TestReconcile_ReplaceMineMode_OwnedUpdated(t *testing.T) {
+	// Week has a matching entry on Monday whose description contains the
+	// ownership marker for test-tmpl/row-01, but with 60 minutes instead of
+	// the template's 120. Checker = &MarkerChecker{}. Mode = ModeReplaceMine.
+	// Expect: 1 ActionUpdate (owned entry gets updated), 4 ActionCreate (Tue-Fri).
+	reportJSON := `{
+		"ID": 1,
+		"PeriodStartDate": "2026-04-05T00:00:00Z",
+		"PeriodEndDate": "2026-04-11T00:00:00Z",
+		"Status": 0,
+		"TimeReportUid": "uid",
+		"UserFullName": "User",
+		"MinutesBillable": 0,
+		"MinutesNonBillable": 0,
+		"MinutesTotal": 60,
+		"TimeEntriesCount": 1,
+		"Times": [
+			{"TimeID":99,"Component":1,"ProjectID":54,"ItemID":54,"ItemTitle":"Proj","ProjectName":"Proj","TimeTypeID":5,"TimeTypeName":"","TimeDate":"2026-04-06T00:00:00Z","Minutes":60,"Description":"work [tdx:test-tmpl#row-01]","Billable":false,"Uid":"uid","Status":0,"StatusDate":"0001-01-01T00:00:00","CreatedDate":"0001-01-01T00:00:00","ModifiedDate":"0001-01-01T00:00:00","AppID":0,"AppName":"","TicketID":0,"PlanID":0,"PortfolioID":0,"Limited":false,"FunctionalRoleId":0}
+		]
+	}`
+	srv := reconcileServer(t, reportJSON, "[]", typesJSON)
+	defer srv.Close()
+
+	paths, tsvc := tmplHarness(t, srv.URL)
+	svc := New(paths, tsvc)
+
+	diff, err := svc.Reconcile(context.Background(), "default", ReconcileInput{
+		Template: testTemplate(),
+		WeekRef:  testWeekRef(),
+		Mode:     domain.ModeReplaceMine,
+		Checker:  &MarkerChecker{},
+		UserUID:  "test-uid",
+	})
+	require.NoError(t, err)
+
+	creates, updates, skips := diff.CountByKind()
+	require.Equal(t, 4, creates, "expected 4 creates (Tue-Fri)")
+	require.Equal(t, 1, updates, "expected 1 update (owned Mon entry)")
+	require.Equal(t, 0, skips, "expected 0 skips")
+	require.Empty(t, diff.Blockers)
+
+	var updateAction domain.Action
+	for _, a := range diff.Actions {
+		if a.Kind == domain.ActionUpdate {
+			updateAction = a
+			break
+		}
+	}
+	require.Equal(t, time.Monday, updateAction.Date.Weekday())
+	require.Equal(t, 99, updateAction.ExistingID)
+	require.NotNil(t, updateAction.Patch.Minutes, "expected Patch.Minutes to be set")
+	require.Equal(t, 120, *updateAction.Patch.Minutes)
+}
+
+func TestReconcile_ReplaceMineMode_NotOwnedSkipped(t *testing.T) {
+	// Week has a matching entry on Monday whose description is plain text with
+	// no ownership marker. Checker = &MarkerChecker{}. Mode = ModeReplaceMine.
+	// Expect: 1 ActionSkip("notOwnedByTemplate") on Mon, 4 ActionCreate (Tue-Fri).
+	reportJSON := `{
+		"ID": 1,
+		"PeriodStartDate": "2026-04-05T00:00:00Z",
+		"PeriodEndDate": "2026-04-11T00:00:00Z",
+		"Status": 0,
+		"TimeReportUid": "uid",
+		"UserFullName": "User",
+		"MinutesBillable": 0,
+		"MinutesNonBillable": 0,
+		"MinutesTotal": 60,
+		"TimeEntriesCount": 1,
+		"Times": [
+			{"TimeID":99,"Component":1,"ProjectID":54,"ItemID":54,"ItemTitle":"Proj","ProjectName":"Proj","TimeTypeID":5,"TimeTypeName":"","TimeDate":"2026-04-06T00:00:00Z","Minutes":60,"Description":"someone else's work","Billable":false,"Uid":"uid","Status":0,"StatusDate":"0001-01-01T00:00:00","CreatedDate":"0001-01-01T00:00:00","ModifiedDate":"0001-01-01T00:00:00","AppID":0,"AppName":"","TicketID":0,"PlanID":0,"PortfolioID":0,"Limited":false,"FunctionalRoleId":0}
+		]
+	}`
+	srv := reconcileServer(t, reportJSON, "[]", typesJSON)
+	defer srv.Close()
+
+	paths, tsvc := tmplHarness(t, srv.URL)
+	svc := New(paths, tsvc)
+
+	diff, err := svc.Reconcile(context.Background(), "default", ReconcileInput{
+		Template: testTemplate(),
+		WeekRef:  testWeekRef(),
+		Mode:     domain.ModeReplaceMine,
+		Checker:  &MarkerChecker{},
+		UserUID:  "test-uid",
+	})
+	require.NoError(t, err)
+
+	creates, updates, skips := diff.CountByKind()
+	require.Equal(t, 4, creates, "expected 4 creates (Tue-Fri)")
+	require.Equal(t, 0, updates, "expected 0 updates")
+	require.Equal(t, 1, skips, "expected 1 skip (not owned)")
+	require.Empty(t, diff.Blockers)
+
+	var skipAction domain.Action
+	for _, a := range diff.Actions {
+		if a.Kind == domain.ActionSkip {
+			skipAction = a
+			break
+		}
+	}
+	require.Equal(t, "notOwnedByTemplate", skipAction.SkipReason)
+	require.Equal(t, time.Monday, skipAction.Date.Weekday())
+}
+
+func TestReconcile_ReplaceMineMode_NilChecker(t *testing.T) {
+	// Mode = ModeReplaceMine with Checker = nil and a matching entry present.
+	// Expect: error containing "requires an ownership checker".
+	reportJSON := `{
+		"ID": 1,
+		"PeriodStartDate": "2026-04-05T00:00:00Z",
+		"PeriodEndDate": "2026-04-11T00:00:00Z",
+		"Status": 0,
+		"TimeReportUid": "uid",
+		"UserFullName": "User",
+		"MinutesBillable": 0,
+		"MinutesNonBillable": 0,
+		"MinutesTotal": 60,
+		"TimeEntriesCount": 1,
+		"Times": [
+			{"TimeID":99,"Component":1,"ProjectID":54,"ItemID":54,"ItemTitle":"Proj","ProjectName":"Proj","TimeTypeID":5,"TimeTypeName":"","TimeDate":"2026-04-06T00:00:00Z","Minutes":60,"Description":"work","Billable":false,"Uid":"uid","Status":0,"StatusDate":"0001-01-01T00:00:00","CreatedDate":"0001-01-01T00:00:00","ModifiedDate":"0001-01-01T00:00:00","AppID":0,"AppName":"","TicketID":0,"PlanID":0,"PortfolioID":0,"Limited":false,"FunctionalRoleId":0}
+		]
+	}`
+	srv := reconcileServer(t, reportJSON, "[]", typesJSON)
+	defer srv.Close()
+
+	paths, tsvc := tmplHarness(t, srv.URL)
+	svc := New(paths, tsvc)
+
+	_, err := svc.Reconcile(context.Background(), "default", ReconcileInput{
+		Template: testTemplate(),
+		WeekRef:  testWeekRef(),
+		Mode:     domain.ModeReplaceMine,
+		Checker:  nil,
+		UserUID:  "test-uid",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "requires an ownership checker")
+}
+
 func TestReconcile_DiffHashStable(t *testing.T) {
 	srv := reconcileServer(t, emptyReport(0), "[]", typesJSON)
 	defer srv.Close()
