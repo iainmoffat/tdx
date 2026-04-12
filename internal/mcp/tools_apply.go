@@ -35,6 +35,25 @@ type previewArgs struct {
 	Profile   string   `json:"profile,omitempty"`
 }
 
+type applyTemplateArgs struct {
+	Name             string   `json:"name" jsonschema:"required"`
+	Week             string   `json:"week" jsonschema:"required"`
+	Mode             string   `json:"mode,omitempty"`
+	Days             string   `json:"days,omitempty"`
+	Overrides        []string `json:"overrides,omitempty"`
+	ExpectedDiffHash string   `json:"expectedDiffHash" jsonschema:"required,description=hash from preview_apply_time_template"`
+	Confirm          bool     `json:"confirm" jsonschema:"required"`
+	Profile          string   `json:"profile,omitempty"`
+}
+
+// applyResult is the JSON shape returned by the apply tool.
+type applyResult struct {
+	Created int                  `json:"created"`
+	Updated int                  `json:"updated"`
+	Skipped int                  `json:"skipped"`
+	Failed  []tmplsvc.ApplyFailure `json:"failed,omitempty"`
+}
+
 // RegisterApplyTools registers compare, preview, and apply MCP tools.
 func RegisterApplyTools(srv *sdkmcp.Server, svcs Services) {
 	sdkmcp.AddTool(srv, &sdkmcp.Tool{
@@ -46,6 +65,11 @@ func RegisterApplyTools(srv *sdkmcp.Server, svcs Services) {
 		Name:        "preview_apply_time_template",
 		Description: "Preview applying a template to a week with optional overrides. Returns a diffHash for apply.",
 	}, previewHandler(svcs))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name:        "apply_time_template_to_week",
+		Description: "Apply a time template to a week, creating/updating entries. Requires diffHash from preview and confirm=true.",
+	}, applyTemplateHandler(svcs))
 }
 
 // reconcileResult is the JSON shape returned by compare and preview tools.
@@ -242,4 +266,74 @@ func parseOverrides(strs []string) ([]tmplsvc.Override, error) {
 		out = append(out, tmplsvc.Override{RowID: rowID, Day: day, Hours: hours})
 	}
 	return out, nil
+}
+
+func applyTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, applyTemplateArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args applyTemplateArgs) (*sdkmcp.CallToolResult, any, error) {
+		if result, ok := confirmGate(args.Confirm, "Call preview_apply_time_template first, then set confirm: true and pass the expectedDiffHash."); !ok {
+			return result, nil, nil
+		}
+
+		if args.ExpectedDiffHash == "" {
+			return errorResult("expectedDiffHash is required. Call preview_apply_time_template first to get the hash."), nil, nil
+		}
+
+		profile := resolveProfile(svcs, args.Profile)
+
+		tmpl, err := svcs.Template.Store().Load(args.Name)
+		if err != nil {
+			return errorResult(fmt.Sprintf("load template: %v", err)), nil, nil
+		}
+
+		weekDate, err := time.ParseInLocation("2006-01-02", args.Week, domain.EasternTZ)
+		if err != nil {
+			return errorResult(fmt.Sprintf("invalid week date: %v", err)), nil, nil
+		}
+		weekRef := domain.WeekRefContaining(weekDate)
+
+		mode, err := parseMode(args.Mode)
+		if err != nil {
+			return errorResult(err.Error()), nil, nil
+		}
+
+		daysFilter, err := parseDaysFilter(args.Days)
+		if err != nil {
+			return errorResult(err.Error()), nil, nil
+		}
+
+		overrides, err := parseOverrides(args.Overrides)
+		if err != nil {
+			return errorResult(err.Error()), nil, nil
+		}
+
+		user, err := svcs.Auth.WhoAmI(ctx, profile)
+		if err != nil {
+			return errorResult(fmt.Sprintf("auth: %v", err)), nil, nil
+		}
+
+		input := tmplsvc.ReconcileInput{
+			Template:   tmpl,
+			WeekRef:    weekRef,
+			Mode:       mode,
+			DaysFilter: daysFilter,
+			Overrides:  overrides,
+			Round:      true,
+			UserUID:    user.UID,
+		}
+
+		ar, err := svcs.Template.Apply(ctx, profile, input, args.ExpectedDiffHash)
+		if err != nil {
+			if strings.Contains(err.Error(), "hash mismatch") {
+				return errorResult("Week changed since preview (hash mismatch). Call preview_apply_time_template again to get an updated diffHash."), nil, nil
+			}
+			return errorResult(fmt.Sprintf("apply: %v", err)), nil, nil
+		}
+
+		return jsonResult(applyResult{
+			Created: ar.Created,
+			Updated: ar.Updated,
+			Skipped: ar.Skipped,
+			Failed:  ar.Failed,
+		})
+	}
 }
