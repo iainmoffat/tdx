@@ -7,8 +7,7 @@ import (
 )
 
 // encodeTarget maps a domain.Target to wire fields on a wireTimeEntryWrite.
-// projectID is the wire ProjectID required for projectTask and projectIssue kinds.
-func encodeTarget(t domain.Target, projectID int, w *wireTimeEntryWrite) error {
+func encodeTarget(t domain.Target, w *wireTimeEntryWrite) error {
 	switch t.Kind {
 	case domain.TargetTicket:
 		w.Component = componentTicketTime
@@ -24,12 +23,12 @@ func encodeTarget(t domain.Target, projectID int, w *wireTimeEntryWrite) error {
 		w.ProjectID = t.ItemID
 	case domain.TargetProjectTask:
 		w.Component = componentTaskTime
-		w.ProjectID = projectID
+		w.ProjectID = t.ProjectID
 		w.PlanID = t.ItemID
 		w.ItemID = t.TaskID
 	case domain.TargetProjectIssue:
 		w.Component = componentIssueTime
-		w.ProjectID = projectID
+		w.ProjectID = t.ProjectID
 		w.ItemID = t.ItemID
 	case domain.TargetWorkspace:
 		w.Component = componentWorkspaceTime
@@ -57,7 +56,7 @@ func encodeEntryWrite(input domain.EntryInput) (wireTimeEntryWrite, error) {
 		Description: input.Description,
 		Billable:    input.Billable,
 	}
-	if err := encodeTarget(input.Target, input.ProjectID, &w); err != nil {
+	if err := encodeTarget(input.Target, &w); err != nil {
 		return wireTimeEntryWrite{}, err
 	}
 	return w, nil

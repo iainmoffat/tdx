@@ -61,8 +61,7 @@ func TestAddEntry_Success(t *testing.T) {
 		Minutes:     15,
 		TimeTypeID:  5,
 		Billable:    false,
-		Target:      domain.Target{Kind: domain.TargetProjectTask, ItemID: 2091, TaskID: 2612},
-		ProjectID:   54,
+		Target:      domain.Target{Kind: domain.TargetProjectTask, ItemID: 2091, TaskID: 2612, ProjectID: 54},
 		Description: "test desc",
 	}
 	entry, err := svc.AddEntry(context.Background(), profile, input)

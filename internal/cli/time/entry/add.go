@@ -155,7 +155,7 @@ func runAdd(cmd *cobra.Command, f addFlags) error {
 
 	// ---- 3. Build target from flags ----
 
-	target, projectID := buildTarget(f)
+	target := buildTarget(f)
 
 	// ---- 4. Pre-write validation ----
 
@@ -188,7 +188,6 @@ func runAdd(cmd *cobra.Command, f addFlags) error {
 		TimeTypeID:  tt.ID,
 		Billable:    tt.Billable,
 		Target:      target,
-		ProjectID:   projectID,
 		Description: f.description,
 	}
 
@@ -232,7 +231,7 @@ func runAdd(cmd *cobra.Command, f addFlags) error {
 
 // buildTarget translates CLI flags into a domain.Target and the optional
 // wire ProjectID (used only for projectTask / projectIssue).
-func buildTarget(f addFlags) (domain.Target, int) {
+func buildTarget(f addFlags) domain.Target {
 	switch {
 	case f.ticket > 0 && f.task > 0:
 		return domain.Target{
@@ -240,43 +239,45 @@ func buildTarget(f addFlags) (domain.Target, int) {
 			AppID:  f.app,
 			ItemID: f.ticket,
 			TaskID: f.task,
-		}, 0
+		}
 
 	case f.ticket > 0:
 		return domain.Target{
 			Kind:   domain.TargetTicket,
 			AppID:  f.app,
 			ItemID: f.ticket,
-		}, 0
+		}
 
 	case f.project > 0 && f.plan > 0 && f.task > 0:
 		return domain.Target{
-			Kind:   domain.TargetProjectTask,
-			ItemID: f.plan,
-			TaskID: f.task,
-		}, f.project
+			Kind:      domain.TargetProjectTask,
+			ItemID:    f.plan,
+			TaskID:    f.task,
+			ProjectID: f.project,
+		}
 
 	case f.project > 0 && f.issue > 0:
 		return domain.Target{
-			Kind:   domain.TargetProjectIssue,
-			ItemID: f.issue,
-		}, f.project
+			Kind:      domain.TargetProjectIssue,
+			ItemID:    f.issue,
+			ProjectID: f.project,
+		}
 
 	case f.project > 0:
 		return domain.Target{
 			Kind:   domain.TargetProject,
 			ItemID: f.project,
-		}, 0
+		}
 
 	case f.workspace > 0:
 		return domain.Target{
 			Kind:   domain.TargetWorkspace,
 			ItemID: f.workspace,
-		}, 0
+		}
 
 	default:
 		// Should be unreachable due to earlier validation.
-		return domain.Target{}, 0
+		return domain.Target{}
 	}
 }
 

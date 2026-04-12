@@ -10,7 +10,6 @@ type EntryInput struct {
 	TimeTypeID  int
 	Billable    bool
 	Target      Target
-	ProjectID   int // wire ProjectID for projectTask/projectIssue; 0 for others
 	Description string
 }
 

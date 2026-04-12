@@ -10,9 +10,8 @@ import (
 
 func TestEncodeTarget_RoundTrip(t *testing.T) {
 	tests := []struct {
-		name      string
-		target    domain.Target
-		projectID int // for projectTask/projectIssue
+		name   string
+		target domain.Target
 	}{
 		{
 			name:   "ticket",
@@ -27,14 +26,12 @@ func TestEncodeTarget_RoundTrip(t *testing.T) {
 			target: domain.Target{Kind: domain.TargetProject, ItemID: 54},
 		},
 		{
-			name:      "projectTask",
-			target:    domain.Target{Kind: domain.TargetProjectTask, ItemID: 2091, TaskID: 2612},
-			projectID: 54,
+			name:   "projectTask",
+			target: domain.Target{Kind: domain.TargetProjectTask, ItemID: 2091, TaskID: 2612, ProjectID: 54},
 		},
 		{
-			name:      "projectIssue",
-			target:    domain.Target{Kind: domain.TargetProjectIssue, ItemID: 300},
-			projectID: 54,
+			name:   "projectIssue",
+			target: domain.Target{Kind: domain.TargetProjectIssue, ItemID: 300, ProjectID: 54},
 		},
 		{
 			name:   "workspace",
@@ -52,7 +49,7 @@ func TestEncodeTarget_RoundTrip(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var w wireTimeEntryWrite
-			err := encodeTarget(tt.target, tt.projectID, &w)
+			err := encodeTarget(tt.target, &w)
 			require.NoError(t, err)
 
 			// Build a wireTimeEntry from the write struct to decode back.
@@ -71,13 +68,14 @@ func TestEncodeTarget_RoundTrip(t *testing.T) {
 			require.Equal(t, tt.target.ItemID, got.ItemID, "itemID")
 			require.Equal(t, tt.target.TaskID, got.TaskID, "taskID")
 			require.Equal(t, tt.target.AppID, got.AppID, "appID")
+			require.Equal(t, tt.target.ProjectID, got.ProjectID, "projectID")
 		})
 	}
 }
 
 func TestEncodeTarget_UnsupportedKind(t *testing.T) {
 	var w wireTimeEntryWrite
-	err := encodeTarget(domain.Target{Kind: domain.TargetKind("bogus"), ItemID: 1}, 0, &w)
+	err := encodeTarget(domain.Target{Kind: domain.TargetKind("bogus"), ItemID: 1}, &w)
 	require.Error(t, err)
 }
 
@@ -88,8 +86,7 @@ func TestEncodeEntryWrite(t *testing.T) {
 		Minutes:     90,
 		TimeTypeID:  5,
 		Billable:    true,
-		Target:      domain.Target{Kind: domain.TargetProjectTask, ItemID: 2091, TaskID: 2612},
-		ProjectID:   54,
+		Target:      domain.Target{Kind: domain.TargetProjectTask, ItemID: 2091, TaskID: 2612, ProjectID: 54},
 		Description: "did some work",
 	}
 	w, err := encodeEntryWrite(input)

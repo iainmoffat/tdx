@@ -128,10 +128,12 @@ func decodeTarget(w wireTimeEntry) (domain.Target, error) {
 		t.Kind = domain.TargetProjectTask
 		t.ItemID = w.PlanID
 		t.TaskID = w.ItemID
+		t.ProjectID = w.ProjectID
 		t.DisplayRef = fmt.Sprintf("plan/%d/task/%d", t.ItemID, t.TaskID)
 	case componentIssueTime:
 		t.Kind = domain.TargetProjectIssue
 		t.ItemID = w.ItemID
+		t.ProjectID = w.ProjectID
 		t.DisplayRef = fmt.Sprintf("issue/%d", t.ItemID)
 	case componentTimeOff:
 		t.Kind = domain.TargetTimeOff

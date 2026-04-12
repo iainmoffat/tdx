@@ -36,6 +36,7 @@ type createEntryArgs struct {
 	ItemID      int     `json:"itemID" jsonschema:"work item ID"`
 	AppID       int     `json:"appID,omitempty"`
 	TaskID      int     `json:"taskID,omitempty"`
+	ProjectID   int     `json:"projectID,omitempty" jsonschema:"project ID (required for projectTask/projectIssue)"`
 	Description string  `json:"description,omitempty"`
 	Billable    bool    `json:"billable,omitempty"`
 	Confirm     bool    `json:"confirm" jsonschema:"must be true to execute"`
@@ -180,10 +181,11 @@ func createEntryHandler(svcs Services) func(context.Context, *sdkmcp.CallToolReq
 		}
 
 		target := domain.Target{
-			Kind:   domain.TargetKind(args.Kind),
-			ItemID: args.ItemID,
-			AppID:  args.AppID,
-			TaskID: args.TaskID,
+			Kind:      domain.TargetKind(args.Kind),
+			ItemID:    args.ItemID,
+			AppID:     args.AppID,
+			TaskID:    args.TaskID,
+			ProjectID: args.ProjectID,
 		}
 
 		input := domain.EntryInput{

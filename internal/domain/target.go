@@ -58,6 +58,7 @@ type Target struct {
 	AppID       int        `json:"appID" yaml:"appID"`
 	ItemID      int        `json:"itemID" yaml:"itemID"`
 	TaskID      int        `json:"taskID,omitempty" yaml:"taskID,omitempty"`
+	ProjectID   int        `json:"projectID,omitempty" yaml:"projectID,omitempty"`
 	DisplayName string     `json:"displayName,omitempty" yaml:"displayName,omitempty"`
 	DisplayRef  string     `json:"displayRef,omitempty" yaml:"displayRef,omitempty"`
 }
