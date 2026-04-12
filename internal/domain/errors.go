@@ -24,4 +24,11 @@ var (
 	// ErrUnsupportedTargetKind indicates a TargetKind has no component-lookup
 	// endpoint, so `tdx time type for` cannot handle it.
 	ErrUnsupportedTargetKind = errors.New("unsupported target kind")
+
+	// ErrDayLocked indicates a pre-write check found the target day is locked.
+	ErrDayLocked = errors.New("day is locked")
+
+	// ErrWeekSubmitted indicates a pre-write check found the target week has
+	// already been submitted for approval.
+	ErrWeekSubmitted = errors.New("week already submitted")
 )

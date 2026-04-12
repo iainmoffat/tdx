@@ -70,7 +70,7 @@ func (t Target) Validate() error {
 	if !t.Kind.IsKnown() {
 		return fmt.Errorf("%w: unknown kind %q", ErrInvalidTarget, t.Kind)
 	}
-	if t.AppID <= 0 {
+	if (t.Kind == TargetTicket || t.Kind == TargetTicketTask) && t.AppID <= 0 {
 		return fmt.Errorf("%w: appID is required", ErrInvalidTarget)
 	}
 	if t.ItemID <= 0 {
