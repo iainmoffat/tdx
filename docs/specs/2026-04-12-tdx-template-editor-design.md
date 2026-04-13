@@ -20,6 +20,7 @@ adjust hours, and save — without leaving the terminal or editing YAML.
 | Live totals | Row totals and day totals recompute on every edit |
 | Save/cancel | Ctrl-S saves and exits; Esc cancels (with dirty prompt) |
 | bubbletea dependency | Charm's TUI framework for the interactive model |
+| Doc updates | Update README command table, user guide Templates section, and MCP tool reference if applicable |
 
 ### Out of scope
 
@@ -208,7 +209,43 @@ type cursor struct {
 
 ---
 
-## 8. Decision Log
+## 8. Documentation Updates
+
+Three files need updates:
+
+### README.md
+
+Add `tdx time template edit <name>` back to the Templates command table:
+
+```
+| `tdx time template edit <name>` | Edit template hours in a grid editor | |
+```
+
+### docs/guide.md
+
+Add a new subsection under **Templates** (after "Show a template"):
+
+**Edit a template**
+
+Describe the interactive editor: `tdx time template edit <name>` opens a
+grid where you navigate with arrow keys/Tab, adjust hours with up/down
+(0.5 increments) or by typing values, save with Ctrl-S, cancel with Esc.
+Include the keybinding table and a brief example of the workflow:
+derive → edit → apply.
+
+### docs/guide.md — Templates workflow intro
+
+Update the workflow summary at the top of the Templates section from:
+
+> 1. Derive, 2. Show/compare, 3. Apply
+
+to:
+
+> 1. Derive, 2. Edit (optional), 3. Show/compare, 4. Apply
+
+---
+
+## 9. Decision Log
 
 | # | Decision | Rationale |
 |---|---|---|
