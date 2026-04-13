@@ -61,6 +61,7 @@ type Target struct {
 	ProjectID   int        `json:"projectID,omitempty" yaml:"projectID,omitempty"`
 	DisplayName string     `json:"displayName,omitempty" yaml:"displayName,omitempty"`
 	DisplayRef  string     `json:"displayRef,omitempty" yaml:"displayRef,omitempty"`
+	GroupName   string     `json:"groupName,omitempty" yaml:"groupName,omitempty"`
 }
 
 // Validate returns nil if the target is structurally sound for an API call.

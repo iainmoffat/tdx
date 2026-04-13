@@ -71,6 +71,7 @@ func templateToGridData(tmpl domain.Template) render.GridData {
 		rows[i] = render.GridRow{
 			Label:  r.Label,
 			Detail: detail,
+			Group:  r.Target.GroupName,
 			Ref:    fmt.Sprintf("(%s)", r.Target.Kind),
 			Hours: [7]float64{
 				r.Hours.Sun, r.Hours.Mon, r.Hours.Tue, r.Hours.Wed,

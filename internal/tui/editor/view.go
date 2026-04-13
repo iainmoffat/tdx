@@ -13,6 +13,7 @@ var (
 	activeStyle = lipgloss.NewStyle().Reverse(true)
 	headerStyle = lipgloss.NewStyle().Bold(true)
 	hintStyle   = lipgloss.NewStyle().Faint(true)
+	groupStyle  = lipgloss.NewStyle().Bold(true)
 )
 
 var dayNames = [7]string{"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"}
@@ -40,12 +41,50 @@ func (m Model) View() string {
 		return b.String()
 	}
 
-	// Compute label width
+	// Build ordered groups for display (preserving row indices for cursor mapping).
+	type indexedRow struct {
+		flatIdx int
+		row     domain.TemplateRow
+	}
+	type group struct {
+		name string
+		rows []indexedRow
+	}
+	var groups []group
+	groupIdx := map[string]int{}
+
+	for i, r := range m.rows {
+		gn := r.Target.GroupName
+		if gn == "" {
+			groups = append(groups, group{name: "", rows: []indexedRow{{i, r}}})
+			continue
+		}
+		if idx, ok := groupIdx[gn]; ok {
+			groups[idx].rows = append(groups[idx].rows, indexedRow{i, r})
+		} else {
+			groupIdx[gn] = len(groups)
+			groups = append(groups, group{name: gn, rows: []indexedRow{{i, r}}})
+		}
+	}
+
+	// Compute label width.
 	labelWidth := len("  ROW")
-	for _, r := range m.rows {
-		label := "  " + m.rowLabel(r)
-		if len(label) > labelWidth {
-			labelWidth = len(label)
+	for _, g := range groups {
+		if g.name != "" {
+			label := "  " + g.name
+			if len(label) > labelWidth {
+				labelWidth = len(label)
+			}
+		}
+		for _, ir := range g.rows {
+			prefix := "  "
+			if g.name != "" {
+				prefix = "    + "
+			}
+			label := prefix + m.rowLabel(ir.row)
+			if len(label) > labelWidth {
+				labelWidth = len(label)
+			}
 		}
 	}
 
@@ -61,24 +100,69 @@ func (m Model) View() string {
 	sepLen := labelWidth + 7*(1+cellWidth) + 2 + 5
 	b.WriteString(strings.Repeat("─", sepLen) + "\n")
 
-	// Data rows
+	// Data rows grouped hierarchically.
 	var dayTotals [7]float64
-	for ri, r := range m.rows {
-		label := "  " + m.rowLabel(r)
-		line := padRight(label, labelWidth)
-		rowTotal := 0.0
-		for ci := 0; ci < 7; ci++ {
-			wd := time.Weekday(ci)
-			hours := r.Hours.ForDay(wd)
-			cell := m.formatCell(ri, ci, hours)
-			line += "  " + cell
-			dayTotals[ci] += hours
-			rowTotal += hours
+	for _, g := range groups {
+		if g.name != "" {
+			// Group header with aggregated hours.
+			var gDays [7]float64
+			for _, ir := range g.rows {
+				for ci := 0; ci < 7; ci++ {
+					gDays[ci] += ir.row.Hours.ForDay(time.Weekday(ci))
+				}
+			}
+			gTotal := 0.0
+			for ci := 0; ci < 7; ci++ {
+				gTotal += gDays[ci]
+			}
+			headerLine := padRight("  "+g.name, labelWidth)
+			for ci := 0; ci < 7; ci++ {
+				if gDays[ci] == 0 {
+					headerLine += "  " + padRight(".", cellWidth-1)
+				} else {
+					headerLine += "  " + padRight(fmt.Sprintf("%.1f", gDays[ci]), cellWidth-1)
+				}
+			}
+			headerLine += "  " + padRight(fmt.Sprintf("%.1f", gTotal), cellWidth-1)
+			b.WriteString(groupStyle.Render(strings.TrimRight(headerLine, " ")) + "\n")
+
+			// Task rows indented under group.
+			for _, ir := range g.rows {
+				label := "    + " + m.rowLabel(ir.row)
+				line := padRight(label, labelWidth)
+				rowTotal := 0.0
+				for ci := 0; ci < 7; ci++ {
+					wd := time.Weekday(ci)
+					hours := ir.row.Hours.ForDay(wd)
+					cell := m.formatCell(ir.flatIdx, ci, hours)
+					line += "  " + cell
+					dayTotals[ci] += hours
+					rowTotal += hours
+				}
+				line += "  " + padRight(fmt.Sprintf("%.1f", rowTotal), cellWidth-1)
+				b.WriteString(strings.TrimRight(line, " ") + "\n")
+				b.WriteString("        " + ir.row.TimeType.Name + "\n")
+			}
+		} else {
+			// Ungrouped row.
+			ir := g.rows[0]
+			label := "  " + m.rowLabel(ir.row)
+			line := padRight(label, labelWidth)
+			rowTotal := 0.0
+			for ci := 0; ci < 7; ci++ {
+				wd := time.Weekday(ci)
+				hours := ir.row.Hours.ForDay(wd)
+				cell := m.formatCell(ir.flatIdx, ci, hours)
+				line += "  " + cell
+				dayTotals[ci] += hours
+				rowTotal += hours
+			}
+			line += "  " + padRight(fmt.Sprintf("%.1f", rowTotal), cellWidth-1)
+			b.WriteString(strings.TrimRight(line, " ") + "\n")
+			if ir.row.TimeType.Name != "" {
+				b.WriteString("    └ " + ir.row.TimeType.Name + "\n")
+			}
 		}
-		line += "  " + padRight(fmt.Sprintf("%.1f", rowTotal), cellWidth-1)
-		b.WriteString(strings.TrimRight(line, " ") + "\n")
-		// Sub-label
-		b.WriteString("    └ " + r.TimeType.Name + "\n")
 	}
 
 	// Separator
@@ -110,6 +194,9 @@ func (m Model) rowLabel(r domain.TemplateRow) string {
 	label := r.Label
 	if label == "" {
 		label = r.Target.DisplayRef
+	}
+	if r.Target.GroupName != "" {
+		return label
 	}
 	return label + " (" + string(r.Target.Kind) + ")"
 }
