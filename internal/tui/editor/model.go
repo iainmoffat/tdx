@@ -57,10 +57,6 @@ func (m Model) Rows() []domain.TemplateRow { return m.rows }
 // Init implements tea.Model.
 func (m Model) Init() tea.Cmd { return nil }
 
-// View implements tea.Model. The full rendering is handled in view.go;
-// this stub satisfies the interface during development.
-func (m Model) View() string { return "" }
-
 // Update implements tea.Model.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
