@@ -324,11 +324,10 @@ to move between cells, then adjust values:
 
 | Key | Action |
 |-----|--------|
-| Arrow keys / Tab | Navigate between day cells |
-| `+` / `-` | Increment or decrement by 0.5 hours |
-| 0-9, `.` | Type a value directly (snaps to nearest 0.5) |
+| Arrow keys / Tab | Navigate between cells |
+| 0-9, `.` | Type a value (snaps to nearest 0.5 on Enter) |
+| Enter | Confirm typed value and advance to next cell |
 | Backspace | Clear cell to 0 |
-| Enter | Confirm typed value and advance |
 | Ctrl-S | Save and exit |
 | Esc | Cancel (prompts if unsaved changes) |
 

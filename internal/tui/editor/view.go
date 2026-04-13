@@ -100,7 +100,7 @@ func (m Model) View() string {
 
 	// Key hints
 	b.WriteString("\n")
-	hints := "  ←→/Tab: move  +/-: adjust ±0.5  type: set value  Ctrl-S: save  Esc: cancel"
+	hints := "  ←→↑↓/Tab: navigate  type: set value  Backspace: clear  Ctrl-S: save  Esc: cancel"
 	b.WriteString(hintStyle.Render(hints))
 
 	return b.String()

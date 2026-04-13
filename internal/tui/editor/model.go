@@ -92,20 +92,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyRunes:
 			if len(msg.Runes) == 1 {
 				r := msg.Runes[0]
-				switch r {
-				case 'q':
+				if r == 'q' {
 					if m.dirty {
 						m.confirm = true
 						return m, nil
 					}
 					m.quitting = true
 					return m, tea.Quit
-				case '+':
-					m.nudgeCell(1)
-					return m, nil
-				case '-':
-					m.nudgeCell(-1)
-					return m, nil
 				}
 				if r >= '0' && r <= '9' || r == '.' {
 					m.typing = true
@@ -211,13 +204,6 @@ func (m *Model) commitTyping() {
 func (m *Model) setCellValue(v float64) {
 	wd := m.cursor.weekday()
 	m.rows[m.cursor.row].Hours.SetDay(wd, v)
-	m.updateDirty()
-}
-
-func (m *Model) nudgeCell(dir int) {
-	wd := m.cursor.weekday()
-	current := m.rows[m.cursor.row].Hours.ForDay(wd)
-	m.rows[m.cursor.row].Hours.SetDay(wd, nudge(current, dir))
 	m.updateDirty()
 }
 

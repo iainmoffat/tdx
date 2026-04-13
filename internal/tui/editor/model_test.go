@@ -37,6 +37,15 @@ func sendRune(m Model, r rune) Model {
 	return result
 }
 
+// typeAndCommit types a value and presses Enter to commit it.
+func typeAndCommit(m Model, val string) Model {
+	for _, r := range val {
+		m = sendRune(m, r)
+	}
+	m = sendKey(m, tea.KeyEnter)
+	return m
+}
+
 func TestModel_InitialCursor(t *testing.T) {
 	m := New("test", testRows())
 	require.Equal(t, 0, m.cursor.row)
@@ -91,22 +100,6 @@ func TestModel_ClampBottom(t *testing.T) {
 	require.Equal(t, 1, m.cursor.row)
 }
 
-func TestModel_NudgeUp(t *testing.T) {
-	m := New("test", testRows())
-	m = sendKey(m, tea.KeyRight) // Mon = 8.0
-	m = sendRune(m, '+')
-	require.InDelta(t, 8.5, m.rows[0].Hours.Mon, 0.001)
-	require.True(t, m.dirty)
-}
-
-func TestModel_NudgeDown(t *testing.T) {
-	m := New("test", testRows())
-	m = sendKey(m, tea.KeyRight) // Mon = 8.0
-	m = sendRune(m, '-')
-	require.InDelta(t, 7.5, m.rows[0].Hours.Mon, 0.001)
-	require.True(t, m.dirty)
-}
-
 func TestModel_TypeValue(t *testing.T) {
 	m := New("test", testRows())
 	m = sendKey(m, tea.KeyRight) // Mon
@@ -116,6 +109,15 @@ func TestModel_TypeValue(t *testing.T) {
 	require.False(t, m.typing)
 	require.InDelta(t, 4.0, m.rows[0].Hours.Mon, 0.001)
 	require.True(t, m.dirty)
+}
+
+func TestModel_TypeReplacesExisting(t *testing.T) {
+	m := New("test", testRows())
+	m = sendKey(m, tea.KeyRight) // Mon = 8.0
+	// Type "2" — replaces, doesn't append to "8"
+	m = sendRune(m, '2')
+	m = sendKey(m, tea.KeyEnter)
+	require.InDelta(t, 2.0, m.rows[0].Hours.Mon, 0.001)
 }
 
 func TestModel_TypeSnaps(t *testing.T) {
@@ -140,14 +142,25 @@ func TestModel_DirtyDetection(t *testing.T) {
 	m := New("test", testRows())
 	require.False(t, m.dirty)
 	m = sendKey(m, tea.KeyRight) // Mon = 8.0
-	m = sendRune(m, '+')
+	m = typeAndCommit(m, "4")    // change to 4.0
 	require.True(t, m.dirty)
+}
+
+func TestModel_DirtyRevert(t *testing.T) {
+	m := New("test", testRows())
+	m = sendKey(m, tea.KeyRight) // Mon = 8.0
+	m = typeAndCommit(m, "4")    // change to 4.0
+	require.True(t, m.dirty)
+	// Navigate back and restore original value
+	m = sendKey(m, tea.KeyLeft)
+	m = typeAndCommit(m, "8")
+	require.False(t, m.dirty)
 }
 
 func TestModel_SaveExit(t *testing.T) {
 	m := New("test", testRows())
 	m = sendKey(m, tea.KeyRight)
-	m = sendRune(m, '+')
+	m = typeAndCommit(m, "4") // make dirty
 	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
 	m, _ = updated.(Model)
 	require.True(t, m.saved)
@@ -167,7 +180,7 @@ func TestModel_CancelClean(t *testing.T) {
 func TestModel_CancelDirtyPrompt(t *testing.T) {
 	m := New("test", testRows())
 	m = sendKey(m, tea.KeyRight)
-	m = sendRune(m, '+')
+	m = typeAndCommit(m, "4") // make dirty
 	m = sendKey(m, tea.KeyEsc)
 	require.True(t, m.confirm)
 	require.False(t, m.quitting)
@@ -181,7 +194,7 @@ func TestModel_CancelDirtyPrompt(t *testing.T) {
 func TestModel_CancelDirtyDeny(t *testing.T) {
 	m := New("test", testRows())
 	m = sendKey(m, tea.KeyRight)
-	m = sendRune(m, '+')
+	m = typeAndCommit(m, "4") // make dirty
 	m = sendKey(m, tea.KeyEsc)
 	require.True(t, m.confirm)
 	m = sendRune(m, 'n')
@@ -196,15 +209,6 @@ func TestModel_TabWraps(t *testing.T) {
 	}
 	require.Equal(t, 1, m.cursor.row)
 	require.Equal(t, 0, m.cursor.col)
-}
-
-func TestModel_DirtyRevert(t *testing.T) {
-	m := New("test", testRows())
-	m = sendKey(m, tea.KeyRight) // Mon = 8.0
-	m = sendRune(m, '+')         // 8.5
-	require.True(t, m.dirty)
-	m = sendRune(m, '-') // back to 8.0
-	require.False(t, m.dirty)
 }
 
 func TestModel_CtrlS_WhileTyping(t *testing.T) {
@@ -243,7 +247,7 @@ func TestModel_QuitKey_Clean(t *testing.T) {
 func TestModel_QuitKey_Dirty(t *testing.T) {
 	m := New("test", testRows())
 	m = sendKey(m, tea.KeyRight)
-	m = sendRune(m, '+')
+	m = typeAndCommit(m, "4") // make dirty
 	m = sendRune(m, 'q')
 	require.True(t, m.confirm)
 	require.False(t, m.quitting)
