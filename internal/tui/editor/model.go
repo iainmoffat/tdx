@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"sort"
 	"strconv"
 	"time"
 
@@ -36,16 +37,38 @@ type Model struct {
 }
 
 // New creates a new editor Model for the given template rows.
+// Rows are sorted into display order (grouped by GroupName, then by Label)
+// so that cursor navigation matches the visual layout.
 func New(name string, rows []domain.TemplateRow) Model {
-	orig := make([]domain.WeekHours, len(rows))
-	for i, r := range rows {
+	// Sort into display order: grouped rows by GroupName then Label,
+	// ungrouped rows by Label. This matches the view's grouping logic.
+	sorted := make([]domain.TemplateRow, len(rows))
+	copy(sorted, rows)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		gi, gj := sorted[i].Target.GroupName, sorted[j].Target.GroupName
+		if gi != gj {
+			return gi < gj
+		}
+		li, lj := rowSortLabel(sorted[i]), rowSortLabel(sorted[j])
+		return li < lj
+	})
+
+	orig := make([]domain.WeekHours, len(sorted))
+	for i, r := range sorted {
 		orig[i] = r.Hours
 	}
 	return Model{
 		name:     name,
-		rows:     rows,
+		rows:     sorted,
 		original: orig,
 	}
+}
+
+func rowSortLabel(r domain.TemplateRow) string {
+	if r.Label != "" {
+		return r.Label
+	}
+	return r.Target.DisplayRef
 }
 
 // Saved reports whether the user chose to save.

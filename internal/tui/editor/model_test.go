@@ -252,3 +252,73 @@ func TestModel_QuitKey_Dirty(t *testing.T) {
 	require.True(t, m.confirm)
 	require.False(t, m.quitting)
 }
+
+// testGroupedRows returns rows from multiple groups in a deliberately
+// scrambled order, simulating what derive produces (sorted by total hours
+// descending, not by group).
+func testGroupedRows() []domain.TemplateRow {
+	return []domain.TemplateRow{
+		{
+			ID:       "row-01",
+			Label:    "Admin Task",
+			Target:   domain.Target{GroupName: "UFIT Administration"},
+			TimeType: domain.TimeType{ID: 5, Name: "Standard"},
+			Hours:    domain.WeekHours{Mon: 8.0},
+		},
+		{
+			ID:       "row-02",
+			Label:    "Linux",
+			Target:   domain.Target{GroupName: "UFIT Operations"},
+			TimeType: domain.TimeType{ID: 5, Name: "Standard"},
+			Hours:    domain.WeekHours{Mon: 1.0},
+		},
+		{
+			ID:       "row-03",
+			Label:    "Prof Dev",
+			Target:   domain.Target{GroupName: "UFIT Administration"},
+			TimeType: domain.TimeType{ID: 6, Name: "Training"},
+		},
+		{
+			ID:       "row-04",
+			Label:    "Docker",
+			Target:   domain.Target{GroupName: "UFIT Operations"},
+			TimeType: domain.TimeType{ID: 5, Name: "Standard"},
+			Hours:    domain.WeekHours{Tue: 1.0},
+		},
+	}
+}
+
+func TestModel_GroupedNavigation_DownVisitsDisplayOrder(t *testing.T) {
+	m := New("test", testGroupedRows())
+
+	// After sorting, rows should be grouped:
+	// UFIT Administration: Admin Task, Prof Dev
+	// UFIT Operations: Docker, Linux
+	// Verify by navigating down and collecting row IDs.
+	var visited []string
+	for i := 0; i < len(m.rows); i++ {
+		visited = append(visited, m.rows[m.cursor.row].ID)
+		m = sendKey(m, tea.KeyDown)
+	}
+
+	// Expected: grouped by GroupName, then sorted by Label within each group.
+	require.Equal(t, []string{"row-01", "row-03", "row-04", "row-02"}, visited,
+		"navigation should follow display order: UFIT Administration (Admin Task, Prof Dev), UFIT Operations (Docker, Linux)")
+}
+
+func TestModel_GroupedRows_PreservesAfterEdit(t *testing.T) {
+	m := New("test", testGroupedRows())
+
+	// First row should be Admin Task (Mon=8.0)
+	require.Equal(t, "row-01", m.rows[0].ID)
+
+	// Edit it
+	m = sendKey(m, tea.KeyRight) // Mon
+	m = typeAndCommit(m, "4")
+	require.InDelta(t, 4.0, m.rows[0].Hours.Mon, 0.001)
+
+	// Save returns rows in display order
+	rows := m.Rows()
+	require.Equal(t, "row-01", rows[0].ID)
+	require.InDelta(t, 4.0, rows[0].Hours.Mon, 0.001)
+}
