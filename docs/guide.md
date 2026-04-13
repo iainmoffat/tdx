@@ -281,8 +281,9 @@ type names.
 Templates are the core feature of tdx. The workflow is:
 
 1. **Derive** a template from a week with known good data
-2. **Show** or **compare** to verify it looks right
-3. **Apply** it to future weeks
+2. **Edit** hours if needed (optional)
+3. **Show** or **compare** to verify it looks right
+4. **Apply** it to future weeks
 
 ### Derive a template
 
@@ -309,6 +310,34 @@ tdx time template show my-week
 
 Displays the template as a grid, similar to the week view but showing the
 template's hour pattern rather than live data.
+
+### Edit a template
+
+Open the interactive grid editor to adjust hour values:
+
+```bash
+tdx time template edit my-week
+```
+
+The editor shows the template as a navigable grid. Use arrow keys or Tab
+to move between cells, then adjust values:
+
+| Key | Action |
+|-----|--------|
+| Arrow keys / Tab | Navigate between day cells |
+| `+` / `-` | Increment or decrement by 0.5 hours |
+| 0-9, `.` | Type a value directly (snaps to nearest 0.5) |
+| Backspace | Clear cell to 0 |
+| Enter | Confirm typed value and advance |
+| Ctrl-S | Save and exit |
+| Esc | Cancel (prompts if unsaved changes) |
+
+Values are constrained to 0.5-hour increments between 0 and 24 hours.
+Row totals and day totals update live as you edit.
+
+This is useful for adjusting a derived template before applying it — for
+example, reducing Friday hours for a short week, or zeroing out rows you
+don't need this time.
 
 ### Clone a template
 
