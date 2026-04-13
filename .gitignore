@@ -13,6 +13,9 @@ go.work.sum
 # Legacy superpowers directory (moved to docs/specs + docs/plans)
 docs/superpowers/
 
+# Superpowers brainstorm sessions
+.superpowers/
+
 # Editor and OS noise
 .DS_Store
 .idea/
