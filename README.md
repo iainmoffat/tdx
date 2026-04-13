@@ -88,7 +88,7 @@ tdx time template apply my-week --week 2026-04-14 --yes
 | `tdx time template derive <name>` | Create template from a live week | `--from-week` |
 | `tdx time template list` | List saved templates | `--json` |
 | `tdx time template show <name>` | Show template as a grid | `--json` |
-| `tdx time template edit <name>` | Edit template hours in a grid editor | |
+| `tdx time template edit <name>` | Edit template hours in a grid editor | `--web` |
 | `tdx time template clone <name> <new>` | Copy a template | |
 | `tdx time template delete <name>` | Delete a template | |
 | `tdx time template apply <name>` | Apply template to a week | `--week`, `--mode`, `--days`, `--dry-run`, `--yes` |

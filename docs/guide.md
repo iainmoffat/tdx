@@ -338,6 +338,18 @@ This is useful for adjusting a derived template before applying it — for
 example, reducing Friday hours for a short week, or zeroing out rows you
 don't need this time.
 
+#### Browser editor
+
+For a GUI experience, add `--web` to open the editor in your browser:
+
+```bash
+tdx time template edit --web my-week
+```
+
+This starts a local server and opens a spreadsheet-like grid. Click cells
+to select, type to enter values, shift-click to fill across a row. Click
+Save when done — the server exits automatically.
+
 ### Clone a template
 
 ```bash
