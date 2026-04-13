@@ -35,7 +35,7 @@ func newEditCmd() *cobra.Command {
 				return fmt.Errorf("editor: %w", err)
 			}
 
-			final := result.(editor.Model)
+			final, _ := result.(editor.Model)
 			if !final.Saved() {
 				return nil
 			}

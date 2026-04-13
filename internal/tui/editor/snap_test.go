@@ -32,9 +32,9 @@ func TestSnapToHalf(t *testing.T) {
 }
 
 func TestNudge(t *testing.T) {
-	require.InDelta(t, 1.0, nudge(0.5, 1), 0.001)   // up
-	require.InDelta(t, 0.0, nudge(0.5, -1), 0.001)   // down
-	require.InDelta(t, 0.0, nudge(0.0, -1), 0.001)   // clamp at 0
-	require.InDelta(t, 24.0, nudge(24.0, 1), 0.001)  // clamp at 24
-	require.InDelta(t, 23.5, nudge(24.0, -1), 0.001) // down from max
+	require.InDelta(t, 1.0, nudge(0.5, 1), 0.001)
+	require.InDelta(t, 0.0, nudge(0.5, -1), 0.001)
+	require.InDelta(t, 0.0, nudge(0.0, -1), 0.001)
+	require.InDelta(t, 24.0, nudge(24.0, 1), 0.001)
+	require.InDelta(t, 23.5, nudge(24.0, -1), 0.001)
 }

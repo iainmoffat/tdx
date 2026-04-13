@@ -27,12 +27,14 @@ func testRows() []domain.TemplateRow {
 
 func sendKey(m Model, k tea.KeyType) Model {
 	updated, _ := m.Update(tea.KeyMsg{Type: k})
-	return updated.(Model)
+	result, _ := updated.(Model)
+	return result
 }
 
 func sendRune(m Model, r rune) Model {
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
-	return updated.(Model)
+	result, _ := updated.(Model)
+	return result
 }
 
 func TestModel_InitialCursor(t *testing.T) {
@@ -147,7 +149,7 @@ func TestModel_SaveExit(t *testing.T) {
 	m = sendKey(m, tea.KeyRight)
 	m = sendRune(m, '+')
 	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
-	m = updated.(Model)
+	m, _ = updated.(Model)
 	require.True(t, m.saved)
 	require.True(t, m.quitting)
 	require.NotNil(t, cmd)
@@ -156,7 +158,7 @@ func TestModel_SaveExit(t *testing.T) {
 func TestModel_CancelClean(t *testing.T) {
 	m := New("test", testRows())
 	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
-	m = updated.(Model)
+	m, _ = updated.(Model)
 	require.True(t, m.quitting)
 	require.False(t, m.saved)
 	require.NotNil(t, cmd)
@@ -170,7 +172,7 @@ func TestModel_CancelDirtyPrompt(t *testing.T) {
 	require.True(t, m.confirm)
 	require.False(t, m.quitting)
 	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
-	m = updated.(Model)
+	m, _ = updated.(Model)
 	require.True(t, m.quitting)
 	require.False(t, m.saved)
 	require.NotNil(t, cmd)
