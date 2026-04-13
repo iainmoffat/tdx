@@ -118,12 +118,14 @@ func (m Model) View() string {
 			headerLine := padRight("  "+g.name, labelWidth)
 			for ci := 0; ci < 7; ci++ {
 				if gDays[ci] == 0 {
-					headerLine += "  " + padRight(".", cellWidth-1)
+					headerLine += "  " + padRight(" ", cellWidth-1)
 				} else {
 					headerLine += "  " + padRight(fmt.Sprintf("%.1f", gDays[ci]), cellWidth-1)
 				}
 			}
-			headerLine += "  " + padRight(fmt.Sprintf("%.1f", gTotal), cellWidth-1)
+			if gTotal > 0 {
+				headerLine += "  " + padRight(fmt.Sprintf("%.1f", gTotal), cellWidth-1)
+			}
 			b.WriteString(groupStyle.Render(strings.TrimRight(headerLine, " ")) + "\n")
 
 			// Task rows indented under group.
@@ -141,7 +143,9 @@ func (m Model) View() string {
 				}
 				line += "  " + padRight(fmt.Sprintf("%.1f", rowTotal), cellWidth-1)
 				b.WriteString(strings.TrimRight(line, " ") + "\n")
-				b.WriteString("        " + ir.row.TimeType.Name + "\n")
+				if ir.row.TimeType.Name != "" {
+					b.WriteString("        " + ir.row.TimeType.Name + "\n")
+				}
 			}
 		} else {
 			// Ungrouped row.

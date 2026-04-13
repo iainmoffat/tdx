@@ -231,7 +231,9 @@ func Grid(w io.Writer, data GridData) {
 			for i := 0; i < 7; i++ {
 				headerLine += "  " + formatGroupCell(groupDays[i])
 			}
-			headerLine += "  " + padRight(fmt.Sprintf("%.1f", groupTotal), gridDayWidth-1)
+			if groupTotal > 0 {
+				headerLine += "  " + padRight(fmt.Sprintf("%.1f", groupTotal), gridDayWidth-1)
+			}
 			_, _ = fmt.Fprintln(w, strings.TrimRight(headerLine, " "))
 
 			// Task rows indented under the group.
@@ -289,7 +291,7 @@ func Grid(w io.Writer, data GridData) {
 // formatGroupCell formats a group header cell (no markers).
 func formatGroupCell(hours float64) string {
 	if hours == 0 {
-		return padRight(gridEmptyCell, gridDayWidth-1)
+		return padRight(" ", gridDayWidth-1)
 	}
 	return padRight(fmt.Sprintf("%.1f", hours), gridDayWidth-1)
 }
