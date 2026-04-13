@@ -122,13 +122,9 @@ func (s *Service) Derive(ctx context.Context, profileName, templateName string, 
 	}
 
 	// 5. Build rows slice in insertion order, then sort by total hours desc.
-	// Skip rows with zero total hours (empty assignment slots from the week report).
 	rows := make([]domain.TemplateRow, 0, len(order))
 	for _, k := range order {
 		acc := groups[k]
-		if acc.hours.Total() == 0 {
-			continue
-		}
 		desc := acc.mostCommonDescription()
 
 		label := acc.target.DisplayName
