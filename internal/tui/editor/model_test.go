@@ -197,3 +197,54 @@ func TestModel_TabWraps(t *testing.T) {
 	require.Equal(t, 1, m.cursor.row)
 	require.Equal(t, 0, m.cursor.col)
 }
+
+func TestModel_DirtyRevert(t *testing.T) {
+	m := New("test", testRows())
+	m = sendKey(m, tea.KeyRight) // Mon = 8.0
+	m = sendRune(m, '+')         // 8.5
+	require.True(t, m.dirty)
+	m = sendRune(m, '-') // back to 8.0
+	require.False(t, m.dirty)
+}
+
+func TestModel_CtrlS_WhileTyping(t *testing.T) {
+	m := New("test", testRows())
+	m = sendKey(m, tea.KeyRight) // Mon
+	m = sendRune(m, '4')         // start typing
+	require.True(t, m.typing)
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
+	m, _ = updated.(Model)
+	require.True(t, m.saved)
+	require.True(t, m.quitting)
+	require.InDelta(t, 4.0, m.rows[0].Hours.Mon, 0.001)
+	require.NotNil(t, cmd)
+}
+
+func TestModel_Esc_WhileTyping(t *testing.T) {
+	m := New("test", testRows())
+	m = sendKey(m, tea.KeyRight) // Mon = 8.0
+	m = sendRune(m, '3')         // start typing
+	require.True(t, m.typing)
+	m = sendKey(m, tea.KeyEsc) // discard
+	require.False(t, m.typing)
+	require.InDelta(t, 8.0, m.rows[0].Hours.Mon, 0.001) // unchanged
+	require.False(t, m.dirty)
+}
+
+func TestModel_QuitKey_Clean(t *testing.T) {
+	m := New("test", testRows())
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
+	m, _ = updated.(Model)
+	require.True(t, m.quitting)
+	require.False(t, m.saved)
+	require.NotNil(t, cmd)
+}
+
+func TestModel_QuitKey_Dirty(t *testing.T) {
+	m := New("test", testRows())
+	m = sendKey(m, tea.KeyRight)
+	m = sendRune(m, '+')
+	m = sendRune(m, 'q')
+	require.True(t, m.confirm)
+	require.False(t, m.quitting)
+}
