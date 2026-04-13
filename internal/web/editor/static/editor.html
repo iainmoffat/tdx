@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>tdx template editor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      background: #f5f5f5;
+      color: #222;
+      padding: 16px 24px 32px;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      color: #111;
+    }
+
+    h1 #tmpl-name {
+      color: #1a73e8;
+      font-weight: 700;
+    }
+
+    /* ---- grid ---- */
+    .grid-table {
+      border-collapse: collapse;
+      background: #fff;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      overflow: hidden;
+      width: max-content;
+      max-width: 100%;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+
+    .grid-table thead th {
+      background: #f0f4ff;
+      border-bottom: 2px solid #c0cce8;
+      padding: 6px 10px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 13px;
+      color: #444;
+      white-space: nowrap;
+    }
+
+    .grid-table thead th.col-label {
+      text-align: left;
+      min-width: 220px;
+    }
+
+    .grid-table thead th.col-total {
+      background: #eaf0fa;
+      color: #2255aa;
+    }
+
+    /* group header rows */
+    tr.group-row td {
+      background: #f7f7f7;
+      font-weight: 700;
+      font-size: 13px;
+      color: #555;
+      padding: 5px 10px;
+      border-top: 1px solid #d8d8d8;
+      border-bottom: 1px solid #e0e0e0;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+    }
+
+    /* task rows */
+    tr.task-row td {
+      border-bottom: 1px solid #ebebeb;
+      padding: 0;
+    }
+
+    tr.task-row:last-child td { border-bottom: none; }
+
+    tr.task-row:hover { background: #fafcff; }
+
+    td.cell-label {
+      padding: 6px 10px 6px 22px;
+      min-width: 220px;
+      white-space: nowrap;
+      color: #333;
+      user-select: none;
+    }
+
+    td.cell-day {
+      width: 52px;
+      text-align: center;
+      position: relative;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    td.cell-day .display-val {
+      display: block;
+      width: 100%;
+      height: 100%;
+      line-height: 32px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    td.cell-day .display-val.zero {
+      color: #bbb;
+    }
+
+    /* selected cell */
+    td.cell-day.selected {
+      outline: 2px solid #1a73e8;
+      outline-offset: -2px;
+      background: #e8f0fe;
+      z-index: 1;
+    }
+
+    /* editing cell */
+    td.cell-day.editing {
+      outline: 2px solid #f4a700;
+      outline-offset: -2px;
+      background: #fffde7;
+    }
+
+    td.cell-day input.edit-input {
+      width: 100%;
+      height: 32px;
+      border: none;
+      background: transparent;
+      text-align: center;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      font-variant-numeric: tabular-nums;
+      padding: 0 2px;
+    }
+
+    /* fill preview */
+    td.cell-day.fill-preview {
+      outline: 2px dashed #28a745;
+      outline-offset: -2px;
+      background: #e9fbe9;
+    }
+
+    /* flash animation on fill */
+    @keyframes flash-green {
+      0%   { background: #c6f6d5; }
+      60%  { background: #c6f6d5; }
+      100% { background: transparent; }
+    }
+
+    td.cell-day.flash-fill {
+      animation: flash-green 0.4s ease-out forwards;
+    }
+
+    /* row total */
+    td.cell-row-total {
+      padding: 0 10px;
+      text-align: right;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: #2255aa;
+      width: 52px;
+      white-space: nowrap;
+      background: #f0f4ff;
+      border-left: 1px solid #c0cce8;
+      border-bottom: 1px solid #ebebeb;
+    }
+
+    /* day total row */
+    tr.total-row td {
+      background: #eaf0fa;
+      border-top: 2px solid #c0cce8;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: #2255aa;
+      text-align: center;
+      padding: 6px 10px;
+    }
+
+    tr.total-row td.col-label {
+      text-align: left;
+      font-size: 13px;
+      padding-left: 10px;
+    }
+
+    tr.total-row td.grand-total {
+      border-left: 1px solid #c0cce8;
+    }
+
+    /* hint bar */
+    .hint-bar {
+      font-size: 12px;
+      color: #777;
+      background: #f9f9f9;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      padding: 6px 12px;
+      margin-bottom: 14px;
+      line-height: 1.6;
+      width: max-content;
+      max-width: 100%;
+    }
+
+    .hint-bar kbd {
+      display: inline-block;
+      background: #eee;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-size: 11px;
+      font-family: monospace;
+      color: #444;
+    }
+
+    /* buttons */
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .btn-row button {
+      padding: 8px 20px;
+      border-radius: 5px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s, background .15s;
+    }
+
+    #btn-save {
+      background: #1a73e8;
+      color: #fff;
+    }
+
+    #btn-save:hover:not(:disabled) { background: #1558b0; }
+
+    #btn-cancel {
+      background: #eee;
+      color: #444;
+    }
+
+    #btn-cancel:hover:not(:disabled) { background: #ddd; }
+
+    .btn-row button:disabled {
+      opacity: .5;
+      cursor: default;
+    }
+
+    #status {
+      font-size: 13px;
+      min-height: 20px;
+      color: #333;
+    }
+
+    #status.ok  { color: #1a7340; font-weight: 600; }
+    #status.err { color: #c0392b; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>tdx template editor &nbsp;<span id="tmpl-name"></span></h1>
+
+  <table class="grid-table" id="grid">
+    <thead>
+      <tr>
+        <th class="col-label">Task</th>
+        <th>Sun</th>
+        <th>Tue</th>
+        <th>Mon</th>
+        <th>Wed</th>
+        <th>Thu</th>
+        <th>Fri</th>
+        <th>Sat</th>
+        <th class="col-total">Total</th>
+      </tr>
+    </thead>
+    <tbody id="grid-body"></tbody>
+  </table>
+
+  <div class="hint-bar">
+    <kbd>Click</kbd> select &nbsp;|&nbsp;
+    <kbd>Type</kbd> edit &nbsp;|&nbsp;
+    <kbd>Enter</kbd>/<kbd>Tab</kbd> commit &amp; advance &nbsp;|&nbsp;
+    <kbd>Esc</kbd> cancel &nbsp;|&nbsp;
+    <kbd>Arrows</kbd> navigate &nbsp;|&nbsp;
+    <kbd>Del</kbd>/<kbd>Bksp</kbd> clear &nbsp;|&nbsp;
+    <kbd>Shift+Click</kbd> fill range
+  </div>
+
+  <div class="btn-row">
+    <button id="btn-cancel">Cancel</button>
+    <button id="btn-save">Save Template</button>
+  </div>
+  <div id="status"></div>
+
+  <script>
+    const TEMPLATE_DATA = "__TEMPLATE_JSON__";
+
+    // ---- Constants ----
+    const DAYS = ['sun','mon','tue','wed','thu','fri','sat'];
+    const DAY_LABELS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+    // ---- Parse template ----
+    let tmpl;
+    try {
+      tmpl = JSON.parse(TEMPLATE_DATA);
+    } catch(e) {
+      document.body.innerHTML = '<p style="color:red;padding:20px">Failed to parse template data: ' + e.message + '</p>';
+      throw e;
+    }
+
+    // ---- Fix header order (Sun Mon Tue Wed Thu Fri Sat) ----
+    // The static header was a placeholder; rebuild dynamically.
+    (function buildHeader() {
+      const thead = document.querySelector('#grid thead tr');
+      thead.innerHTML = '';
+      const thLabel = document.createElement('th');
+      thLabel.className = 'col-label';
+      thLabel.textContent = 'Task';
+      thead.appendChild(thLabel);
+      DAY_LABELS.forEach(d => {
+        const th = document.createElement('th');
+        th.textContent = d;
+        thead.appendChild(th);
+      });
+      const thTotal = document.createElement('th');
+      thTotal.className = 'col-total';
+      thTotal.textContent = 'Total';
+      thead.appendChild(thTotal);
+    })();
+
+    // ---- Set title ----
+    document.getElementById('tmpl-name').textContent = tmpl.name || '';
+
+    // ---- Sort rows by (group, label) ----
+    const rows = (tmpl.rows || []).slice().sort((a, b) => {
+      const ga = (a.group||'').toLowerCase();
+      const gb = (b.group||'').toLowerCase();
+      if (ga !== gb) return ga < gb ? -1 : 1;
+      const la = (a.label||'').toLowerCase();
+      const lb = (b.label||'').toLowerCase();
+      return la < lb ? -1 : la > lb ? 1 : 0;
+    });
+
+    // ---- State ----
+    // cells[rowIdx][dayIdx] = { td, span, value (number) }
+    const cells = [];
+    // Map rowId -> hours object (live, mutable)
+    const hoursMap = {};
+
+    // Selection / editing state
+    let selRow = -1;
+    let selDay = -1;
+    let editing = false;
+    let editInput = null;
+    let editPrev = 0;
+
+    // Shift-fill state
+    let fillAnchorRow = -1;
+    let fillAnchorDay = -1;
+
+    // ---- Build grid body ----
+    const tbody = document.getElementById('grid-body');
+    let currentGroup = null;
+    let taskRowIdx = 0; // index into cells[]
+
+    rows.forEach((row) => {
+      // Initialize hoursMap
+      const h = Object.assign({ sun:0, mon:0, tue:0, wed:0, thu:0, fri:0, sat:0 }, row.hours || {});
+      hoursMap[row.id] = h;
+
+      // Group header
+      if (row.group !== currentGroup) {
+        currentGroup = row.group;
+        const tr = document.createElement('tr');
+        tr.className = 'group-row';
+        const td = document.createElement('td');
+        td.colSpan = 2 + DAYS.length; // label + days + total
+        td.textContent = row.group || 'Ungrouped';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+      }
+
+      // Task row
+      const rIdx = taskRowIdx++;
+      cells[rIdx] = [];
+      const meta = { id: row.id, label: row.label };
+
+      const tr = document.createElement('tr');
+      tr.className = 'task-row';
+      tr.dataset.ridx = rIdx;
+
+      // Label cell
+      const tdLabel = document.createElement('td');
+      tdLabel.className = 'cell-label';
+      tdLabel.textContent = row.label || '';
+      tr.appendChild(tdLabel);
+
+      // Day cells
+      DAYS.forEach((day, dIdx) => {
+        const td = document.createElement('td');
+        td.className = 'cell-day';
+        td.dataset.ridx = rIdx;
+        td.dataset.didx = dIdx;
+
+        const span = document.createElement('span');
+        span.className = 'display-val';
+        td.appendChild(span);
+
+        cells[rIdx][dIdx] = { td, span, rowId: row.id, day };
+        setDisplay(rIdx, dIdx, h[day]);
+
+        td.addEventListener('mousedown', onCellMouseDown);
+        td.addEventListener('mouseover', onCellMouseOver);
+
+        tr.appendChild(td);
+      });
+
+      // Row total cell
+      const tdTotal = document.createElement('td');
+      tdTotal.className = 'cell-row-total';
+      tdTotal.id = 'rt-' + rIdx;
+      tr.appendChild(tdTotal);
+      updateRowTotal(rIdx);
+
+      tbody.appendChild(tr);
+    });
+
+    // ---- Day totals row ----
+    const totalRow = document.createElement('tr');
+    totalRow.className = 'total-row';
+    const tdTotalLabel = document.createElement('td');
+    tdTotalLabel.className = 'col-label';
+    tdTotalLabel.textContent = 'Day Total';
+    totalRow.appendChild(tdTotalLabel);
+    DAYS.forEach((day, dIdx) => {
+      const td = document.createElement('td');
+      td.id = 'dt-' + dIdx;
+      totalRow.appendChild(td);
+    });
+    const tdGrand = document.createElement('td');
+    tdGrand.className = 'grand-total';
+    tdGrand.id = 'dt-grand';
+    totalRow.appendChild(tdGrand);
+    tbody.appendChild(totalRow);
+    updateAllTotals();
+
+    // ---- Display helpers ----
+    function fmtVal(v) {
+      if (v === 0) return '-';
+      // show integer if whole, otherwise 1 decimal
+      return (v % 1 === 0) ? String(v) : v.toFixed(1);
+    }
+
+    function setDisplay(rIdx, dIdx, val) {
+      const c = cells[rIdx][dIdx];
+      c.span.textContent = fmtVal(val);
+      c.span.className = 'display-val' + (val === 0 ? ' zero' : '');
+    }
+
+    function snapVal(v) {
+      // snap to nearest 0.5, clamp 0-24
+      const s = Math.round(v * 2) / 2;
+      return Math.max(0, Math.min(24, s));
+    }
+
+    function getValue(rIdx, dIdx) {
+      const c = cells[rIdx][dIdx];
+      return hoursMap[c.rowId][c.day];
+    }
+
+    function setValue(rIdx, dIdx, raw) {
+      const v = snapVal(raw);
+      const c = cells[rIdx][dIdx];
+      hoursMap[c.rowId][c.day] = v;
+      setDisplay(rIdx, dIdx, v);
+      updateRowTotal(rIdx);
+      updateDayTotal(dIdx);
+      updateGrandTotal();
+      return v;
+    }
+
+    function updateRowTotal(rIdx) {
+      const el = document.getElementById('rt-' + rIdx);
+      if (!el) return;
+      const c0 = cells[rIdx][0];
+      const h = hoursMap[c0.rowId];
+      const sum = DAYS.reduce((a, d) => a + (h[d] || 0), 0);
+      el.textContent = fmtVal(sum);
+    }
+
+    function updateDayTotal(dIdx) {
+      const el = document.getElementById('dt-' + dIdx);
+      if (!el) return;
+      const day = DAYS[dIdx];
+      const sum = cells.reduce((a, row) => {
+        const c = row[dIdx];
+        return a + (hoursMap[c.rowId][day] || 0);
+      }, 0);
+      el.textContent = fmtVal(sum);
+    }
+
+    function updateGrandTotal() {
+      const el = document.getElementById('dt-grand');
+      if (!el) return;
+      let sum = 0;
+      cells.forEach((row, rIdx) => {
+        const c0 = row[0];
+        const h = hoursMap[c0.rowId];
+        DAYS.forEach(d => { sum += h[d] || 0; });
+      });
+      el.textContent = fmtVal(sum);
+    }
+
+    function updateAllTotals() {
+      cells.forEach((_, rIdx) => updateRowTotal(rIdx));
+      DAYS.forEach((_, dIdx) => updateDayTotal(dIdx));
+      updateGrandTotal();
+    }
+
+    // ---- Selection ----
+    function cellEl(rIdx, dIdx) {
+      if (rIdx < 0 || rIdx >= cells.length) return null;
+      if (dIdx < 0 || dIdx >= DAYS.length) return null;
+      return cells[rIdx][dIdx].td;
+    }
+
+    function selectCell(rIdx, dIdx, startEdit, initChar) {
+      // Commit any current edit first
+      if (editing) commitEdit();
+
+      // Deselect old
+      const old = cellEl(selRow, selDay);
+      if (old) old.classList.remove('selected');
+
+      selRow = rIdx;
+      selDay = dIdx;
+
+      const el = cellEl(rIdx, dIdx);
+      if (!el) return;
+      el.classList.add('selected');
+      el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+
+      if (startEdit) {
+        beginEdit(rIdx, dIdx, initChar);
+      }
+    }
+
+    // ---- Editing ----
+    function beginEdit(rIdx, dIdx, initChar) {
+      const c = cells[rIdx][dIdx];
+      editing = true;
+      editPrev = getValue(rIdx, dIdx);
+      c.td.classList.add('editing');
+      c.span.style.display = 'none';
+
+      editInput = document.createElement('input');
+      editInput.type = 'text';
+      editInput.className = 'edit-input';
+      editInput.inputMode = 'decimal';
+
+      if (initChar !== undefined && initChar !== null) {
+        editInput.value = initChar;
+      } else {
+        editInput.value = editPrev === 0 ? '' : String(editPrev % 1 === 0 ? editPrev : editPrev.toFixed(1));
+      }
+
+      c.td.appendChild(editInput);
+      editInput.focus();
+      // Select all text for replace-on-type (when not init char)
+      if (initChar === undefined || initChar === null) {
+        editInput.select();
+      } else {
+        // Put cursor at end
+        const len = editInput.value.length;
+        editInput.setSelectionRange(len, len);
+      }
+
+      editInput.addEventListener('keydown', onInputKeyDown);
+      editInput.addEventListener('blur', onInputBlur);
+    }
+
+    function commitEdit() {
+      if (!editing) return;
+      const rIdx = selRow;
+      const dIdx = selDay;
+      const raw = parseFloat(editInput.value);
+      const v = isNaN(raw) ? editPrev : raw;
+      endEdit(rIdx, dIdx);
+      setValue(rIdx, dIdx, v);
+    }
+
+    function cancelEdit() {
+      if (!editing) return;
+      const rIdx = selRow;
+      const dIdx = selDay;
+      endEdit(rIdx, dIdx);
+      // restore display (value unchanged)
+      setDisplay(rIdx, dIdx, editPrev);
+    }
+
+    function endEdit(rIdx, dIdx) {
+      if (!editing) return;
+      editing = false;
+      const c = cells[rIdx][dIdx];
+      c.td.classList.remove('editing');
+      c.span.style.display = '';
+      if (editInput) {
+        editInput.removeEventListener('keydown', onInputKeyDown);
+        editInput.removeEventListener('blur', onInputBlur);
+        editInput.remove();
+        editInput = null;
+      }
+    }
+
+    // ---- Keyboard: input ----
+    function onInputKeyDown(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        commitEdit();
+        // Advance: next day, or wrap to next row
+        const nextDay = selDay + 1;
+        if (nextDay < DAYS.length) {
+          selectCell(selRow, nextDay, false);
+        } else if (selRow + 1 < cells.length) {
+          selectCell(selRow + 1, 0, false);
+        }
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        commitEdit();
+        if (e.shiftKey) {
+          const prevDay = selDay - 1;
+          if (prevDay >= 0) {
+            selectCell(selRow, prevDay, false);
+          } else if (selRow > 0) {
+            selectCell(selRow - 1, DAYS.length - 1, false);
+          }
+        } else {
+          const nextDay = selDay + 1;
+          if (nextDay < DAYS.length) {
+            selectCell(selRow, nextDay, false);
+          } else if (selRow + 1 < cells.length) {
+            selectCell(selRow + 1, 0, false);
+          }
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelEdit();
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' ||
+                 e.key === 'ArrowUp'   || e.key === 'ArrowDown') {
+        e.preventDefault();
+        commitEdit();
+        navigate(e.key);
+      }
+    }
+
+    function onInputBlur() {
+      // small delay so click-on-other-cell fires first
+      setTimeout(() => {
+        if (editing) commitEdit();
+      }, 80);
+    }
+
+    // ---- Keyboard: grid ----
+    document.addEventListener('keydown', onGridKeyDown);
+
+    function onGridKeyDown(e) {
+      // If focus is inside an input, let onInputKeyDown handle it
+      if (editing) return;
+      if (selRow < 0) return;
+
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' ||
+          e.key === 'ArrowUp'   || e.key === 'ArrowDown') {
+        e.preventDefault();
+        navigate(e.key);
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        setValue(selRow, selDay, 0);
+      } else if (e.key === 'Enter' || e.key === 'F2') {
+        e.preventDefault();
+        beginEdit(selRow, selDay, null);
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          const prevDay = selDay - 1;
+          if (prevDay >= 0) selectCell(selRow, prevDay, false);
+          else if (selRow > 0) selectCell(selRow - 1, DAYS.length - 1, false);
+        } else {
+          const nextDay = selDay + 1;
+          if (nextDay < DAYS.length) selectCell(selRow, nextDay, false);
+          else if (selRow + 1 < cells.length) selectCell(selRow + 1, 0, false);
+        }
+      } else if (e.key === 'Escape') {
+        // deselect
+        const old = cellEl(selRow, selDay);
+        if (old) old.classList.remove('selected');
+        selRow = -1; selDay = -1;
+        fillAnchorRow = -1; fillAnchorDay = -1;
+      } else if (isDigitOrDot(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Start typing — replace cell content
+        e.preventDefault();
+        selectCell(selRow, selDay, true, e.key);
+      }
+    }
+
+    function isDigitOrDot(key) {
+      return /^[0-9.]$/.test(key);
+    }
+
+    function navigate(arrowKey) {
+      let r = selRow, d = selDay;
+      if (arrowKey === 'ArrowLeft')  d = Math.max(0, d - 1);
+      if (arrowKey === 'ArrowRight') d = Math.min(DAYS.length - 1, d + 1);
+      if (arrowKey === 'ArrowUp')    r = Math.max(0, r - 1);
+      if (arrowKey === 'ArrowDown')  r = Math.min(cells.length - 1, r + 1);
+      selectCell(r, d, false);
+    }
+
+    // ---- Mouse interaction ----
+    function onCellMouseDown(e) {
+      const td = e.currentTarget;
+      const rIdx = parseInt(td.dataset.ridx, 10);
+      const dIdx = parseInt(td.dataset.didx, 10);
+
+      if (e.shiftKey && fillAnchorRow >= 0 && fillAnchorRow === rIdx) {
+        // Shift-click fill
+        e.preventDefault();
+        doFill(rIdx, fillAnchorDay, dIdx);
+        clearFillPreview();
+        // Keep anchor, update selection
+        selectCell(rIdx, dIdx, false);
+        fillAnchorRow = rIdx;
+        fillAnchorDay = dIdx; // new anchor is the clicked cell? or original?
+      } else {
+        selectCell(rIdx, dIdx, false);
+        fillAnchorRow = rIdx;
+        fillAnchorDay = dIdx;
+      }
+    }
+
+    function onCellMouseOver(e) {
+      if (!e.shiftKey || fillAnchorRow < 0) {
+        clearFillPreview();
+        return;
+      }
+      const td = e.currentTarget;
+      const rIdx = parseInt(td.dataset.ridx, 10);
+      const dIdx = parseInt(td.dataset.didx, 10);
+
+      if (rIdx !== fillAnchorRow) {
+        clearFillPreview();
+        return;
+      }
+
+      // Show preview
+      clearFillPreview();
+      const lo = Math.min(fillAnchorDay, dIdx);
+      const hi = Math.max(fillAnchorDay, dIdx);
+      for (let d = lo; d <= hi; d++) {
+        const c = cells[rIdx][d];
+        if (c && c.td !== cells[rIdx][fillAnchorDay].td) {
+          c.td.classList.add('fill-preview');
+        }
+      }
+    }
+
+    function clearFillPreview() {
+      document.querySelectorAll('.fill-preview').forEach(el => el.classList.remove('fill-preview'));
+    }
+
+    function doFill(rIdx, fromDay, toDay) {
+      const srcVal = getValue(rIdx, fromDay);
+      const lo = Math.min(fromDay, toDay);
+      const hi = Math.max(fromDay, toDay);
+      for (let d = lo; d <= hi; d++) {
+        if (d === fromDay) continue; // source cell already has value
+        setValue(rIdx, d, srcVal);
+        // Flash
+        const td = cells[rIdx][d].td;
+        td.classList.remove('flash-fill');
+        void td.offsetWidth; // force reflow
+        td.classList.add('flash-fill');
+        td.addEventListener('animationend', () => td.classList.remove('flash-fill'), { once: true });
+      }
+    }
+
+    // ---- Save / Cancel ----
+    document.getElementById('btn-save').addEventListener('click', async () => {
+      const btnSave   = document.getElementById('btn-save');
+      const btnCancel = document.getElementById('btn-cancel');
+      const status    = document.getElementById('status');
+
+      // Commit any in-progress edit
+      if (editing) commitEdit();
+
+      btnSave.disabled   = true;
+      btnCancel.disabled = true;
+      status.className   = '';
+      status.textContent = 'Saving...';
+
+      const payload = {
+        rows: rows.map(r => ({
+          id:    r.id,
+          hours: Object.assign({}, hoursMap[r.id])
+        }))
+      };
+
+      try {
+        const res = await fetch('/api/save', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error('Server error ' + res.status + ': ' + txt);
+        }
+        status.className   = 'ok';
+        status.textContent = 'Saved! You can close this tab.';
+      } catch (err) {
+        btnSave.disabled   = false;
+        btnCancel.disabled = false;
+        status.className   = 'err';
+        status.textContent = 'Save failed: ' + err.message;
+      }
+    });
+
+    document.getElementById('btn-cancel').addEventListener('click', async () => {
+      const btnSave   = document.getElementById('btn-save');
+      const btnCancel = document.getElementById('btn-cancel');
+      const status    = document.getElementById('status');
+
+      btnSave.disabled   = true;
+      btnCancel.disabled = true;
+      status.className   = '';
+      status.textContent = 'Cancelling...';
+
+      try {
+        await fetch('/api/cancel', { method: 'POST' });
+      } catch(_) {
+        // server may close the connection; that's fine
+      }
+      status.className   = 'ok';
+      status.textContent = 'Cancelled. You can close this tab.';
+    });
+
+    // ---- Prevent accidental navigation away ----
+    window.addEventListener('beforeunload', e => {
+      // Only warn if buttons are still enabled (i.e., not yet saved/cancelled)
+      const btn = document.getElementById('btn-save');
+      if (btn && !btn.disabled) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
+  </script>
+</body>
+</html>
