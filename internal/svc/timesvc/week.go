@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 // GetWeekReport fetches TD's weekly report for the week containing the

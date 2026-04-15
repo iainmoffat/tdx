@@ -6,7 +6,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 // cursor tracks the active cell position.

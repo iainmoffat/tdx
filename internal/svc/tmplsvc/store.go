@@ -8,8 +8,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 // Store manages template YAML files on disk under config.Paths.TemplatesDir.

@@ -3,8 +3,8 @@ package auth
 import (
 	"fmt"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/spf13/cobra"
 )
 

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 const gridDayWidth = 5 // "99.9" + gutter

@@ -186,7 +186,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
 )
 
@@ -412,7 +412,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 // cursor tracks the active cell position.
@@ -857,9 +857,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/svc/tmplsvc"
-	"github.com/ipm/tdx/internal/tui/editor"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/svc/tmplsvc"
+	"github.com/iainmoffat/tdx/internal/tui/editor"
 )
 
 func newEditCmd() *cobra.Command {

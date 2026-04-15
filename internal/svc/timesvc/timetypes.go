@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 // ListTimeTypes returns every time type visible to the authenticated user.

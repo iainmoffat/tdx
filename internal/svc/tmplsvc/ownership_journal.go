@@ -1,6 +1,6 @@
 package tmplsvc
 
-import "github.com/ipm/tdx/internal/domain"
+import "github.com/iainmoffat/tdx/internal/domain"
 
 // JournalChecker is a no-op implementation of domain.OwnershipChecker.
 // Journal-based ownership tracking defers lookup to an append-only log file

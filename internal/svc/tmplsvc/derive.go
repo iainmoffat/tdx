@@ -6,7 +6,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 // rowKey is the composite key used to group time entries into template rows.

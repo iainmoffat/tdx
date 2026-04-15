@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/svc/tmplsvc"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/svc/tmplsvc"
 )
 
 func newDeleteCmd() *cobra.Command {

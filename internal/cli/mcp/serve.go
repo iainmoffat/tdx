@@ -3,11 +3,11 @@ package mcp
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/ipm/tdx/internal/config"
-	mcpsrv "github.com/ipm/tdx/internal/mcp"
-	"github.com/ipm/tdx/internal/svc/authsvc"
-	"github.com/ipm/tdx/internal/svc/timesvc"
-	"github.com/ipm/tdx/internal/svc/tmplsvc"
+	"github.com/iainmoffat/tdx/internal/config"
+	mcpsrv "github.com/iainmoffat/tdx/internal/mcp"
+	"github.com/iainmoffat/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/svc/timesvc"
+	"github.com/iainmoffat/tdx/internal/svc/tmplsvc"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )

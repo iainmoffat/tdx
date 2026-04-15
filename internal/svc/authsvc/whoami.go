@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ipm/tdx/internal/domain"
-	"github.com/ipm/tdx/internal/tdx"
+	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/tdx"
 )
 
 // wireUser matches the JSON shape returned by GET /TDWebApi/api/auth/getuser.

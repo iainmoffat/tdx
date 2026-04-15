@@ -507,7 +507,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 func TestEncodeTargetRoundTrip(t *testing.T) {
@@ -663,7 +663,7 @@ package timesvc
 import (
 	"fmt"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 // encodeTarget maps a domain.Target to wire fields on a wireTimeEntryWrite.
@@ -767,7 +767,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 // writeTestConfig creates a minimal config directory pointing at the given URL.
@@ -926,7 +926,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 // AddEntry creates a new time entry and returns the full domain entry.
@@ -1519,7 +1519,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 // printEntry writes a human-readable entry to w, matching the show command format.
@@ -1898,11 +1898,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	authsvc "github.com/ipm/tdx/internal/svc/authsvc"
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
-	"github.com/ipm/tdx/internal/render"
-	"github.com/ipm/tdx/internal/svc/timesvc"
+	authsvc "github.com/iainmoffat/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/render"
+	"github.com/iainmoffat/tdx/internal/svc/timesvc"
 )
 
 func newAddCmd() *cobra.Command {
@@ -2381,11 +2381,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	authsvc "github.com/ipm/tdx/internal/svc/authsvc"
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
-	"github.com/ipm/tdx/internal/render"
-	"github.com/ipm/tdx/internal/svc/timesvc"
+	authsvc "github.com/iainmoffat/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/render"
+	"github.com/iainmoffat/tdx/internal/svc/timesvc"
 )
 
 func newUpdateCmd() *cobra.Command {
@@ -2845,10 +2845,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	authsvc "github.com/ipm/tdx/internal/svc/authsvc"
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/render"
-	"github.com/ipm/tdx/internal/svc/timesvc"
+	authsvc "github.com/iainmoffat/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/render"
+	"github.com/iainmoffat/tdx/internal/svc/timesvc"
 )
 
 // ErrPartialDelete is returned when a batch delete has partial failures.

@@ -82,7 +82,7 @@ tdx/
 Run:
 ```bash
 cd /Users/ipm/code/tdx
-go mod init github.com/ipm/tdx
+go mod init github.com/iainmoffat/tdx
 go get github.com/spf13/cobra@latest
 go get github.com/stretchr/testify@latest
 ```
@@ -183,7 +183,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ipm/tdx/internal/cli"
+	"github.com/iainmoffat/tdx/internal/cli"
 )
 
 // version is overridden at build time with -ldflags "-X main.version=..."
@@ -546,7 +546,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
 )
 
@@ -667,7 +667,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"gopkg.in/yaml.v3"
 )
 
@@ -839,7 +839,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
 )
 
@@ -941,7 +941,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"gopkg.in/yaml.v3"
 )
 
@@ -1464,8 +1464,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
 )
 
@@ -1629,9 +1629,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
-	"github.com/ipm/tdx/internal/tdx"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/tdx"
 )
 
 // Service orchestrates the auth-related operations.
@@ -2018,7 +2018,7 @@ package config
 import (
 	"fmt"
 
-	"github.com/ipm/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -2110,7 +2110,7 @@ Modify `internal/cli/root.go`:
 package cli
 
 import (
-	"github.com/ipm/tdx/internal/cli/config"
+	"github.com/iainmoffat/tdx/internal/cli/config"
 	"github.com/spf13/cobra"
 )
 
@@ -2286,8 +2286,8 @@ package auth
 import (
 	"fmt"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/spf13/cobra"
 )
 
@@ -2414,8 +2414,8 @@ Modify `internal/cli/root.go`:
 package cli
 
 import (
-	"github.com/ipm/tdx/internal/cli/auth"
-	"github.com/ipm/tdx/internal/cli/config"
+	"github.com/iainmoffat/tdx/internal/cli/auth"
+	"github.com/iainmoffat/tdx/internal/cli/config"
 	"github.com/spf13/cobra"
 )
 
@@ -2576,7 +2576,7 @@ package auth
 import (
 	"testing"
 
-	"github.com/ipm/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -2607,9 +2607,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/render"
-	"github.com/ipm/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/render"
+	"github.com/iainmoffat/tdx/internal/svc/authsvc"
 	"github.com/spf13/cobra"
 )
 
@@ -2737,8 +2737,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
 )
 
@@ -2805,8 +2805,8 @@ package auth
 import (
 	"fmt"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/svc/authsvc"
 	"github.com/spf13/cobra"
 )
 
@@ -2907,7 +2907,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ipm/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -2998,8 +2998,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/svc/authsvc"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )

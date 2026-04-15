@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 var markerRe = regexp.MustCompile(`\[tdx:([^#\]]+)#([^\]]+)\]$`)

@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
-	"github.com/ipm/tdx/internal/tdx"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/tdx"
 )
 
 // Service orchestrates the auth-related operations.

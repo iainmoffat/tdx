@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/render"
-	"github.com/ipm/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/render"
+	"github.com/iainmoffat/tdx/internal/svc/authsvc"
 	"github.com/spf13/cobra"
 )
 

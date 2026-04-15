@@ -1,10 +1,10 @@
 package cli
 
 import (
-	"github.com/ipm/tdx/internal/cli/auth"
-	"github.com/ipm/tdx/internal/cli/config"
-	mcpcli "github.com/ipm/tdx/internal/cli/mcp"
-	timecli "github.com/ipm/tdx/internal/cli/time"
+	"github.com/iainmoffat/tdx/internal/cli/auth"
+	"github.com/iainmoffat/tdx/internal/cli/config"
+	mcpcli "github.com/iainmoffat/tdx/internal/cli/mcp"
+	timecli "github.com/iainmoffat/tdx/internal/cli/time"
 	"github.com/spf13/cobra"
 )
 

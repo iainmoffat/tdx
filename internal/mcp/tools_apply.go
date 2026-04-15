@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ipm/tdx/internal/domain"
-	"github.com/ipm/tdx/internal/svc/tmplsvc"
+	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/svc/tmplsvc"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

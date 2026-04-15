@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 // All types in this file are private wire structs that match TeamDynamix's

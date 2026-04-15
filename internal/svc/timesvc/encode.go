@@ -3,7 +3,7 @@ package timesvc
 import (
 	"fmt"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 // encodeTarget maps a domain.Target to wire fields on a wireTimeEntryWrite.

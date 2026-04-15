@@ -5,10 +5,10 @@
 package time
 
 import (
-	"github.com/ipm/tdx/internal/cli/time/entry"
-	"github.com/ipm/tdx/internal/cli/time/template"
-	"github.com/ipm/tdx/internal/cli/time/timetype"
-	"github.com/ipm/tdx/internal/cli/time/week"
+	"github.com/iainmoffat/tdx/internal/cli/time/entry"
+	"github.com/iainmoffat/tdx/internal/cli/time/template"
+	"github.com/iainmoffat/tdx/internal/cli/time/timetype"
+	"github.com/iainmoffat/tdx/internal/cli/time/week"
 	"github.com/spf13/cobra"
 )
 

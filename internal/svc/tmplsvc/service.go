@@ -4,8 +4,8 @@
 package tmplsvc
 
 import (
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/svc/timesvc"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/svc/timesvc"
 )
 
 // Service is the template operations facade. It holds a Store for YAML CRUD

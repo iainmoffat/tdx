@@ -6,8 +6,8 @@ package timesvc
 import (
 	"fmt"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/tdx"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/tdx"
 )
 
 // Service is the read-only time operations facade. It holds references to

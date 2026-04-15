@@ -7,7 +7,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

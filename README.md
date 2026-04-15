@@ -17,7 +17,7 @@ brew install iainmoffat/tdx/tdx
 **Go install**:
 
 ```bash
-go install github.com/ipm/tdx/cmd/tdx@latest
+go install github.com/iainmoffat/tdx/cmd/tdx@latest
 ```
 
 **GitHub Releases**: download the binary for your platform from

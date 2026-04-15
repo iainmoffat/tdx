@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ipm/tdx/internal/domain"
-	"github.com/ipm/tdx/internal/tdx"
+	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/tdx"
 )
 
 // SearchEntries runs POST /TDWebApi/api/time/search with the given filter.

@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/svc/authsvc"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )

@@ -6,7 +6,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"gopkg.in/yaml.v3"
 )
 

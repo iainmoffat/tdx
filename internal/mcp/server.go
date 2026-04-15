@@ -3,9 +3,9 @@ package mcp
 import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/ipm/tdx/internal/svc/authsvc"
-	"github.com/ipm/tdx/internal/svc/timesvc"
-	"github.com/ipm/tdx/internal/svc/tmplsvc"
+	"github.com/iainmoffat/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/svc/timesvc"
+	"github.com/iainmoffat/tdx/internal/svc/tmplsvc"
 )
 
 // Services bundles the service layer dependencies for MCP tool handlers.

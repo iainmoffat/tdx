@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
-	"github.com/ipm/tdx/internal/svc/timesvc"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/svc/timesvc"
 	"github.com/stretchr/testify/require"
 )
 

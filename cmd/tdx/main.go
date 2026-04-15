@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ipm/tdx/internal/cli"
+	"github.com/iainmoffat/tdx/internal/cli"
 )
 
 // version is overridden at build time with -ldflags "-X main.version=..."

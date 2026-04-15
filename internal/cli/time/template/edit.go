@@ -7,11 +7,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
-	"github.com/ipm/tdx/internal/svc/tmplsvc"
-	"github.com/ipm/tdx/internal/tui/editor"
-	webeditor "github.com/ipm/tdx/internal/web/editor"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/svc/tmplsvc"
+	"github.com/iainmoffat/tdx/internal/tui/editor"
+	webeditor "github.com/iainmoffat/tdx/internal/web/editor"
 )
 
 func newEditCmd() *cobra.Command {

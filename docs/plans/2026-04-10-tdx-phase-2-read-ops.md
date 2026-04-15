@@ -171,7 +171,7 @@ package main
 import (
 	_ "time/tzdata"
 
-	"github.com/ipm/tdx/internal/cli"
+	"github.com/iainmoffat/tdx/internal/cli"
 )
 
 var version = "0.1.0-dev"
@@ -1265,8 +1265,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
 )
 
@@ -1347,8 +1347,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ipm/tdx/internal/domain"
-	"github.com/ipm/tdx/internal/tdx"
+	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/tdx"
 )
 
 // wireUser matches the JSON shape returned by GET /TDWebApi/api/auth/getuser.
@@ -1692,8 +1692,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
 )
 
@@ -1763,8 +1763,8 @@ package timesvc
 import (
 	"fmt"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/tdx"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/tdx"
 )
 
 // Service is the read-only time operations facade. It holds references to
@@ -2006,7 +2006,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 // ListTimeTypes returns every time type visible to the authenticated user.
@@ -2169,7 +2169,7 @@ func TestTimeTypesForTarget_UnsupportedKind(t *testing.T) {
 }
 ```
 
-Ensure the test file imports both `github.com/ipm/tdx/internal/domain` and the same helpers it already uses.
+Ensure the test file imports both `github.com/iainmoffat/tdx/internal/domain` and the same helpers it already uses.
 
 - [ ] **Step 2: Run tests and confirm they fail**
 
@@ -2277,7 +2277,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
 )
 
@@ -2462,7 +2462,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 // SearchEntries runs POST /TDWebApi/api/time/search with the given filter.
@@ -2730,8 +2730,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ipm/tdx/internal/domain"
-	"github.com/ipm/tdx/internal/tdx"
+	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/tdx"
 )
 ```
 
@@ -2769,7 +2769,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
 )
 
@@ -2843,7 +2843,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 // GetWeekReport fetches TD's weekly report for the week containing the
@@ -3257,7 +3257,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
 )
 
@@ -3395,7 +3395,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 const gridDayWidth = 5  // "99.9" + gutter
@@ -3564,8 +3564,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
 )
 
@@ -3718,7 +3718,7 @@ Create `internal/cli/time/time.go`:
 package time
 
 import (
-	"github.com/ipm/tdx/internal/cli/time/entry"
+	"github.com/iainmoffat/tdx/internal/cli/time/entry"
 	"github.com/spf13/cobra"
 )
 
@@ -3767,11 +3767,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
-	"github.com/ipm/tdx/internal/render"
-	"github.com/ipm/tdx/internal/svc/authsvc"
-	"github.com/ipm/tdx/internal/svc/timesvc"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/render"
+	"github.com/iainmoffat/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/svc/timesvc"
 	"github.com/spf13/cobra"
 )
 
@@ -4119,11 +4119,11 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
-	"github.com/ipm/tdx/internal/render"
-	"github.com/ipm/tdx/internal/svc/authsvc"
-	"github.com/ipm/tdx/internal/svc/timesvc"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/render"
+	"github.com/iainmoffat/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/svc/timesvc"
 	"github.com/spf13/cobra"
 )
 
@@ -4236,8 +4236,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
 )
 
@@ -4373,11 +4373,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
-	"github.com/ipm/tdx/internal/render"
-	"github.com/ipm/tdx/internal/svc/authsvc"
-	"github.com/ipm/tdx/internal/svc/timesvc"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/render"
+	"github.com/iainmoffat/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/svc/timesvc"
 	"github.com/spf13/cobra"
 )
 
@@ -4467,11 +4467,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
-	"github.com/ipm/tdx/internal/render"
-	"github.com/ipm/tdx/internal/svc/authsvc"
-	"github.com/ipm/tdx/internal/svc/timesvc"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/render"
+	"github.com/iainmoffat/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/svc/timesvc"
 	"github.com/spf13/cobra"
 )
 
@@ -4573,8 +4573,8 @@ Modify `internal/cli/time/time.go`:
 package time
 
 import (
-	"github.com/ipm/tdx/internal/cli/time/entry"
-	"github.com/ipm/tdx/internal/cli/time/week"
+	"github.com/iainmoffat/tdx/internal/cli/time/entry"
+	"github.com/iainmoffat/tdx/internal/cli/time/week"
 	"github.com/spf13/cobra"
 )
 
@@ -4631,8 +4631,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
 )
 
@@ -4768,11 +4768,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
-	"github.com/ipm/tdx/internal/render"
-	"github.com/ipm/tdx/internal/svc/authsvc"
-	"github.com/ipm/tdx/internal/svc/timesvc"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/render"
+	"github.com/iainmoffat/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/svc/timesvc"
 	"github.com/spf13/cobra"
 )
 
@@ -4851,11 +4851,11 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/ipm/tdx/internal/config"
-	"github.com/ipm/tdx/internal/domain"
-	"github.com/ipm/tdx/internal/render"
-	"github.com/ipm/tdx/internal/svc/authsvc"
-	"github.com/ipm/tdx/internal/svc/timesvc"
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/render"
+	"github.com/iainmoffat/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/svc/timesvc"
 	"github.com/spf13/cobra"
 )
 
@@ -4965,9 +4965,9 @@ Modify `internal/cli/time/time.go`:
 package time
 
 import (
-	"github.com/ipm/tdx/internal/cli/time/entry"
-	"github.com/ipm/tdx/internal/cli/time/timetype"
-	"github.com/ipm/tdx/internal/cli/time/week"
+	"github.com/iainmoffat/tdx/internal/cli/time/entry"
+	"github.com/iainmoffat/tdx/internal/cli/time/timetype"
+	"github.com/iainmoffat/tdx/internal/cli/time/week"
 	"github.com/spf13/cobra"
 )
 
@@ -4986,15 +4986,15 @@ func NewCmd() *cobra.Command {
 
 - [ ] **Step 7: Wire `time` into the root**
 
-Modify `internal/cli/root.go`. It currently imports `cli/auth` and `cli/config`. Add the `time` import and one new `AddCommand` line. Note the alias: because the directory is `internal/cli/time`, you need `timecli "github.com/ipm/tdx/internal/cli/time"` so it doesn't collide with stdlib `time`. Final root.go:
+Modify `internal/cli/root.go`. It currently imports `cli/auth` and `cli/config`. Add the `time` import and one new `AddCommand` line. Note the alias: because the directory is `internal/cli/time`, you need `timecli "github.com/iainmoffat/tdx/internal/cli/time"` so it doesn't collide with stdlib `time`. Final root.go:
 
 ```go
 package cli
 
 import (
-	"github.com/ipm/tdx/internal/cli/auth"
-	"github.com/ipm/tdx/internal/cli/config"
-	timecli "github.com/ipm/tdx/internal/cli/time"
+	"github.com/iainmoffat/tdx/internal/cli/auth"
+	"github.com/iainmoffat/tdx/internal/cli/config"
+	timecli "github.com/iainmoffat/tdx/internal/cli/time"
 	"github.com/spf13/cobra"
 )
 
