@@ -22,6 +22,7 @@ type listFlags struct {
 	dateFilter string
 	noRemote   bool
 	json       bool
+	archived   bool
 }
 
 type weekDraftListItem struct {
@@ -32,6 +33,7 @@ type weekDraftListItem struct {
 	SyncDetail domain.DraftSyncState `json:"syncDetail"`
 	TotalHours float64               `json:"totalHours"`
 	PulledAt   string                `json:"pulledAt,omitempty"`
+	Archived   bool                  `json:"archived,omitempty"`
 }
 
 type weekDraftListResp struct {
@@ -55,6 +57,7 @@ func newListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&f.dateFilter, "date", "", "filter by week-start date (YYYY-MM-DD)")
 	cmd.Flags().BoolVar(&f.noRemote, "no-remote-check", false, "skip remote fingerprint probe")
 	cmd.Flags().BoolVar(&f.json, "json", false, "JSON output")
+	cmd.Flags().BoolVar(&f.archived, "archived", false, "include archived drafts")
 	return cmd
 }
 
@@ -102,8 +105,11 @@ func runList(cmd *cobra.Command, f listFlags) error {
 			SyncDetail: state,
 			TotalHours: state.TotalHours,
 			PulledAt:   formatRFC3339OrEmpty(d.Provenance.PulledAt),
+			Archived:   d.Archived,
 		})
 	}
+
+	items = filterArchived(items, f.archived)
 
 	w := cmd.OutOrStdout()
 	if f.json {
@@ -120,6 +126,19 @@ func writeListJSON(w io.Writer, items []weekDraftListItem) error {
 	})
 }
 
+func filterArchived(items []weekDraftListItem, includeArchived bool) []weekDraftListItem {
+	if includeArchived {
+		return items
+	}
+	out := make([]weekDraftListItem, 0, len(items))
+	for _, it := range items {
+		if !it.Archived {
+			out = append(out, it)
+		}
+	}
+	return out
+}
+
 func writeListText(w io.Writer, items []weekDraftListItem) {
 	if len(items) == 0 {
 		_, _ = fmt.Fprintln(w, "No drafts found.")
@@ -127,9 +146,15 @@ func writeListText(w io.Writer, items []weekDraftListItem) {
 	}
 	_, _ = fmt.Fprintf(w, "%-12s  %-10s  %-12s  %5s  %s\n",
 		"WEEK", "NAME", "STATE", "HOURS", "PULLED")
+	var prevDate string
 	for _, it := range items {
+		dateCol := it.WeekStart
+		if dateCol == prevDate {
+			dateCol = ""
+		}
 		_, _ = fmt.Fprintf(w, "%-12s  %-10s  %-12s  %5.1f  %s\n",
-			it.WeekStart, it.Name, it.SyncState, it.TotalHours, it.PulledAt)
+			dateCol, it.Name, it.SyncState, it.TotalHours, it.PulledAt)
+		prevDate = it.WeekStart
 	}
 }
 
