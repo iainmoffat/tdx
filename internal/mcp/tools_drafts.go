@@ -370,6 +370,16 @@ Recipe:
 		Name:        "reset_week_draft",
 		Description: "Discard local edits and re-pull from TD. Auto-snapshots first. Requires confirm=true.",
 	}, resetDraftHandler(svcs))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name: "archive_week_draft",
+		Description: "Hide a draft from default `list_week_drafts` output. Soft-archive via the `archived: true` flag — fully reversible via `unarchive_week_draft`. Requires confirm=true.",
+	}, archiveDraftHandler(svcs, true))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name: "unarchive_week_draft",
+		Description: "Show a previously archived draft in default `list_week_drafts` output. Requires confirm=true.",
+	}, archiveDraftHandler(svcs, false))
 }
 
 var dayNamesMCP = map[string]time.Weekday{
@@ -633,6 +643,13 @@ type resetDraftArgs struct {
 	Confirm   bool   `json:"confirm"`
 }
 
+type archiveDraftArgs struct {
+	Profile   string `json:"profile,omitempty"`
+	WeekStart string `json:"weekStart"`
+	Name      string `json:"name,omitempty"`
+	Confirm   bool   `json:"confirm"`
+}
+
 func copyDraftHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, copyDraftArgs) (*sdkmcp.CallToolResult, any, error) {
 	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args copyDraftArgs) (*sdkmcp.CallToolResult, any, error) {
 		if r, ok := confirmGate(args.Confirm, "Set confirm=true to copy the draft."); !ok {
@@ -724,4 +741,39 @@ func parseDraftRefMCP(s string) (time.Time, string, error) {
 		return time.Time{}, "", err
 	}
 	return domain.WeekRefContaining(d).StartDate, name, nil
+}
+
+func archiveDraftHandler(svcs Services, archive bool) func(context.Context, *sdkmcp.CallToolRequest, archiveDraftArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args archiveDraftArgs) (*sdkmcp.CallToolResult, any, error) {
+		verb := "archive"
+		if !archive {
+			verb = "unarchive"
+		}
+		if r, ok := confirmGate(args.Confirm, fmt.Sprintf("Set confirm=true to %s the draft.", verb)); !ok {
+			return r, nil, nil
+		}
+		profile := resolveProfile(svcs, args.Profile)
+		weekStart, err := parseWeekStart(args.WeekStart)
+		if err != nil {
+			return errorResult(fmt.Sprintf("invalid weekStart: %v", err)), nil, nil
+		}
+		name := args.Name
+		if name == "" {
+			name = "default"
+		}
+		if err := svcs.Drafts.SetArchived(profile, weekStart, name, archive); err != nil {
+			return errorResult(fmt.Sprintf("%s: %v", verb, err)), nil, nil
+		}
+		return jsonResult(struct {
+			Schema    string `json:"schema"`
+			WeekStart string `json:"weekStart"`
+			Name      string `json:"name"`
+			Archived  bool   `json:"archived"`
+		}{
+			Schema:    "tdx.v1.weekDraftArchiveResult",
+			WeekStart: weekStart.Format("2006-01-02"),
+			Name:      name,
+			Archived:  archive,
+		})
+	}
 }
