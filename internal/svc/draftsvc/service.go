@@ -84,6 +84,39 @@ func (s *Service) PulledCellsByKey(profile string, weekStart time.Time, name str
 	return pulledCellsByKey(snap), nil
 }
 
+// Reconcile loads current remote state and produces a ReconcileDiff for the
+// named draft. userUID is required: it populates EntryInput.UserUID for any
+// Create actions. Callers should resolve it via authsvc.WhoAmI.
+func (s *Service) Reconcile(ctx context.Context, profile string, weekStart time.Time, name string, userUID string) (domain.WeekDraft, domain.ReconcileDiff, error) {
+	if name == "" {
+		name = "default"
+	}
+	draft, err := s.store.Load(profile, weekStart, name)
+	if err != nil {
+		return domain.WeekDraft{}, domain.ReconcileDiff{}, err
+	}
+
+	pulled, err := s.PulledCellsByKey(profile, weekStart, name)
+	if err != nil {
+		return domain.WeekDraft{}, domain.ReconcileDiff{}, err
+	}
+
+	report, err := s.tsvc.GetWeekReport(ctx, profile, weekStart)
+	if err != nil {
+		return domain.WeekDraft{}, domain.ReconcileDiff{}, err
+	}
+	locked, err := s.tsvc.GetLockedDays(ctx, profile, weekStart, weekStart.AddDate(0, 0, 6))
+	if err != nil {
+		return domain.WeekDraft{}, domain.ReconcileDiff{}, err
+	}
+
+	diff, err := reconcileDraft(draft, pulled, report, locked, computeRemoteFingerprint(report), userUID)
+	if err != nil {
+		return draft, domain.ReconcileDiff{}, err
+	}
+	return draft, diff, nil
+}
+
 // pulledCellsByKey extracts the cells-with-source-id map from a draft.
 // Used internally by PulledCellsByKey on the loaded pulled snapshot.
 func pulledCellsByKey(d domain.WeekDraft) map[string]domain.DraftCell {
