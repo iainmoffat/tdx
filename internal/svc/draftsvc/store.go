@@ -84,6 +84,38 @@ func (s *Store) Delete(profile string, weekStart time.Time, name string) error {
 	return nil
 }
 
+// pulledSnapshotPath returns the path to the at-pull-time sibling YAML.
+func (s *Store) pulledSnapshotPath(profile string, weekStart time.Time, name string) string {
+	return s.draftPath(profile, weekStart, name+".pulled")
+}
+
+// SavePulledSnapshot writes the at-pull-time draft to a sibling YAML file.
+func (s *Store) SavePulledSnapshot(d domain.WeekDraft) error {
+	p := s.pulledSnapshotPath(d.Profile, d.WeekStart, d.Name)
+	if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
+		return err
+	}
+	data, err := yaml.Marshal(d)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(p, data, 0o600)
+}
+
+// LoadPulledSnapshot reads the at-pull-time draft sibling, if it exists.
+func (s *Store) LoadPulledSnapshot(profile string, weekStart time.Time, name string) (domain.WeekDraft, error) {
+	p := s.pulledSnapshotPath(profile, weekStart, name)
+	data, err := os.ReadFile(p)
+	if err != nil {
+		return domain.WeekDraft{}, err
+	}
+	var d domain.WeekDraft
+	if err := yaml.Unmarshal(data, &d); err != nil {
+		return domain.WeekDraft{}, err
+	}
+	return d, nil
+}
+
 // List returns all drafts for the given profile, ordered by (weekStart desc, name asc).
 func (s *Store) List(profile string) ([]domain.WeekDraft, error) {
 	root := s.paths.ProfileWeeksDir(profile)
