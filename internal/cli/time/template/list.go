@@ -7,11 +7,15 @@ import (
 
 	"github.com/iainmoffat/tdx/internal/config"
 	"github.com/iainmoffat/tdx/internal/render"
+	"github.com/iainmoffat/tdx/internal/svc/authsvc"
 	"github.com/iainmoffat/tdx/internal/svc/tmplsvc"
 )
 
 func newListCmd() *cobra.Command {
-	var jsonFlag bool
+	var (
+		jsonFlag    bool
+		profileFlag string
+	)
 
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -21,8 +25,13 @@ func newListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			auth := authsvc.New(paths)
+			profile, err := auth.ResolveProfile(profileFlag)
+			if err != nil {
+				return err
+			}
 			store := tmplsvc.NewStore(paths)
-			templates, err := store.List()
+			templates, err := store.List(profile)
 			if err != nil {
 				return err
 			}
@@ -86,5 +95,6 @@ func newListCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&jsonFlag, "json", false, "emit JSON output")
+	cmd.Flags().StringVar(&profileFlag, "profile", "", "profile name")
 	return cmd
 }

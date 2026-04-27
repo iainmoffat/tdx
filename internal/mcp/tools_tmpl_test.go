@@ -15,14 +15,14 @@ func TestListTemplates(t *testing.T) {
 	svcs := mcpHarness(t, "http://localhost/")
 	store := svcs.Template.Store()
 
-	require.NoError(t, store.Save(domain.Template{
+	require.NoError(t, store.Save("default", domain.Template{
 		SchemaVersion: 1,
 		Name:          "alpha",
 		Rows: []domain.TemplateRow{
 			{ID: "r1", Hours: domain.WeekHours{Mon: 8}},
 		},
 	}))
-	require.NoError(t, store.Save(domain.Template{
+	require.NoError(t, store.Save("default", domain.Template{
 		SchemaVersion: 1,
 		Name:          "beta",
 		Rows: []domain.TemplateRow{
@@ -45,7 +45,7 @@ func TestGetTemplate(t *testing.T) {
 	svcs := mcpHarness(t, "http://localhost/")
 	store := svcs.Template.Store()
 
-	require.NoError(t, store.Save(domain.Template{
+	require.NoError(t, store.Save("default", domain.Template{
 		SchemaVersion: 1,
 		Name:          "test",
 		Rows: []domain.TemplateRow{
@@ -89,7 +89,7 @@ func TestCreateTemplate_WithConfirm(t *testing.T) {
 	require.False(t, result.IsError, "expected success, got: %v", extractText(t, result))
 
 	// Verify saved to store.
-	tmpl, loadErr := svcs.Template.Store().Load("new-tmpl")
+	tmpl, loadErr := svcs.Template.Store().Load("default", "new-tmpl")
 	require.NoError(t, loadErr)
 	require.Equal(t, "new-tmpl", tmpl.Name)
 	require.Equal(t, "A test template", tmpl.Description)
@@ -113,7 +113,7 @@ func TestDeleteTemplate_WithConfirm(t *testing.T) {
 	svcs := mcpHarness(t, "http://localhost/")
 
 	// Save a template first.
-	require.NoError(t, svcs.Template.Store().Save(domain.Template{
+	require.NoError(t, svcs.Template.Store().Save("default", domain.Template{
 		SchemaVersion: 1,
 		Name:          "to-delete",
 		Rows: []domain.TemplateRow{
@@ -130,7 +130,7 @@ func TestDeleteTemplate_WithConfirm(t *testing.T) {
 	require.False(t, result.IsError, "expected success, got: %v", extractText(t, result))
 
 	// Verify removed from store.
-	require.False(t, svcs.Template.Store().Exists("to-delete"))
+	require.False(t, svcs.Template.Store().Exists("default", "to-delete"))
 }
 
 func TestDeriveTemplate_WithConfirm(t *testing.T) {
@@ -176,7 +176,7 @@ func TestDeriveTemplate_WithConfirm(t *testing.T) {
 	require.False(t, result.IsError, "expected success, got: %v", extractText(t, result))
 
 	// Verify template was saved.
-	tmpl, loadErr := svcs.Template.Store().Load("derived-tmpl")
+	tmpl, loadErr := svcs.Template.Store().Load("default", "derived-tmpl")
 	require.NoError(t, loadErr)
 	require.Equal(t, "derived-tmpl", tmpl.Name)
 	require.NotEmpty(t, tmpl.Rows)

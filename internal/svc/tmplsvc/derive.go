@@ -76,7 +76,7 @@ func (a *rowAccumulator) mostCommonDescription() string {
 //   - "no entries in week of…" when the fetched report has no time entries.
 func (s *Service) Derive(ctx context.Context, profileName, templateName string, weekDate time.Time) (domain.Template, error) {
 	// 1. Guard: template must not already exist.
-	if s.store.Exists(templateName) {
+	if s.store.Exists(profileName, templateName) {
 		return domain.Template{}, fmt.Errorf("template %q already exists", templateName)
 	}
 
@@ -171,7 +171,7 @@ func (s *Service) Derive(ctx context.Context, profileName, templateName string, 
 		Rows: rows,
 	}
 
-	if err := s.store.Save(tmpl); err != nil {
+	if err := s.store.Save(profileName, tmpl); err != nil {
 		return domain.Template{}, fmt.Errorf("derive %q: save: %w", templateName, err)
 	}
 

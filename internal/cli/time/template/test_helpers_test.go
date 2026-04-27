@@ -1,7 +1,6 @@
 package template
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/iainmoffat/tdx/internal/config"
@@ -17,12 +16,8 @@ func seedTemplateDir(t *testing.T) string {
 	dir := t.TempDir()
 	t.Setenv("TDX_CONFIG_HOME", dir)
 
-	paths := config.Paths{
-		Root:            dir,
-		ConfigFile:      filepath.Join(dir, "config.yaml"),
-		CredentialsFile: filepath.Join(dir, "credentials.yaml"),
-		TemplatesDir:    filepath.Join(dir, "templates"),
-	}
+	paths, err := config.ResolvePaths()
+	require.NoError(t, err)
 	ps := config.NewProfileStore(paths)
 	require.NoError(t, ps.AddProfile(domain.Profile{
 		Name:          "default",
@@ -33,10 +28,11 @@ func seedTemplateDir(t *testing.T) string {
 	return dir
 }
 
-// writeTestTemplate saves a template to disk in the given config home dir.
-func writeTestTemplate(t *testing.T, dir string, tmpl domain.Template) {
+// writeTestTemplate saves a template to disk under the "default" profile.
+func writeTestTemplate(t *testing.T, _ string, tmpl domain.Template) {
 	t.Helper()
-	paths := config.Paths{TemplatesDir: filepath.Join(dir, "templates")}
+	paths, err := config.ResolvePaths()
+	require.NoError(t, err)
 	store := tmplsvc.NewStore(paths)
-	require.NoError(t, store.Save(tmpl))
+	require.NoError(t, store.Save("default", tmpl))
 }

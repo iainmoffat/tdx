@@ -56,7 +56,7 @@ func newDeriveCmd() *cobra.Command {
 
 			if description != "" {
 				tmpl.Description = description
-				if err := svc.Store().Save(tmpl); err != nil {
+				if err := svc.Store().Save(profileName, tmpl); err != nil {
 					return err
 				}
 			}

@@ -9,13 +9,17 @@ import (
 
 	"github.com/iainmoffat/tdx/internal/config"
 	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/svc/authsvc"
 	"github.com/iainmoffat/tdx/internal/svc/tmplsvc"
 	"github.com/iainmoffat/tdx/internal/tui/editor"
 	webeditor "github.com/iainmoffat/tdx/internal/web/editor"
 )
 
 func newEditCmd() *cobra.Command {
-	var webFlag bool
+	var (
+		webFlag     bool
+		profileFlag string
+	)
 
 	cmd := &cobra.Command{
 		Use:   "edit <name>",
@@ -27,24 +31,30 @@ func newEditCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			auth := authsvc.New(paths)
+			profile, err := auth.ResolveProfile(profileFlag)
+			if err != nil {
+				return err
+			}
 			store := tmplsvc.NewStore(paths)
-			tmpl, err := store.Load(args[0])
+			tmpl, err := store.Load(profile, args[0])
 			if err != nil {
 				return err
 			}
 
 			if webFlag {
-				return runWebEditor(cmd, tmpl, store)
+				return runWebEditor(cmd, profile, tmpl, store)
 			}
-			return runTUIEditor(cmd, tmpl, store)
+			return runTUIEditor(cmd, profile, tmpl, store)
 		},
 	}
 
 	cmd.Flags().BoolVar(&webFlag, "web", false, "open the editor in your browser")
+	cmd.Flags().StringVar(&profileFlag, "profile", "", "profile name")
 	return cmd
 }
 
-func runTUIEditor(cmd *cobra.Command, tmpl domain.Template, store *tmplsvc.Store) error {
+func runTUIEditor(cmd *cobra.Command, profile string, tmpl domain.Template, store *tmplsvc.Store) error {
 	m := editor.New(tmpl.Name, tmpl.Rows)
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	result, err := p.Run()
@@ -59,16 +69,16 @@ func runTUIEditor(cmd *cobra.Command, tmpl domain.Template, store *tmplsvc.Store
 
 	tmpl.Rows = final.Rows()
 	tmpl.ModifiedAt = time.Now().UTC()
-	if err := store.Save(tmpl); err != nil {
+	if err := store.Save(profile, tmpl); err != nil {
 		return fmt.Errorf("save: %w", err)
 	}
 	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "saved template %q\n", tmpl.Name)
 	return nil
 }
 
-func runWebEditor(cmd *cobra.Command, tmpl domain.Template, store *tmplsvc.Store) error {
+func runWebEditor(cmd *cobra.Command, profile string, tmpl domain.Template, store *tmplsvc.Store) error {
 	saveFn := func(t domain.Template) error {
-		return store.Save(t)
+		return store.Save(profile, t)
 	}
 
 	res, err := webeditor.Run(tmpl, saveFn)

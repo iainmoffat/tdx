@@ -57,7 +57,7 @@ func applyTestServer(t *testing.T) *httptest.Server {
 
 func saveTestTemplate(t *testing.T, svcs Services) {
 	t.Helper()
-	require.NoError(t, svcs.Template.Store().Save(domain.Template{
+	require.NoError(t, svcs.Template.Store().Save("default", domain.Template{
 		SchemaVersion: 1,
 		Name:          "test-tmpl",
 		Rows: []domain.TemplateRow{

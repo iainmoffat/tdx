@@ -95,7 +95,7 @@ func newApplyCmd() *cobra.Command {
 			}
 
 			// Load template.
-			tmpl, err := svc.Store().Load(name)
+			tmpl, err := svc.Store().Load(profileName, name)
 			if err != nil {
 				return err
 			}

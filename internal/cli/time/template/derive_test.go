@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"testing"
 
 	"github.com/iainmoffat/tdx/internal/config"
@@ -49,12 +48,8 @@ func TestDeriveCmd_Success(t *testing.T) {
 	// Build config dir pointing at the test server.
 	dir := t.TempDir()
 	t.Setenv("TDX_CONFIG_HOME", dir)
-	paths := config.Paths{
-		Root:            dir,
-		ConfigFile:      filepath.Join(dir, "config.yaml"),
-		CredentialsFile: filepath.Join(dir, "credentials.yaml"),
-		TemplatesDir:    filepath.Join(dir, "templates"),
-	}
+	paths, err := config.ResolvePaths()
+	require.NoError(t, err)
 	ps := config.NewProfileStore(paths)
 	require.NoError(t, ps.AddProfile(domain.Profile{Name: "default", TenantBaseURL: srv.URL}))
 	cs := config.NewCredentialsStore(paths)
@@ -69,9 +64,9 @@ func TestDeriveCmd_Success(t *testing.T) {
 	got := out.String()
 	require.Contains(t, got, `derived template "test-week"`)
 
-	// Template file must exist on disk.
+	// Template file must exist on disk under the "default" profile.
 	store := tmplsvc.NewStore(paths)
-	require.True(t, store.Exists("test-week"))
+	require.True(t, store.Exists("default", "test-week"))
 }
 
 func TestDeriveCmd_MissingFromWeek(t *testing.T) {

@@ -23,10 +23,10 @@ func mcpHarness(t *testing.T, tenantURL string) Services {
 	t.Helper()
 	dir := t.TempDir()
 	paths := config.Paths{
-		Root:            dir,
-		ConfigFile:      filepath.Join(dir, "config.yaml"),
-		CredentialsFile: filepath.Join(dir, "credentials.yaml"),
-		TemplatesDir:    filepath.Join(dir, "templates"),
+		Root:               dir,
+		ConfigFile:         filepath.Join(dir, "config.yaml"),
+		CredentialsFile:    filepath.Join(dir, "credentials.yaml"),
+		LegacyTemplatesDir: filepath.Join(dir, "templates"),
 	}
 	ps := config.NewProfileStore(paths)
 	require.NoError(t, ps.AddProfile(domain.Profile{
