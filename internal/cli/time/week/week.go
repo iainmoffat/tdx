@@ -16,5 +16,6 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(newDiffCmd())
 	cmd.AddCommand(newPreviewCmd())
 	cmd.AddCommand(newPushCmd())
+	cmd.AddCommand(newDeleteCmd())
 	return cmd
 }
