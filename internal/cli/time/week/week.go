@@ -27,5 +27,6 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(newResetCmd())
 	cmd.AddCommand(newArchiveCmd())
 	cmd.AddCommand(newUnarchiveCmd())
+	cmd.AddCommand(newSnapshotCmd())
 	return cmd
 }
