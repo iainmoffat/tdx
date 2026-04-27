@@ -119,3 +119,65 @@ func TestWeekDraft_Validate(t *testing.T) {
 		}
 	}
 }
+
+func TestComputeCellState(t *testing.T) {
+	pulled := DraftCell{Day: time.Monday, Hours: 8.0, SourceEntryID: 98731}
+
+	cases := []struct {
+		name    string
+		pulled  DraftCell
+		current DraftCell
+		want    CellState
+	}{
+		{"untouched", pulled, pulled, CellUntouched},
+		{"edited (hours)", pulled, DraftCell{Day: time.Monday, Hours: 6.0, SourceEntryID: 98731}, CellEdited},
+		{"edited (cleared = delete-on-push)", pulled,
+			DraftCell{Day: time.Monday, Hours: 0, SourceEntryID: 98731}, CellEdited},
+		{"added (no source)", DraftCell{}, DraftCell{Day: time.Monday, Hours: 4.0}, CellAdded},
+	}
+	for _, c := range cases {
+		got := ComputeCellState(c.pulled, c.current)
+		if got != c.want {
+			t.Errorf("%s: got %s, want %s", c.name, got, c.want)
+		}
+	}
+}
+
+func TestComputeSyncState(t *testing.T) {
+	weekStart := time.Date(2026, 5, 4, 0, 0, 0, 0, EasternTZ)
+	pulledFingerprint := "abc123"
+
+	base := WeekDraft{
+		SchemaVersion: 1, Profile: "work", Name: "default", WeekStart: weekStart,
+		Provenance: DraftProvenance{Kind: ProvenancePulled, RemoteFingerprint: pulledFingerprint},
+	}
+
+	pulledCells := map[string]DraftCell{
+		"row-01:Monday": {Day: time.Monday, Hours: 8.0, SourceEntryID: 98731},
+	}
+
+	// Clean: cells match what was pulled, fingerprint matches.
+	cleanDraft := base
+	cleanDraft.Rows = []DraftRow{{ID: "row-01", Cells: []DraftCell{
+		{Day: time.Monday, Hours: 8.0, SourceEntryID: 98731},
+	}}}
+
+	if state := ComputeSyncState(cleanDraft, pulledCells, pulledFingerprint); state.Sync != SyncClean {
+		t.Errorf("clean: got %s, want clean", state.Sync)
+	}
+
+	// Dirty: cell hours edited.
+	dirty := cleanDraft
+	dirty.Rows[0].Cells[0].Hours = 6.0
+	if state := ComputeSyncState(dirty, pulledCells, pulledFingerprint); state.Sync != SyncDirty {
+		t.Errorf("dirty: got %s, want dirty", state.Sync)
+	}
+	if state := ComputeSyncState(dirty, pulledCells, pulledFingerprint); state.Stale {
+		t.Errorf("dirty: got Stale=true, want false (fingerprint matches)")
+	}
+
+	// Stale: fingerprint differs.
+	if state := ComputeSyncState(cleanDraft, pulledCells, "different"); !state.Stale {
+		t.Errorf("stale: got Stale=false, want true")
+	}
+}

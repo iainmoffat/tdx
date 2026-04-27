@@ -103,3 +103,91 @@ func (d WeekDraft) Validate() error {
 	}
 	return nil
 }
+
+// CellState classifies a draft cell relative to its pulled origin.
+type CellState string
+
+const (
+	CellUntouched CellState = "untouched"
+	CellEdited    CellState = "edited"
+	CellAdded     CellState = "added"
+	CellConflict  CellState = "conflict"
+	CellInvalid   CellState = "invalid"
+)
+
+// SyncState classifies a draft as a whole.
+type SyncState string
+
+const (
+	SyncClean      SyncState = "clean"
+	SyncDirty      SyncState = "dirty"
+	SyncConflicted SyncState = "conflicted"
+)
+
+// DraftSyncState bundles the sync verdict + drift flag + cell counts.
+type DraftSyncState struct {
+	Sync       SyncState
+	Stale      bool
+	Untouched  int
+	Edited     int
+	Added      int
+	Conflict   int
+	TotalHours float64
+}
+
+// ComputeCellState classifies the current cell against the cell at pull time.
+// A zero-valued pulledAtPullTime means "no entry was pulled here" (added cell).
+func ComputeCellState(pulledAtPullTime, current DraftCell) CellState {
+	if pulledAtPullTime.SourceEntryID == 0 && current.SourceEntryID == 0 {
+		if current.Hours > 0 {
+			return CellAdded
+		}
+		return CellUntouched
+	}
+	if pulledAtPullTime.Hours == current.Hours {
+		return CellUntouched
+	}
+	return CellEdited
+}
+
+// ComputeSyncState walks the draft's cells, comparing each to its pulled
+// counterpart (keyed by "rowID:weekday"), and returns the aggregate state.
+//
+// pulledFingerprint should be the remote fingerprint observed at the most
+// recent successful pull or push; if it differs from the draft's stored
+// remoteFingerprint, the Stale flag is set.
+//
+// Key format: "rowID:weekday" where weekday is time.Weekday.String() (e.g.
+// "Monday", "Tuesday"). Callers building the pulledByKey map must use the
+// same case-sensitive format.
+func ComputeSyncState(draft WeekDraft, pulledByKey map[string]DraftCell, currentRemoteFingerprint string) DraftSyncState {
+	s := DraftSyncState{Sync: SyncClean}
+	for _, row := range draft.Rows {
+		for _, cell := range row.Cells {
+			key := fmt.Sprintf("%s:%s", row.ID, cell.Day)
+			pulled := pulledByKey[key]
+			switch ComputeCellState(pulled, cell) {
+			case CellUntouched:
+				s.Untouched++
+			case CellEdited:
+				s.Edited++
+				if s.Sync == SyncClean {
+					s.Sync = SyncDirty
+				}
+			case CellAdded:
+				s.Added++
+				if s.Sync == SyncClean {
+					s.Sync = SyncDirty
+				}
+			case CellConflict:
+				s.Conflict++
+				s.Sync = SyncConflicted
+			}
+			s.TotalHours += cell.Hours
+		}
+	}
+	if currentRemoteFingerprint != "" && draft.Provenance.RemoteFingerprint != "" {
+		s.Stale = currentRemoteFingerprint != draft.Provenance.RemoteFingerprint
+	}
+	return s
+}
