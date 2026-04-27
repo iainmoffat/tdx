@@ -416,14 +416,40 @@ Verify: non-zero exit, no entries written to TD.
 Fill in after completing all steps.
 
 ```
-Date run:     _______________
+Date run:     2026-04-27
 Tenant:       https://ufl.teamdynamix.com/
-tdx version:  _______________
-Tester:       _______________
-Week used:    _______________
+tdx version:  0.1.0-dev (branch phase-A-week-drafts @ bf2f78d)
+Tester:       Claude (subagent-driven dispatcher) on behalf of ipm
+Week used:    2026-04-12 (open, 24 entries, 20h, UFIT Administration row only)
 
-Passed steps: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18
-Failed steps: (none / list any that failed with a note)
+Passed steps: 1 2 3 4 5 6 7 8 9 10 13 14 15 16 17 18
+Variations:   - Step 6 / 7 used `tdx time week set` instead of the interactive
+                editor (no TTY in subagent dispatch).
+              - Step 11 was exercised against live data with a tiny update
+                (Mon 4.0 -> 4.5h on entry #22085) and immediately restored
+                (4.5 -> 4.0h on the same entry). The --allow-deletes path
+                with actual delete actions was NOT exercised against live
+                data (would change entry IDs); the refusal gate was
+                verified in Step 10, and the delete code path itself is
+                covered by TestApply_AllowDeletesGate (mocked tsvc).
+              - Step 12 (TD web UI verification) was substituted with
+                `tdx time week show 2026-04-12 --json | jq .entries[] |
+                select(.id == 22085)` to confirm the remote state changed
+                and was restored.
+              - Step 18 was simulated via `--expected-diff-hash deadbeef…`
+                rather than mid-test remote tampering; same code path,
+                no remote write needed.
 
-Notes:
+Failed steps: none
+
+Bugs caught and fixed during the walkthrough:
+  - tmplsvc per-profile regression  -> commit d99d419
+  - show --json banner corruption  -> commit 9ab5d1c
+  - Zero-entry placeholders + diff before-value polish  -> commit db94438
+  - Walkthrough doc snapshot expectation (this file)  -> commit bf2f78d
+
+Notes: live-tenant entry #22085 was modified twice during Step 11 and is
+back to its original state (240 minutes / 4.0h on Mon 2026-04-13).
+Entry #22089 (Friday) was set to 0h locally during Step 18 but no push
+occurred (hash refused), so remote was untouched.
 ```
