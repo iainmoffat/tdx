@@ -261,6 +261,15 @@ func diffDraftHandler(svcs Services) func(context.Context, *sdkmcp.CallToolReque
 // Mutating tools (Task 25)
 // ---------------------------------------------------------------------------
 
+type createDraftArgs struct {
+	Profile   string `json:"profile,omitempty"`
+	WeekStart string `json:"weekStart"`
+	Name      string `json:"name,omitempty"`
+	From      string `json:"from,omitempty" jsonschema:"blank | template:<n> | draft:<date>[/<n>]"`
+	ShiftDays int    `json:"shiftDays,omitempty"`
+	Confirm   bool   `json:"confirm"`
+}
+
 type pullDraftArgs struct {
 	Profile   string `json:"profile,omitempty"`
 	WeekStart string `json:"weekStart" jsonschema:"YYYY-MM-DD any day in target week"`
@@ -304,6 +313,19 @@ type pushDraftArgs struct {
 // RegisterDraftMutatingTools registers the mutating week-draft tools.
 // All require confirm=true; push additionally requires expectedDiffHash.
 func RegisterDraftMutatingTools(srv *sdkmcp.Server, svcs Services) {
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name: "create_week_draft",
+		Description: `Create a new week draft. From values:
+  blank             - empty draft
+  template:<name>   - seed rows from a template
+  draft:<date>      - clone from another draft (default name)
+  draft:<date>/<n>  - clone from a specifically-named draft
+
+Optional shiftDays adjusts the source's WeekStart when from=draft:<...>.
+Requires confirm=true. Refuses to overwrite an existing draft at the same
+(profile, weekStart, name).`,
+	}, createDraftHandler(svcs))
+
 	sdkmcp.AddTool(srv, &sdkmcp.Tool{
 		Name:        "pull_week_draft",
 		Description: "Pull a live TD week into a local draft. Refuses to overwrite a dirty draft unless force=true (auto-snapshots first). Requires confirm=true.",
@@ -522,4 +544,72 @@ func pushDraftHandler(svcs Services) func(context.Context, *sdkmcp.CallToolReque
 			Failed: res.Failed,
 		})
 	}
+}
+
+func createDraftHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, createDraftArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args createDraftArgs) (*sdkmcp.CallToolResult, any, error) {
+		if r, ok := confirmGate(args.Confirm, "Set confirm=true to create the draft."); !ok {
+			return r, nil, nil
+		}
+		profile := resolveProfile(svcs, args.Profile)
+		weekStart, err := parseWeekStart(args.WeekStart)
+		if err != nil {
+			return errorResult(fmt.Sprintf("invalid weekStart: %v", err)), nil, nil
+		}
+		name := args.Name
+		if name == "" {
+			name = "default"
+		}
+
+		var draft domain.WeekDraft
+		switch {
+		case args.From == "" || args.From == "blank":
+			draft, err = svcs.Drafts.NewBlank(profile, weekStart, name)
+		case strings.HasPrefix(args.From, "template:"):
+			tname := strings.TrimPrefix(args.From, "template:")
+			tmpl, terr := svcs.Template.Store().Load(profile, tname)
+			if terr != nil {
+				return errorResult(fmt.Sprintf("load template: %v", terr)), nil, nil
+			}
+			draft, err = svcs.Drafts.NewFromTemplate(profile, weekStart, name, tmpl)
+		case strings.HasPrefix(args.From, "draft:"):
+			ref := strings.TrimPrefix(args.From, "draft:")
+			srcDate, srcName, perr := parseDraftRefMCP(ref)
+			if perr != nil {
+				return errorResult(fmt.Sprintf("from: %v", perr)), nil, nil
+			}
+			if args.ShiftDays != 0 {
+				srcDate = srcDate.AddDate(0, 0, -args.ShiftDays)
+			}
+			draft, err = svcs.Drafts.NewFromDraft(profile, weekStart, name, profile, srcDate, srcName)
+		default:
+			return errorResult(fmt.Sprintf("unknown from value: %q", args.From)), nil, nil
+		}
+		if err != nil {
+			return errorResult(fmt.Sprintf("create: %v", err)), nil, nil
+		}
+
+		return jsonResult(struct {
+			Schema string           `json:"schema"`
+			Draft  domain.WeekDraft `json:"draft"`
+		}{Schema: "tdx.v1.weekDraftCreateResult", Draft: draft})
+	}
+}
+
+// parseDraftRefMCP duplicates the cli/week ParseDraftRef without that import.
+func parseDraftRefMCP(s string) (time.Time, string, error) {
+	var dateStr, name string
+	if i := strings.IndexByte(s, '/'); i >= 0 {
+		dateStr, name = s[:i], s[i+1:]
+		if name == "" {
+			return time.Time{}, "", fmt.Errorf("empty name after slash")
+		}
+	} else {
+		dateStr, name = s, "default"
+	}
+	d, err := time.ParseInLocation("2006-01-02", dateStr, domain.EasternTZ)
+	if err != nil {
+		return time.Time{}, "", err
+	}
+	return domain.WeekRefContaining(d).StartDate, name, nil
 }
