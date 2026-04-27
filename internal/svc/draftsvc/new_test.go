@@ -64,3 +64,42 @@ func TestService_NewFromTemplate(t *testing.T) {
 		t.Errorf("cells = %d, want 2 (Mon+Tue)", len(d.Rows[0].Cells))
 	}
 }
+
+func TestService_NewFromDraft(t *testing.T) {
+	paths := config.Paths{Root: t.TempDir()}
+	s := newServiceWithTimeWriter(paths, &mockTimeWriter{})
+	srcWeek := time.Date(2026, 4, 26, 0, 0, 0, 0, domain.EasternTZ)
+	dstWeek := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
+
+	src := domain.WeekDraft{
+		SchemaVersion: 1, Profile: "work", Name: "default", WeekStart: srcWeek,
+		Provenance: domain.DraftProvenance{Kind: domain.ProvenanceBlank},
+		Rows: []domain.DraftRow{{
+			ID: "row-01",
+			Cells: []domain.DraftCell{{Day: time.Monday, Hours: 4, SourceEntryID: 999}},
+		}},
+	}
+	if err := s.store.Save(src); err != nil {
+		t.Fatal(err)
+	}
+
+	d, err := s.NewFromDraft("work", dstWeek, "default", "work", srcWeek, "default")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !d.WeekStart.Equal(dstWeek) {
+		t.Errorf("dst weekStart = %v, want %v", d.WeekStart, dstWeek)
+	}
+	if d.Provenance.Kind != domain.ProvenanceFromDraft {
+		t.Errorf("Provenance.Kind = %s, want from-draft", d.Provenance.Kind)
+	}
+	if d.Provenance.ShiftedByDays != 7 {
+		t.Errorf("ShiftedByDays = %d, want 7", d.Provenance.ShiftedByDays)
+	}
+	if len(d.Rows) != 1 || len(d.Rows[0].Cells) != 1 {
+		t.Errorf("rows/cells lost in clone")
+	}
+	if d.Rows[0].Cells[0].SourceEntryID != 0 {
+		t.Errorf("clone should drop sourceEntryIDs (was %d)", d.Rows[0].Cells[0].SourceEntryID)
+	}
+}
