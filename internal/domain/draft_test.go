@@ -54,6 +54,40 @@ func TestWeekDraft_YAMLRoundTrip(t *testing.T) {
 	if out.Rows[0].Cells[0].SourceEntryID != 98731 {
 		t.Errorf("SourceEntryID lost")
 	}
+
+	if out.SchemaVersion != in.SchemaVersion {
+		t.Errorf("SchemaVersion lost: got %d, want %d", out.SchemaVersion, in.SchemaVersion)
+	}
+	if out.Profile != in.Profile {
+		t.Errorf("Profile lost: got %q, want %q", out.Profile, in.Profile)
+	}
+	if out.Notes != in.Notes {
+		t.Errorf("Notes lost: got %q, want %q", out.Notes, in.Notes)
+	}
+	if out.Provenance.Kind != in.Provenance.Kind {
+		t.Errorf("Provenance.Kind lost: got %q, want %q", out.Provenance.Kind, in.Provenance.Kind)
+	}
+	if !out.Provenance.PulledAt.Equal(in.Provenance.PulledAt) {
+		t.Errorf("Provenance.PulledAt lost: got %v, want %v", out.Provenance.PulledAt, in.Provenance.PulledAt)
+	}
+	if out.Provenance.RemoteFingerprint != in.Provenance.RemoteFingerprint {
+		t.Errorf("Provenance.RemoteFingerprint lost")
+	}
+	if out.Provenance.RemoteStatus != in.Provenance.RemoteStatus {
+		t.Errorf("Provenance.RemoteStatus lost")
+	}
+	if out.Rows[0].Target.Kind != in.Rows[0].Target.Kind {
+		t.Errorf("Target.Kind lost")
+	}
+	if out.Rows[0].Target.AppID != in.Rows[0].Target.AppID {
+		t.Errorf("Target.AppID lost")
+	}
+	if out.Rows[0].TimeType.ID != in.Rows[0].TimeType.ID {
+		t.Errorf("TimeType.ID lost")
+	}
+	if out.Rows[0].Billable != in.Rows[0].Billable {
+		t.Errorf("Billable lost")
+	}
 }
 
 func TestWeekDraft_Validate(t *testing.T) {

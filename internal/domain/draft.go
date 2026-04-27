@@ -20,7 +20,7 @@ type DraftProvenance struct {
 	Kind              ProvenanceKind `yaml:"kind" json:"kind"`
 	PulledAt          time.Time      `yaml:"pulledAt,omitempty" json:"pulledAt,omitempty"`
 	RemoteFingerprint string         `yaml:"remoteFingerprint,omitempty" json:"remoteFingerprint,omitempty"`
-	RemoteStatus      ReportStatus   `yaml:"remoteStatus,omitempty" json:"remoteStatus,omitempty"`
+	RemoteStatus      ReportStatus   `yaml:"remoteStatus,omitempty" json:"remoteStatus,omitempty"` // open|submitted|approved|rejected
 	FromTemplate      string         `yaml:"fromTemplate,omitempty" json:"fromTemplate,omitempty"`
 	FromDraft         string         `yaml:"fromDraft,omitempty" json:"fromDraft,omitempty"`
 	ShiftedByDays     int            `yaml:"shiftedByDays,omitempty" json:"shiftedByDays,omitempty"`
@@ -28,6 +28,9 @@ type DraftProvenance struct {
 
 // WeekDraft is the canonical local artifact for a single editable week.
 type WeekDraft struct {
+	// SchemaVersion identifies the draft on-disk schema. Bumped when a
+	// breaking change is made; load-time migration handles older versions.
+	// Phase A initial release: 1.
 	SchemaVersion int             `yaml:"schemaVersion" json:"schemaVersion"`
 	Profile       string          `yaml:"profile" json:"profile"`
 	WeekStart     time.Time       `yaml:"weekStart" json:"weekStart"`
@@ -61,8 +64,9 @@ type DraftCell struct {
 	PerCell       *PerCell     `yaml:"perCell,omitempty" json:"perCell,omitempty"`
 }
 
-// PerCell holds per-cell metadata overrides (Phase C escape hatch). Empty
-// pointer fields mean "use the row default."
+// PerCell holds per-cell metadata overrides (Phase C escape hatch).
+// All pointer fields are optional: nil means "inherit from the row";
+// a non-nil value overrides the row default for that one cell.
 type PerCell struct {
 	Description *string `yaml:"description,omitempty" json:"description,omitempty"`
 	TimeTypeID  *int    `yaml:"timeTypeID,omitempty" json:"timeTypeID,omitempty"`
@@ -84,6 +88,9 @@ func (d WeekDraft) Validate() error {
 		return fmt.Errorf("draft weekStart must be a Sunday in EasternTZ (got %s)",
 			d.WeekStart.Weekday())
 	}
+	// Empty Rows is intentionally permitted: a nascent draft (created via
+	// `tdx time week new` with no template seed) has zero rows until the
+	// user adds them.
 	seen := make(map[string]struct{}, len(d.Rows))
 	for i, row := range d.Rows {
 		if row.ID == "" {
