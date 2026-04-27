@@ -8,10 +8,13 @@ import (
 
 // Paths holds resolved filesystem locations used by tdx.
 type Paths struct {
-	Root               string
-	ConfigFile         string
-	CredentialsFile    string
-	TemplatesDir       string
+	Root            string
+	ConfigFile      string
+	CredentialsFile string
+	TemplatesDir    string
+	// LegacyTemplatesDir is the pre-migration global templates directory.
+	// Read until the per-profile migration completes; thereafter only used
+	// to detect the .migrated marker.
 	LegacyTemplatesDir string
 }
 
@@ -33,6 +36,8 @@ func ResolvePaths() (Paths, error) {
 }
 
 // MustPaths calls ResolvePaths and panics on error.
+// Intended for use in tests and program init only — runtime code
+// should call ResolvePaths and handle the error.
 func MustPaths() Paths {
 	p, err := ResolvePaths()
 	if err != nil {
