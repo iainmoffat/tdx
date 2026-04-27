@@ -14,6 +14,7 @@ commands and flags, see the [README](../README.md).
 - [Week View](#week-view)
 - [Time Types](#time-types)
 - [Templates](#templates)
+- [Week drafts](#week-drafts)
 - [MCP Server](#mcp-server)
 - [JSON Output](#json-output)
 - [Shell Completions](#shell-completions)
@@ -499,6 +500,148 @@ tdx time template apply my-week --week 2026-04-14 --round --yes
 
 ---
 
+## Week drafts
+
+Week drafts are first-class, locally-stored, dated week documents that let
+you pull a live week from TeamDynamix, edit it offline, validate, diff,
+preview, and push back with safety guarantees.
+
+Templates are *patterns*; drafts are *instances*. Use a template when you
+don't care which specific week it lands on. Use a draft when you do.
+
+### Concepts
+
+A **week draft** is identified by `(profile, weekStart, name)` where:
+- `weekStart` is the Sunday of the target week (in EasternTZ)
+- `name` defaults to `default`; multiple alternate names will be supported in Phase B
+
+A **draft cell** holds hours plus optional metadata. Cells with a `sourceEntryID`
+came from a TD pull; cells without one are local additions. Clearing a pulled
+cell (`hours = 0`) marks it for deletion on push.
+
+A **snapshot** is an immutable point-in-time copy of a draft, taken automatically
+before destructive operations (pull-overwriting-dirty, push, delete). Bounded
+retention (last 10 unpinned by default).
+
+### Sync state
+
+Every draft is in one of these states:
+
+| State | Meaning |
+|---|---|
+| **clean** | Local cells match what was pulled. Push would be a no-op. |
+| **dirty** | Local has uncommitted edits. Push has work to do. |
+| **stale** | Remote fingerprint changed since pull (independent flag). |
+| **conflicted** | Refresh detected divergent remote changes (Phase B). |
+
+### Lifecycle
+
+```
+ABSENT --pull--> EXISTS (clean) --edit--> EXISTS (dirty)
+                       |                       |
+                  --refresh-->            --preview-->
+                       |                       |
+                       v                  --push --yes-->
+                  EXISTS (clean,                 |
+                  fresh watermark)               v
+                                            EXISTS (clean, pushed)
+```
+
+### Editing
+
+`tdx time week edit <date>` opens the draft YAML in `$EDITOR` (vi fallback).
+On save, the YAML is validated against the draft schema before being written
+back. Identity fields (profile, weekStart, name) are protected — changing
+them is rejected with a clear error. A future phase will add a grid-aware
+TUI editor for drafts.
+
+For non-interactive cell writes, use `tdx time week set`:
+
+```bash
+tdx time week set 2026-05-04 row-01:mon=8 row-01:fri=4
+```
+
+### Push safety contract
+
+Three layered guarantees:
+
+1. **`--yes` required** — without it, push behaves as preview (renders the
+   diff list + summary + hash, exits without writes).
+2. **Hash protection** — push re-runs reconcile and verifies the computed
+   `expectedDiffHash` matches the preview's. If remote changed, hash
+   mismatches and push refuses, pointing you at `preview` or `pull --force`.
+3. **`--allow-deletes` for any deletes** — if your draft contains cleared
+   pulled cells (which produce delete actions on push), push refuses
+   without the explicit `--allow-deletes` flag. This is an extra speed
+   bump beyond `--yes` whenever destruction is involved.
+
+### Worked examples
+
+**Mid-week correction:**
+
+```bash
+tdx time week pull 2026-04-27
+tdx time week edit 2026-04-27
+# fix Tuesday's hours in the YAML; clear Wednesday's bogus entry
+tdx time week preview 2026-04-27
+tdx time week push 2026-04-27 --yes --allow-deletes
+```
+
+**Snapshot a live week before risky edits:**
+
+```bash
+tdx time week pull 2026-04-27 --name pristine
+tdx time week pull 2026-04-27   # creates the default draft
+tdx time week edit 2026-04-27
+tdx time week diff 2026-04-27   # vs current remote
+```
+
+**Partial-week push** (defer weekend cells):
+
+In your YAML, leave Sun/Sat cells unchanged or zeroed-but-unpulled; only
+edited cells generate actions on push.
+
+### Auto-snapshot history
+
+Use `tdx time week history <date>` to list snapshots:
+
+```
+SEQ   OP            TAKEN                 PINNED  NOTE
+1     pre-pull      2026-04-27 13:12:14
+2     pre-push      2026-04-27 15:02:11
+```
+
+Snapshot retention: last 10 unpinned per draft (`--keep` for manual pins
+will be added in Phase B).
+
+## Storage layout
+
+Week drafts and templates live under per-profile directories:
+
+```
+~/.config/tdx/
+├── config.yaml
+├── credentials.yaml
+└── profiles/
+    └── <profile>/
+        ├── templates/          # per-profile templates (Phase A migration)
+        └── weeks/
+            └── <YYYY-MM-DD>/
+                ├── default.yaml             # the draft
+                ├── default.pulled.yaml      # at-pull-time snapshot
+                └── default.snapshots/       # auto-history
+                    ├── 0001-pre-pull-...yaml
+                    └── 0002-pre-push-...yaml
+```
+
+On first run after upgrading from a pre-Phase-A version, tdx detects any
+templates in the legacy `~/.config/tdx/templates/` directory and offers to
+migrate them into the active profile. Single-profile users see the
+migration run silently; multi-profile users get a one-time prompt naming
+the target profile.
+
+---
+
 ## MCP Server
 
 tdx includes an MCP (Model Context Protocol) server that exposes all
@@ -652,11 +795,14 @@ tdx completion fish | source
 
 tdx stores configuration in `~/.config/tdx/`:
 
-| File | Contents |
+| Path | Contents |
 |------|----------|
 | `config.yaml` | Profiles and default profile |
 | `credentials.yaml` | Authentication tokens (per profile) |
-| `templates/` | Saved template YAML files |
+| `templates/` | Legacy templates (migrated to per-profile on upgrade) |
+| `profiles/<profile>/templates/` | Per-profile templates |
+| `profiles/<profile>/weeks/<YYYY-MM-DD>/<name>.yaml` | Local week drafts |
+| `profiles/<profile>/weeks/<YYYY-MM-DD>/<name>.snapshots/` | Per-draft auto-snapshots |
 
 Override the config directory with `TDX_CONFIG_HOME`:
 
