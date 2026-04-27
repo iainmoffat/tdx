@@ -95,6 +95,9 @@ type Action struct {
 	// ExistingID is the TD entry ID for ActionUpdate actions.
 	ExistingID int
 
+	// BeforeMinutes is the existing entry's minutes for ActionUpdate actions.
+	BeforeMinutes int
+
 	// Patch is the set of fields to update for ActionUpdate actions.
 	Patch EntryUpdate
 

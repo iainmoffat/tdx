@@ -141,11 +141,12 @@ func reconcileDraft(
 						})
 					} else {
 						actions = append(actions, domain.Action{
-							Kind:       domain.ActionUpdate,
-							RowID:      row.ID,
-							Date:       date,
-							ExistingID: cell.SourceEntryID,
-							Patch:      patch,
+							Kind:          domain.ActionUpdate,
+							RowID:         row.ID,
+							Date:          date,
+							ExistingID:    cell.SourceEntryID,
+							BeforeMinutes: existing.Minutes,
+							Patch:         patch,
 						})
 					}
 					continue

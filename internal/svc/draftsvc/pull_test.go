@@ -57,6 +57,28 @@ func TestBuildDraftFromReport_GroupsByTargetTypeBillable(t *testing.T) {
 	}
 }
 
+func TestBuildDraftFromReport_FiltersZeroPlaceholders(t *testing.T) {
+	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
+	report := domain.WeekReport{
+		WeekRef: domain.WeekRef{StartDate: week, EndDate: week.AddDate(0, 0, 6)},
+		Status:  domain.ReportOpen,
+		Entries: []domain.TimeEntry{
+			// Real entry — should produce a row + cell.
+			{ID: 100, Date: week.AddDate(0, 0, 1), Minutes: 480,
+				Target:   domain.Target{Kind: domain.TargetTicket, AppID: 42, ItemID: 1},
+				TimeType: domain.TimeType{ID: 7, Name: "Work"}, Billable: true},
+			// TD placeholder — should be silently dropped.
+			{ID: 0, Date: time.Time{}, Minutes: 0,
+				Target:   domain.Target{Kind: domain.TargetProject, ItemID: 999},
+				TimeType: domain.TimeType{ID: 99, Name: "Other"}, Billable: false},
+		},
+	}
+	draft := buildDraftFromReport("work", "default", report)
+	if got := len(draft.Rows); got != 1 {
+		t.Errorf("rows = %d, want 1 (zero placeholder should be filtered)", got)
+	}
+}
+
 func TestComputeRemoteFingerprint_Stable(t *testing.T) {
 	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
 	a := domain.WeekReport{

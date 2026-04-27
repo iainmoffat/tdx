@@ -150,6 +150,48 @@ func TestReconcile_LockedDayBlocks(t *testing.T) {
 	}
 }
 
+func TestReconcile_PopulatesBeforeMinutesOnUpdate(t *testing.T) {
+	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
+	row := domain.DraftRow{
+		ID:       "row-01",
+		Target:   domain.Target{Kind: domain.TargetTicket, AppID: 42, ItemID: 123},
+		TimeType: domain.TimeType{ID: 7, Name: "Work"}, Billable: true,
+		Cells: []domain.DraftCell{{Day: time.Monday, Hours: 6.0, SourceEntryID: 98731}},
+	}
+	draft := domain.WeekDraft{
+		SchemaVersion: 1, Profile: "work", Name: "default", WeekStart: week,
+		Rows:       []domain.DraftRow{row},
+		Provenance: domain.DraftProvenance{Kind: domain.ProvenancePulled, RemoteFingerprint: "fp"},
+	}
+	pulled := map[string]domain.DraftCell{
+		"row-01:Monday": {Day: time.Monday, Hours: 8.0, SourceEntryID: 98731},
+	}
+	report := domain.WeekReport{
+		WeekRef: domain.WeekRef{StartDate: week, EndDate: week.AddDate(0, 0, 6)},
+		Status:  domain.ReportOpen,
+		Entries: []domain.TimeEntry{
+			{ID: 98731, Date: week.AddDate(0, 0, 1), Minutes: 480,
+				Target: row.Target, TimeType: row.TimeType, Billable: true},
+		},
+	}
+	diff, err := reconcileDraft(draft, pulled, report, nil, "fp", "user-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var found bool
+	for _, a := range diff.Actions {
+		if a.Kind == domain.ActionUpdate {
+			found = true
+			if a.BeforeMinutes != 480 {
+				t.Errorf("BeforeMinutes = %d, want 480", a.BeforeMinutes)
+			}
+		}
+	}
+	if !found {
+		t.Errorf("no ActionUpdate in diff")
+	}
+}
+
 func TestReconcile_SubmittedWeekRefuses(t *testing.T) {
 	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
 	row := domain.DraftRow{

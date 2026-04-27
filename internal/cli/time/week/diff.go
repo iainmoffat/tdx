@@ -107,8 +107,11 @@ func renderDiff(w io.Writer, diff domain.ReconcileDiff, jsonOut bool) error {
 		case domain.ActionUpdate:
 			e.Kind = "update"
 			e.SourceID = a.ExistingID
+			e.Before = float64(a.BeforeMinutes) / 60.0
 			if a.Patch.Minutes != nil {
 				e.After = float64(*a.Patch.Minutes) / 60.0
+			} else {
+				e.After = e.Before
 			}
 			summary.Updates++
 		case domain.ActionDelete:

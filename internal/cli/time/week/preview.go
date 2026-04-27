@@ -105,7 +105,7 @@ func renderPreview(w io.Writer, diff domain.ReconcileDiff, creates, updates, del
 			line += fmt.Sprintf("  %.1fh", float64(a.Entry.Minutes)/60.0)
 		case domain.ActionUpdate:
 			if a.Patch.Minutes != nil {
-				line += fmt.Sprintf("  -> %.1fh  (entry #%d)", float64(*a.Patch.Minutes)/60.0, a.ExistingID)
+				line += fmt.Sprintf("  %.1fh -> %.1fh  (entry #%d)", float64(a.BeforeMinutes)/60.0, float64(*a.Patch.Minutes)/60.0, a.ExistingID)
 			} else {
 				line += fmt.Sprintf("  (entry #%d)", a.ExistingID)
 			}
