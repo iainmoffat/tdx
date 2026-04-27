@@ -61,6 +61,11 @@ Always call this before push_week_draft. The diffHash is required by push_week_d
 		Name:        "diff_week_draft",
 		Description: "Diff a draft vs current remote week. Cell-level. Read-only. (MVP: --against remote only.)",
 	}, diffDraftHandler(svcs))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name:        "list_week_draft_snapshots",
+		Description: "List snapshots for a draft. Read-only.",
+	}, listSnapshotsHandler(svcs))
 }
 
 func listDraftsHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, listDraftsArgs) (*sdkmcp.CallToolResult, any, error) {
@@ -380,6 +385,21 @@ Recipe:
 		Name: "unarchive_week_draft",
 		Description: "Show a previously archived draft in default `list_week_drafts` output. Requires confirm=true.",
 	}, archiveDraftHandler(svcs, false))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name:        "snapshot_week_draft",
+		Description: "Take a manual snapshot of a draft. Optional `keep=true` pins it (exempt from auto-prune). Requires confirm=true.",
+	}, snapshotDraftHandler(svcs))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name:        "restore_week_draft_snapshot",
+		Description: "Restore a draft from a prior snapshot by sequence number. Auto-snapshots the current state as pre-restore first. Requires confirm=true.",
+	}, restoreSnapshotHandler(svcs))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name:        "prune_week_draft_snapshots",
+		Description: "Drop unpinned snapshots. olderThanDays>0 drops by age; 0 prunes to the retention cap. Requires confirm=true.",
+	}, pruneSnapshotsHandler(svcs))
 }
 
 var dayNamesMCP = map[string]time.Weekday{
@@ -775,5 +795,153 @@ func archiveDraftHandler(svcs Services, archive bool) func(context.Context, *sdk
 			Name:      name,
 			Archived:  archive,
 		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Snapshot tools (Task 22)
+// ---------------------------------------------------------------------------
+
+type snapshotDraftArgs struct {
+	Profile   string `json:"profile,omitempty"`
+	WeekStart string `json:"weekStart"`
+	Name      string `json:"name,omitempty"`
+	Keep      bool   `json:"keep,omitempty" jsonschema:"pin (exempt from auto-prune)"`
+	Note      string `json:"note,omitempty"`
+	Confirm   bool   `json:"confirm"`
+}
+
+type restoreSnapshotArgs struct {
+	Profile   string `json:"profile,omitempty"`
+	WeekStart string `json:"weekStart"`
+	Name      string `json:"name,omitempty"`
+	Sequence  int    `json:"sequence" jsonschema:"snapshot sequence number from list_week_draft_snapshots"`
+	Confirm   bool   `json:"confirm"`
+}
+
+type pruneSnapshotsArgs struct {
+	Profile       string `json:"profile,omitempty"`
+	WeekStart     string `json:"weekStart"`
+	Name          string `json:"name,omitempty"`
+	OlderThanDays int    `json:"olderThanDays,omitempty" jsonschema:"prune snapshots older than N days; 0 = use retention cap"`
+	Confirm       bool   `json:"confirm"`
+}
+
+type listSnapshotsArgs struct {
+	Profile   string `json:"profile,omitempty"`
+	WeekStart string `json:"weekStart"`
+	Name      string `json:"name,omitempty"`
+}
+
+func listSnapshotsHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, listSnapshotsArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args listSnapshotsArgs) (*sdkmcp.CallToolResult, any, error) {
+		profile := resolveProfile(svcs, args.Profile)
+		weekStart, err := parseWeekStart(args.WeekStart)
+		if err != nil {
+			return errorResult(fmt.Sprintf("invalid weekStart: %v", err)), nil, nil
+		}
+		name := args.Name
+		if name == "" {
+			name = "default"
+		}
+		list, err := svcs.Drafts.Snapshots().List(profile, weekStart, name)
+		if err != nil {
+			return errorResult(fmt.Sprintf("list snapshots: %v", err)), nil, nil
+		}
+		return jsonResult(struct {
+			Schema    string                  `json:"schema"`
+			Snapshots []draftsvc.SnapshotInfo `json:"snapshots"`
+		}{Schema: "tdx.v1.weekDraftSnapshotList", Snapshots: list})
+	}
+}
+
+func snapshotDraftHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, snapshotDraftArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args snapshotDraftArgs) (*sdkmcp.CallToolResult, any, error) {
+		if r, ok := confirmGate(args.Confirm, "Set confirm=true to take a snapshot."); !ok {
+			return r, nil, nil
+		}
+		profile := resolveProfile(svcs, args.Profile)
+		weekStart, err := parseWeekStart(args.WeekStart)
+		if err != nil {
+			return errorResult(fmt.Sprintf("invalid weekStart: %v", err)), nil, nil
+		}
+		name := args.Name
+		if name == "" {
+			name = "default"
+		}
+		d, err := svcs.Drafts.Store().Load(profile, weekStart, name)
+		if err != nil {
+			return errorResult(fmt.Sprintf("load draft: %v", err)), nil, nil
+		}
+		info, err := svcs.Drafts.Snapshots().Take(d, draftsvc.OpManual, args.Note)
+		if err != nil {
+			return errorResult(fmt.Sprintf("take: %v", err)), nil, nil
+		}
+		if args.Keep {
+			if err := svcs.Drafts.Snapshots().Pin(profile, weekStart, name, info.Sequence, args.Note); err != nil {
+				return errorResult(fmt.Sprintf("pin: %v", err)), nil, nil
+			}
+			info.Pinned = true
+		}
+		return jsonResult(struct {
+			Schema   string                `json:"schema"`
+			Snapshot draftsvc.SnapshotInfo `json:"snapshot"`
+		}{Schema: "tdx.v1.weekDraftSnapshot", Snapshot: info})
+	}
+}
+
+func restoreSnapshotHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, restoreSnapshotArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args restoreSnapshotArgs) (*sdkmcp.CallToolResult, any, error) {
+		if r, ok := confirmGate(args.Confirm, "Set confirm=true to restore the draft from a snapshot."); !ok {
+			return r, nil, nil
+		}
+		if args.Sequence <= 0 {
+			return errorResult("sequence is required (use list_week_draft_snapshots to find sequence numbers)"), nil, nil
+		}
+		profile := resolveProfile(svcs, args.Profile)
+		weekStart, err := parseWeekStart(args.WeekStart)
+		if err != nil {
+			return errorResult(fmt.Sprintf("invalid weekStart: %v", err)), nil, nil
+		}
+		name := args.Name
+		if name == "" {
+			name = "default"
+		}
+		if err := svcs.Drafts.RestoreSnapshot(profile, weekStart, name, args.Sequence); err != nil {
+			return errorResult(fmt.Sprintf("restore: %v", err)), nil, nil
+		}
+		return textResult(fmt.Sprintf("Restored draft %s/%s from snapshot %d.",
+			weekStart.Format("2006-01-02"), name, args.Sequence))
+	}
+}
+
+func pruneSnapshotsHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, pruneSnapshotsArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args pruneSnapshotsArgs) (*sdkmcp.CallToolResult, any, error) {
+		if r, ok := confirmGate(args.Confirm, "Set confirm=true to prune snapshots."); !ok {
+			return r, nil, nil
+		}
+		profile := resolveProfile(svcs, args.Profile)
+		weekStart, err := parseWeekStart(args.WeekStart)
+		if err != nil {
+			return errorResult(fmt.Sprintf("invalid weekStart: %v", err)), nil, nil
+		}
+		name := args.Name
+		if name == "" {
+			name = "default"
+		}
+		var pruned int
+		if args.OlderThanDays > 0 {
+			pruned, err = svcs.Drafts.Snapshots().PruneOlderThan(profile, weekStart, name,
+				time.Duration(args.OlderThanDays)*24*time.Hour)
+		} else {
+			pruned, err = svcs.Drafts.Snapshots().PruneToRetention(profile, weekStart, name)
+		}
+		if err != nil {
+			return errorResult(fmt.Sprintf("prune: %v", err)), nil, nil
+		}
+		return jsonResult(struct {
+			Schema string `json:"schema"`
+			Pruned int    `json:"pruned"`
+		}{Schema: "tdx.v1.weekDraftSnapshotPruneResult", Pruned: pruned})
 	}
 }
