@@ -8,6 +8,7 @@ func NewCmd() *cobra.Command {
 		Use:   "week",
 		Short: "Inspect weekly reports and manage week drafts",
 	}
+	cmd.AddCommand(newNewCmd())
 	cmd.AddCommand(newShowCmd())
 	cmd.AddCommand(newLockedCmd())
 	cmd.AddCommand(newPullCmd())
