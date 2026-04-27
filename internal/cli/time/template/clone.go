@@ -7,11 +7,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/svc/authsvc"
 	"github.com/iainmoffat/tdx/internal/svc/tmplsvc"
 )
 
 func newCloneCmd() *cobra.Command {
-	return &cobra.Command{
+	var profileFlag string
+
+	cmd := &cobra.Command{
 		Use:   "clone <source> <dest>",
 		Short: "Clone a template under a new name",
 		Args:  cobra.ExactArgs(2),
@@ -22,13 +25,18 @@ func newCloneCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			store := tmplsvc.NewStore(paths)
-
-			tmpl, err := store.Load(src)
+			auth := authsvc.New(paths)
+			profile, err := auth.ResolveProfile(profileFlag)
 			if err != nil {
 				return err
 			}
-			if store.Exists(dst) {
+			store := tmplsvc.NewStore(paths)
+
+			tmpl, err := store.Load(profile, src)
+			if err != nil {
+				return err
+			}
+			if store.Exists(profile, dst) {
 				return fmt.Errorf("template %q already exists", dst)
 			}
 
@@ -38,11 +46,14 @@ func newCloneCmd() *cobra.Command {
 			tmpl.CreatedAt = now
 			tmpl.ModifiedAt = now
 
-			if err := store.Save(tmpl); err != nil {
+			if err := store.Save(profile, tmpl); err != nil {
 				return err
 			}
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "cloned %q → %q\n", src, dst)
 			return nil
 		},
 	}
+
+	cmd.Flags().StringVar(&profileFlag, "profile", "", "profile name")
+	return cmd
 }

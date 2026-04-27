@@ -20,10 +20,10 @@ func tmplHarness(t *testing.T, tenantURL string) (config.Paths, *timesvc.Service
 	t.Helper()
 	dir := t.TempDir()
 	paths := config.Paths{
-		Root:            dir,
-		ConfigFile:      filepath.Join(dir, "config.yaml"),
-		CredentialsFile: filepath.Join(dir, "credentials.yaml"),
-		TemplatesDir:    filepath.Join(dir, "templates"),
+		Root:               dir,
+		ConfigFile:         filepath.Join(dir, "config.yaml"),
+		CredentialsFile:    filepath.Join(dir, "credentials.yaml"),
+		LegacyTemplatesDir: filepath.Join(dir, "templates"),
 	}
 	ps := config.NewProfileStore(paths)
 	require.NoError(t, ps.AddProfile(domain.Profile{
@@ -103,7 +103,7 @@ func TestDerive_GroupsEntriesByTargetAndType(t *testing.T) {
 	require.Equal(t, "2026-04-05", tmpl.DerivedFrom.WeekStart.Format("2006-01-02"))
 
 	// Template should be persisted.
-	require.True(t, svc.store.Exists("my-week"))
+	require.True(t, svc.store.Exists("default", "my-week"))
 }
 
 // TestDerive_AlreadyExists verifies that Derive returns an error when a
@@ -120,7 +120,7 @@ func TestDerive_AlreadyExists(t *testing.T) {
 	// Seed an existing template.
 	existing := sampleTemplate()
 	existing.Name = "conflict"
-	require.NoError(t, svc.store.Save(existing))
+	require.NoError(t, svc.store.Save("default", existing))
 
 	weekDate := time.Date(2026, 4, 6, 0, 0, 0, 0, domain.EasternTZ)
 	_, err := svc.Derive(context.Background(), "default", "conflict", weekDate)

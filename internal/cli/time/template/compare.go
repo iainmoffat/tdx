@@ -86,7 +86,7 @@ no --yes or --dry-run flags.`,
 			}
 
 			// Load template.
-			tmpl, err := svc.Store().Load(name)
+			tmpl, err := svc.Store().Load(profileName, name)
 			if err != nil {
 				return err
 			}

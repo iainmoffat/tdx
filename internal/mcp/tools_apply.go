@@ -86,7 +86,7 @@ func compareHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest
 	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args compareArgs) (*sdkmcp.CallToolResult, any, error) {
 		profile := resolveProfile(svcs, args.Profile)
 
-		tmpl, err := svcs.Template.Store().Load(args.Name)
+		tmpl, err := svcs.Template.Store().Load(profile, args.Name)
 		if err != nil {
 			return errorResult(fmt.Sprintf("load template: %v", err)), nil, nil
 		}
@@ -142,7 +142,7 @@ func previewHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest
 	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args previewArgs) (*sdkmcp.CallToolResult, any, error) {
 		profile := resolveProfile(svcs, args.Profile)
 
-		tmpl, err := svcs.Template.Store().Load(args.Name)
+		tmpl, err := svcs.Template.Store().Load(profile, args.Name)
 		if err != nil {
 			return errorResult(fmt.Sprintf("load template: %v", err)), nil, nil
 		}
@@ -280,7 +280,7 @@ func applyTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallToolR
 
 		profile := resolveProfile(svcs, args.Profile)
 
-		tmpl, err := svcs.Template.Store().Load(args.Name)
+		tmpl, err := svcs.Template.Store().Load(profile, args.Name)
 		if err != nil {
 			return errorResult(fmt.Sprintf("load template: %v", err)), nil, nil
 		}

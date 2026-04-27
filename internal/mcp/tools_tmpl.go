@@ -25,17 +25,20 @@ type createTemplateArgs struct {
 	Description string `json:"description,omitempty"`
 	Rows        string `json:"rows" jsonschema:"JSON array of template rows"`
 	Confirm     bool   `json:"confirm" jsonschema:"must be true to execute"`
+	Profile     string `json:"profile,omitempty" jsonschema:"profile name"`
 }
 
 type updateTemplateArgs struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
 	Confirm     bool   `json:"confirm" jsonschema:"must be true to execute"`
+	Profile     string `json:"profile,omitempty" jsonschema:"profile name"`
 }
 
 type deleteTemplateArgs struct {
 	Name    string `json:"name"`
 	Confirm bool   `json:"confirm" jsonschema:"must be true to execute"`
+	Profile string `json:"profile,omitempty" jsonschema:"profile name"`
 }
 
 type deriveTemplateArgs struct {
@@ -81,7 +84,8 @@ func RegisterTemplateTools(srv *sdkmcp.Server, svcs Services) {
 
 func listTemplatesHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, listTemplatesArgs) (*sdkmcp.CallToolResult, any, error) {
 	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args listTemplatesArgs) (*sdkmcp.CallToolResult, any, error) {
-		templates, err := svcs.Template.Store().List()
+		profile := resolveProfile(svcs, args.Profile)
+		templates, err := svcs.Template.Store().List(profile)
 		if err != nil {
 			return errorResult(fmt.Sprintf("list templates: %v", err)), nil, nil
 		}
@@ -92,7 +96,8 @@ func listTemplatesHandler(svcs Services) func(context.Context, *sdkmcp.CallToolR
 
 func getTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, getTemplateArgs) (*sdkmcp.CallToolResult, any, error) {
 	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args getTemplateArgs) (*sdkmcp.CallToolResult, any, error) {
-		tmpl, err := svcs.Template.Store().Load(args.Name)
+		profile := resolveProfile(svcs, args.Profile)
+		tmpl, err := svcs.Template.Store().Load(profile, args.Name)
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				return errorResult(fmt.Sprintf("template %q not found", args.Name)), nil, nil
@@ -109,6 +114,8 @@ func createTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallTool
 		if result, ok := confirmGate(args.Confirm, "Set confirm: true to create the template."); !ok {
 			return result, nil, nil
 		}
+
+		profile := resolveProfile(svcs, args.Profile)
 
 		var rows []domain.TemplateRow
 		if err := json.Unmarshal([]byte(args.Rows), &rows); err != nil {
@@ -129,7 +136,7 @@ func createTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallTool
 			return errorResult(fmt.Sprintf("invalid template: %v", err)), nil, nil
 		}
 
-		if err := svcs.Template.Store().Save(tmpl); err != nil {
+		if err := svcs.Template.Store().Save(profile, tmpl); err != nil {
 			return errorResult(fmt.Sprintf("save template: %v", err)), nil, nil
 		}
 
@@ -143,7 +150,9 @@ func updateTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallTool
 			return result, nil, nil
 		}
 
-		tmpl, err := svcs.Template.Store().Load(args.Name)
+		profile := resolveProfile(svcs, args.Profile)
+
+		tmpl, err := svcs.Template.Store().Load(profile, args.Name)
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				return errorResult(fmt.Sprintf("template %q not found", args.Name)), nil, nil
@@ -154,7 +163,7 @@ func updateTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallTool
 		tmpl.Description = args.Description
 		tmpl.ModifiedAt = time.Now().UTC()
 
-		if err := svcs.Template.Store().Save(tmpl); err != nil {
+		if err := svcs.Template.Store().Save(profile, tmpl); err != nil {
 			return errorResult(fmt.Sprintf("save template: %v", err)), nil, nil
 		}
 
@@ -168,7 +177,9 @@ func deleteTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallTool
 			return result, nil, nil
 		}
 
-		if err := svcs.Template.Store().Delete(args.Name); err != nil {
+		profile := resolveProfile(svcs, args.Profile)
+
+		if err := svcs.Template.Store().Delete(profile, args.Name); err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				return errorResult(fmt.Sprintf("template %q not found", args.Name)), nil, nil
 			}
@@ -199,7 +210,7 @@ func deriveTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallTool
 
 		if args.Description != "" {
 			tmpl.Description = args.Description
-			if saveErr := svcs.Template.Store().Save(tmpl); saveErr != nil {
+			if saveErr := svcs.Template.Store().Save(profile, tmpl); saveErr != nil {
 				return errorResult(fmt.Sprintf("save description: %v", saveErr)), nil, nil
 			}
 		}

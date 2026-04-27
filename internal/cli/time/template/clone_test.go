@@ -2,7 +2,6 @@ package template
 
 import (
 	"bytes"
-	"path/filepath"
 	"testing"
 
 	"github.com/iainmoffat/tdx/internal/config"
@@ -12,9 +11,9 @@ import (
 )
 
 func TestCloneCmd_Success(t *testing.T) {
-	dir := seedTemplateDir(t)
+	seedTemplateDir(t)
 
-	writeTestTemplate(t, dir, domain.Template{
+	writeTestTemplate(t, "", domain.Template{
 		SchemaVersion: 1,
 		Name:          "original",
 		Description:   "The original template",
@@ -34,11 +33,12 @@ func TestCloneCmd_Success(t *testing.T) {
 	require.Contains(t, out.String(), "copy")
 
 	// Verify the clone exists and has the correct name.
-	paths := config.Paths{TemplatesDir: filepath.Join(dir, "templates")}
+	paths, err := config.ResolvePaths()
+	require.NoError(t, err)
 	store := tmplsvc.NewStore(paths)
-	require.True(t, store.Exists("copy"))
+	require.True(t, store.Exists("default", "copy"))
 
-	cloned, err := store.Load("copy")
+	cloned, err := store.Load("default", "copy")
 	require.NoError(t, err)
 	require.Equal(t, "copy", cloned.Name)
 	require.Equal(t, "The original template", cloned.Description)
@@ -47,16 +47,16 @@ func TestCloneCmd_Success(t *testing.T) {
 }
 
 func TestCloneCmd_DestExists(t *testing.T) {
-	dir := seedTemplateDir(t)
+	seedTemplateDir(t)
 
-	writeTestTemplate(t, dir, domain.Template{
+	writeTestTemplate(t, "", domain.Template{
 		SchemaVersion: 1,
 		Name:          "src",
 		Rows: []domain.TemplateRow{
 			{ID: "row1", Label: "Work", Hours: domain.WeekHours{Mon: 8}},
 		},
 	})
-	writeTestTemplate(t, dir, domain.Template{
+	writeTestTemplate(t, "", domain.Template{
 		SchemaVersion: 1,
 		Name:          "dst",
 		Rows: []domain.TemplateRow{

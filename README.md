@@ -74,6 +74,26 @@ tdx time template apply my-week --week 2026-04-14 --yes
 | `tdx time week show [date]` | Show week as a grid (default: this week) |
 | `tdx time week locked` | Show locked days |
 
+### Time Week Drafts
+
+Local week drafts let you pull a live week down, edit it as a YAML
+artifact, validate, diff, preview, and push back with safety guarantees.
+
+| Command | Description | Key Flags |
+|---|---|---|
+| `tdx time week pull <date>` | Pull live week into a local draft | `--name`, `--force`, `--json` |
+| `tdx time week list` | List local drafts with sync state | `--dirty`, `--conflicted`, `--date`, `--no-remote-check`, `--json` |
+| `tdx time week show <date> --draft [name]` | Show a draft as a grid | (flag added to existing `show`) |
+| `tdx time week status <date>[/<name>]` | One-screen draft status | `--json`, `--no-remote-check` |
+| `tdx time week edit <date>[/<name>]` | Edit a draft as YAML in $EDITOR | (vi fallback) |
+| `tdx time week diff <date>[/<name>]` | Diff a draft vs current remote | `--against remote`, `--json` |
+| `tdx time week preview <date>[/<name>]` | Preview what `push` will do | `--json` |
+| `tdx time week push <date>[/<name>] --yes` | Push a draft to TD | `--allow-deletes`, `--expected-diff-hash`, `--json` |
+| `tdx time week delete <date>[/<name>] --yes` | Delete a draft (auto-snapshots first) | `--keep-snapshots` |
+| `tdx time week set <date>[/<name>] <row>:<day>=<h>` | Non-interactive cell write | (repeatable) |
+| `tdx time week note <date>[/<name>]` | Edit free-form notes | `--append`, `--clear` |
+| `tdx time week history <date>[/<name>]` | List snapshots | `--json`, `--limit N` |
+
 ### Time Types
 
 | Command | Description |
@@ -123,9 +143,27 @@ Add tdx as an MCP server in your AI tool's configuration:
 }
 ```
 
-The MCP server exposes 20 tools (12 read-only, 8 mutating). All mutating
+The MCP server exposes 28 tools (16 read-only, 12 mutating). All mutating
 tools require `confirm: true`. Template applies require an `expectedDiffHash`
 from a prior preview call for race protection.
+
+**Week drafts (Phase A — read-only, 4 tools):**
+
+| Tool | Description |
+|------|-------------|
+| `list_week_drafts` | List local drafts with sync state |
+| `get_week_draft` | Load a single draft + sync state |
+| `preview_push_week_draft` | Preview push and capture diffHash |
+| `diff_week_draft` | Cell-level diff vs remote |
+
+**Week drafts (Phase A — mutating, 4 tools, all require `confirm: true`):**
+
+| Tool | Description |
+|------|-------------|
+| `pull_week_draft` | Pull live week into a local draft |
+| `update_week_draft` | Apply per-cell edits (hours=0 on pulled cell = delete-on-push) |
+| `delete_week_draft` | Delete a draft (auto-snapshots) |
+| `push_week_draft` | Push to TD; requires `expectedDiffHash` and `allowDeletes` for any deletes |
 
 ## JSON Output
 
@@ -135,6 +173,11 @@ All commands support `--json` for machine-readable output with stable
 ```bash
 tdx time entry list | jq '.entries[].id'
 ```
+
+Schema names introduced in Phase A: `tdx.v1.weekDraft`, `tdx.v1.weekDraftList`,
+`tdx.v1.weekDraftStatus`, `tdx.v1.weekDraftDiff`, `tdx.v1.weekDraftPreview`,
+`tdx.v1.weekDraftPullResult`, `tdx.v1.weekDraftPushResult`,
+`tdx.v1.weekDraftSnapshotList`.
 
 ## Shell Completions
 
@@ -148,6 +191,19 @@ tdx completion zsh > "${fpath[1]}/_tdx"
 # fish
 tdx completion fish | source
 ```
+
+## Configuration
+
+tdx stores configuration in `~/.config/tdx/`:
+
+| Path | Contents |
+|------|----------|
+| `config.yaml` | Profiles and default profile |
+| `credentials.yaml` | Authentication tokens (per profile) |
+| `templates/` | Legacy templates (migrated to per-profile on upgrade) |
+| `profiles/<profile>/templates/` | Per-profile templates |
+| `profiles/<profile>/weeks/<YYYY-MM-DD>/<name>.yaml` | Local week drafts |
+| `profiles/<profile>/weeks/<YYYY-MM-DD>/<name>.snapshots/` | Per-draft auto-snapshots |
 
 ## Development
 

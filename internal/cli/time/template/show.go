@@ -8,11 +8,15 @@ import (
 	"github.com/iainmoffat/tdx/internal/config"
 	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/iainmoffat/tdx/internal/render"
+	"github.com/iainmoffat/tdx/internal/svc/authsvc"
 	"github.com/iainmoffat/tdx/internal/svc/tmplsvc"
 )
 
 func newShowCmd() *cobra.Command {
-	var jsonFlag bool
+	var (
+		jsonFlag    bool
+		profileFlag string
+	)
 
 	cmd := &cobra.Command{
 		Use:   "show <name>",
@@ -23,8 +27,13 @@ func newShowCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			auth := authsvc.New(paths)
+			profile, err := auth.ResolveProfile(profileFlag)
+			if err != nil {
+				return err
+			}
 			store := tmplsvc.NewStore(paths)
-			tmpl, err := store.Load(args[0])
+			tmpl, err := store.Load(profile, args[0])
 			if err != nil {
 				return err
 			}
@@ -48,6 +57,7 @@ func newShowCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&jsonFlag, "json", false, "emit JSON output")
+	cmd.Flags().StringVar(&profileFlag, "profile", "", "profile name")
 	return cmd
 }
 

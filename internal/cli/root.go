@@ -16,6 +16,13 @@ func NewRootCmd(version string) *cobra.Command {
 		Short:         "Manage TeamDynamix time entries from the terminal",
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if isNonInteractiveCommand(cmd) {
+				return nil
+			}
+			runStartupMigration()
+			return nil
+		},
 	}
 	root.AddCommand(newVersionCmd(version))
 	root.AddCommand(config.NewCmd())

@@ -59,6 +59,8 @@ const (
 	// ActionSkip means no change will be made (entry already matches or is
 	// blocked by a non-fatal condition).
 	ActionSkip ActionKind = 2
+	// ActionDelete means an existing time entry will be deleted.
+	ActionDelete ActionKind = 3
 )
 
 // String returns the canonical string representation of the action kind.
@@ -70,6 +72,8 @@ func (k ActionKind) String() string {
 		return "update"
 	case ActionSkip:
 		return "skip"
+	case ActionDelete:
+		return "delete"
 	}
 	return fmt.Sprintf("ActionKind(%d)", int(k))
 }
@@ -91,8 +95,14 @@ type Action struct {
 	// ExistingID is the TD entry ID for ActionUpdate actions.
 	ExistingID int
 
+	// BeforeMinutes is the existing entry's minutes for ActionUpdate actions.
+	BeforeMinutes int
+
 	// Patch is the set of fields to update for ActionUpdate actions.
 	Patch EntryUpdate
+
+	// DeleteEntryID is the TD entry ID for ActionDelete actions.
+	DeleteEntryID int
 
 	// SkipReason is a human-readable explanation for ActionSkip actions.
 	SkipReason string
@@ -165,6 +175,25 @@ func (d ReconcileDiff) CountByKind() (creates, updates, skips int) {
 			creates++
 		case ActionUpdate:
 			updates++
+		case ActionSkip:
+			skips++
+		}
+	}
+	return
+}
+
+// CountByKindV2 tallies actions including deletes. The original CountByKind
+// is kept for backwards-compatible call sites in tmplsvc; new draft-aware
+// code uses V2.
+func (d ReconcileDiff) CountByKindV2() (creates, updates, deletes, skips int) {
+	for _, a := range d.Actions {
+		switch a.Kind {
+		case ActionCreate:
+			creates++
+		case ActionUpdate:
+			updates++
+		case ActionDelete:
+			deletes++
 		case ActionSkip:
 			skips++
 		}

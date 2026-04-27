@@ -2,7 +2,6 @@ package template
 
 import (
 	"bytes"
-	"path/filepath"
 	"testing"
 
 	"github.com/iainmoffat/tdx/internal/config"
@@ -12,9 +11,9 @@ import (
 )
 
 func TestDeleteCmd_Success(t *testing.T) {
-	dir := seedTemplateDir(t)
+	seedTemplateDir(t)
 
-	writeTestTemplate(t, dir, domain.Template{
+	writeTestTemplate(t, "", domain.Template{
 		SchemaVersion: 1,
 		Name:          "doomed",
 		Rows: []domain.TemplateRow{
@@ -31,9 +30,10 @@ func TestDeleteCmd_Success(t *testing.T) {
 	require.Contains(t, out.String(), `deleted template "doomed"`)
 
 	// Verify it's actually gone.
-	paths := config.Paths{TemplatesDir: filepath.Join(dir, "templates")}
+	paths, err := config.ResolvePaths()
+	require.NoError(t, err)
 	store := tmplsvc.NewStore(paths)
-	require.False(t, store.Exists("doomed"))
+	require.False(t, store.Exists("default", "doomed"))
 }
 
 func TestDeleteCmd_NotFound(t *testing.T) {
