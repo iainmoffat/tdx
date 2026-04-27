@@ -8,10 +8,11 @@ import (
 
 // Paths holds resolved filesystem locations used by tdx.
 type Paths struct {
-	Root            string
-	ConfigFile      string
-	CredentialsFile string
-	TemplatesDir    string
+	Root               string
+	ConfigFile         string
+	CredentialsFile    string
+	TemplatesDir       string
+	LegacyTemplatesDir string
 }
 
 // ResolvePaths determines the tdx config root and derived file locations.
@@ -21,12 +22,23 @@ func ResolvePaths() (Paths, error) {
 	if err != nil {
 		return Paths{}, err
 	}
+	templates := filepath.Join(root, "templates")
 	return Paths{
-		Root:            root,
-		ConfigFile:      filepath.Join(root, "config.yaml"),
-		CredentialsFile: filepath.Join(root, "credentials.yaml"),
-		TemplatesDir:    filepath.Join(root, "templates"),
+		Root:               root,
+		ConfigFile:         filepath.Join(root, "config.yaml"),
+		CredentialsFile:    filepath.Join(root, "credentials.yaml"),
+		TemplatesDir:       templates,
+		LegacyTemplatesDir: templates,
 	}, nil
+}
+
+// MustPaths calls ResolvePaths and panics on error.
+func MustPaths() Paths {
+	p, err := ResolvePaths()
+	if err != nil {
+		panic("tdx: resolve paths: " + err.Error())
+	}
+	return p
 }
 
 func resolveRoot() (string, error) {
@@ -49,4 +61,14 @@ func (p Paths) EnsureRoot() error {
 		return fmt.Errorf("create config root: %w", err)
 	}
 	return nil
+}
+
+// ProfileTemplatesDir returns the per-profile templates directory.
+func (p Paths) ProfileTemplatesDir(profile string) string {
+	return filepath.Join(p.Root, "profiles", profile, "templates")
+}
+
+// ProfileWeeksDir returns the per-profile weeks (drafts) directory.
+func (p Paths) ProfileWeeksDir(profile string) string {
+	return filepath.Join(p.Root, "profiles", profile, "weeks")
 }

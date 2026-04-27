@@ -39,3 +39,19 @@ func TestPaths_FallsBackToHomeDotConfig(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, filepath.Join(home, ".config", "tdx"), p.Root)
 }
+
+func TestProfilePaths(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("TDX_CONFIG_HOME", home)
+	p := MustPaths()
+
+	if got, want := p.ProfileTemplatesDir("work"), filepath.Join(home, "profiles", "work", "templates"); got != want {
+		t.Errorf("ProfileTemplatesDir(work) = %q, want %q", got, want)
+	}
+	if got, want := p.ProfileWeeksDir("work"), filepath.Join(home, "profiles", "work", "weeks"); got != want {
+		t.Errorf("ProfileWeeksDir(work) = %q, want %q", got, want)
+	}
+	if got, want := p.LegacyTemplatesDir, filepath.Join(home, "templates"); got != want {
+		t.Errorf("LegacyTemplatesDir = %q, want %q", got, want)
+	}
+}
