@@ -17,6 +17,7 @@ type listDraftsArgs struct {
 	Dirty      bool   `json:"dirty,omitempty"`
 	Conflicted bool   `json:"conflicted,omitempty"`
 	WeekStart  string `json:"weekStart,omitempty" jsonschema:"YYYY-MM-DD filter"`
+	Archived   bool   `json:"archived,omitempty" jsonschema:"include archived drafts (default false)"`
 }
 
 type getDraftArgs struct {
@@ -85,6 +86,7 @@ func listDraftsHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequ
 			SyncDetail domain.DraftSyncState `json:"syncDetail"`
 			TotalHours float64               `json:"totalHours"`
 			PulledAt   string                `json:"pulledAt,omitempty"`
+			Archived   bool                  `json:"archived,omitempty"`
 		}
 		items := make([]item, 0, len(list))
 		for _, d := range list {
@@ -107,11 +109,22 @@ func listDraftsHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequ
 				SyncState:  string(state.Sync),
 				SyncDetail: state,
 				TotalHours: state.TotalHours,
+				Archived:   d.Archived,
 			}
 			if !d.Provenance.PulledAt.IsZero() {
 				it.PulledAt = d.Provenance.PulledAt.UTC().Format(time.RFC3339)
 			}
 			items = append(items, it)
+		}
+
+		if !args.Archived {
+			out := make([]item, 0, len(items))
+			for _, it := range items {
+				if !it.Archived {
+					out = append(out, it)
+				}
+			}
+			items = out
 		}
 
 		return jsonResult(struct {
