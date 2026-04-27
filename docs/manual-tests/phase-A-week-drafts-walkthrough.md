@@ -242,27 +242,38 @@ Notes: TD may cache the view briefly; hard-refresh if old values appear.
 
 ## Step 13: Auto-snapshot recovery
 
-Goal: confirm snapshots were captured and the history command surfaces them.
+Goal: confirm snapshots are captured before destructive ops and the
+`history` command surfaces them.
+
+Snapshots fire only before destructive operations:
+
+| Trigger | Op tag |
+|---|---|
+| `pull --force` overwriting a dirty draft | `pre-pull` |
+| `push --yes` (taken before any writes) | `pre-push` |
+| `delete --yes` | `pre-delete` |
+
+A fresh pull (no existing draft) does not produce a snapshot. The first
+snapshot you'll see in this walkthrough is the `pre-push` from Step 11,
+followed by `pre-delete` after Step 16.
 
 ```bash
-ls ~/.config/tdx/profiles/default/snapshots/2026-04-20/
+ls ~/.config/tdx/profiles/default/weeks/2026-04-20/default.snapshots/
 ```
 
-Expected: at least `pre-pull-<ts>.yaml`, `pre-push-<ts>.yaml`,
-`pre-delete-<ts>.yaml`.
+Expected (after Step 11 push): at least one `NNNN-pre-push-<ts>.yaml`.
 
 ```bash
 ./tdx time week history 2026-04-20
 ```
 
 ```text
-SNAPSHOT    TIMESTAMP            TRIGGER
-pre-pull    2026-04-27 10:00:00  pull
-pre-push    2026-04-27 10:05:00  push
-pre-delete  2026-04-27 10:05:01  push --allow-deletes
+SEQ   OP            TAKEN                 PINNED  NOTE
+1     pre-push      2026-04-27 10:05:00
 ```
 
-Verify: three or more entries with increasing timestamps.
+Verify: at least one entry with the matching op tag and a recent timestamp.
+After Step 16 (delete), a `pre-delete` row joins the list.
 
 ---
 
