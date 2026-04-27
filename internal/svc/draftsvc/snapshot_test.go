@@ -79,3 +79,45 @@ func TestSnapshotStore_PinnedSurvivesPrune(t *testing.T) {
 		t.Errorf("pinned snapshot pruned")
 	}
 }
+
+func TestService_RestoreSnapshot(t *testing.T) {
+	paths := config.Paths{Root: t.TempDir()}
+	s := newServiceWithTimeWriter(paths, &mockTimeWriter{})
+	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
+
+	base := domain.WeekDraft{SchemaVersion: 1, Profile: "work", Name: "default", WeekStart: week, Notes: "v1"}
+	if err := s.store.Save(base); err != nil {
+		t.Fatal(err)
+	}
+	snap, err := s.snapshots.Take(base, OpManual, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Mutate.
+	base.Notes = "v2"
+	if err := s.store.Save(base); err != nil {
+		t.Fatal(err)
+	}
+
+	// Restore.
+	if err := s.RestoreSnapshot("work", week, "default", snap.Sequence); err != nil {
+		t.Fatal(err)
+	}
+
+	restored, _ := s.store.Load("work", week, "default")
+	if restored.Notes != "v1" {
+		t.Errorf("Notes = %q after restore, want v1", restored.Notes)
+	}
+
+	list, _ := s.snapshots.List("work", week, "default")
+	var hasPreRestore bool
+	for _, sn := range list {
+		if sn.Op == OpPreRestore {
+			hasPreRestore = true
+		}
+	}
+	if !hasPreRestore {
+		t.Errorf("no pre-restore snapshot taken")
+	}
+}

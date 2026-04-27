@@ -294,3 +294,21 @@ func (ss *SnapshotStore) savePinned(dir string, pinned map[int]bool) error {
 	}
 	return os.WriteFile(filepath.Join(dir, ".pinned"), []byte(strings.Join(lines, "\n")+"\n"), 0o600)
 }
+
+// RestoreSnapshot reloads a snapshot's contents back into the live draft.
+// Auto-snapshots the current state as pre-restore first.
+func (s *Service) RestoreSnapshot(profile string, weekStart time.Time, name string, seq int) error {
+	cur, err := s.store.Load(profile, weekStart, name)
+	if err != nil {
+		return fmt.Errorf("restore: load current: %w", err)
+	}
+	if _, err := s.snapshots.Take(cur, OpPreRestore, ""); err != nil {
+		return fmt.Errorf("restore: pre-snapshot: %w", err)
+	}
+	snap, err := s.snapshots.Load(profile, weekStart, name, seq)
+	if err != nil {
+		return fmt.Errorf("restore: load snapshot %d: %w", seq, err)
+	}
+	snap.ModifiedAt = time.Now().UTC()
+	return s.store.Save(snap)
+}
