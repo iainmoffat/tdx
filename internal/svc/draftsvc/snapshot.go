@@ -30,6 +30,8 @@ const (
 	OpPreRestore OpTag = "pre-restore"
 	// OpPreDelete tags a snapshot taken before deleting a draft.
 	OpPreDelete OpTag = "pre-delete"
+	// OpPreRename tags a snapshot taken before a draft is renamed.
+	OpPreRename OpTag = "pre-rename"
 	// OpManual tags a snapshot taken by explicit user request.
 	OpManual OpTag = "manual"
 )
