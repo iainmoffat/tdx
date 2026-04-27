@@ -31,3 +31,36 @@ func TestService_NewBlank(t *testing.T) {
 		t.Errorf("NewBlank should refuse on collision")
 	}
 }
+
+func TestService_NewFromTemplate(t *testing.T) {
+	paths := config.Paths{Root: t.TempDir()}
+	s := newServiceWithTimeWriter(paths, &mockTimeWriter{})
+	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
+
+	tmpl := domain.Template{
+		SchemaVersion: 1, Name: "canonical",
+		Rows: []domain.TemplateRow{
+			{ID: "row-01",
+				Target:   domain.Target{Kind: domain.TargetTicket, AppID: 42, ItemID: 1},
+				TimeType: domain.TimeType{ID: 7, Name: "Work"}, Billable: true,
+				Hours: domain.WeekHours{Mon: 8, Tue: 8}},
+		},
+	}
+
+	d, err := s.NewFromTemplate("work", week, "default", tmpl)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Provenance.Kind != domain.ProvenanceFromTemplate {
+		t.Errorf("Provenance.Kind = %s, want from-template", d.Provenance.Kind)
+	}
+	if d.Provenance.FromTemplate != "canonical" {
+		t.Errorf("Provenance.FromTemplate = %q, want canonical", d.Provenance.FromTemplate)
+	}
+	if len(d.Rows) != 1 {
+		t.Fatalf("rows = %d, want 1", len(d.Rows))
+	}
+	if len(d.Rows[0].Cells) != 2 {
+		t.Errorf("cells = %d, want 2 (Mon+Tue)", len(d.Rows[0].Cells))
+	}
+}
