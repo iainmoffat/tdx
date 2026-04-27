@@ -42,6 +42,9 @@ type WeekDraft struct {
 	ModifiedAt    time.Time       `yaml:"modifiedAt" json:"modifiedAt"`
 	PushedAt      *time.Time      `yaml:"pushedAt,omitempty" json:"pushedAt,omitempty"`
 	Rows          []DraftRow      `yaml:"rows" json:"rows"`
+	// Archived hides the draft from default `list` output. Soft-archive: no
+	// file motion, fully reversible via `unarchive`.
+	Archived bool `yaml:"archived,omitempty" json:"archived,omitempty"`
 }
 
 // DraftRow is one row of a draft (target + type + billable + cells).

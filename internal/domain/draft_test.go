@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -179,5 +180,42 @@ func TestComputeSyncState(t *testing.T) {
 	// Stale: fingerprint differs.
 	if state := ComputeSyncState(cleanDraft, pulledCells, "different"); !state.Stale {
 		t.Errorf("stale: got Stale=false, want true")
+	}
+}
+
+func TestWeekDraft_ArchivedField_RoundTrip(t *testing.T) {
+	week := time.Date(2026, 5, 3, 0, 0, 0, 0, EasternTZ)
+	in := WeekDraft{
+		SchemaVersion: 1, Profile: "work", Name: "default", WeekStart: week,
+		Archived: true,
+	}
+	data, err := yaml.Marshal(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "archived: true") {
+		t.Errorf("yaml should contain 'archived: true', got: %s", data)
+	}
+	var out WeekDraft
+	if err := yaml.Unmarshal(data, &out); err != nil {
+		t.Fatal(err)
+	}
+	if !out.Archived {
+		t.Errorf("Archived = false after round-trip, want true")
+	}
+}
+
+func TestWeekDraft_ArchivedField_OmittedWhenFalse(t *testing.T) {
+	week := time.Date(2026, 5, 3, 0, 0, 0, 0, EasternTZ)
+	in := WeekDraft{
+		SchemaVersion: 1, Profile: "work", Name: "default", WeekStart: week,
+		Archived: false,
+	}
+	data, err := yaml.Marshal(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "archived:") {
+		t.Errorf("zero Archived should be omitted by omitempty, got: %s", data)
 	}
 }
