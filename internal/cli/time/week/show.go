@@ -84,14 +84,15 @@ func newShowCmd() *cobra.Command {
 				return err
 			}
 
+			format := render.ResolveFormat(render.Flags{JSON: jsonFlag})
+
 			// Banner: surface a default draft if one exists for this week.
-			if drafts.Store().Exists(profileName, weekStart, "default") {
+			// Suppressed in JSON mode so output is parseable.
+			if format != render.FormatJSON && drafts.Store().Exists(profileName, weekStart, "default") {
 				_, _ = fmt.Fprintf(cmd.OutOrStdout(),
 					"Local draft exists for this week. View with `tdx time week show %s --draft`.\n\n",
 					weekStart.Format("2006-01-02"))
 			}
-
-			format := render.ResolveFormat(render.Flags{JSON: jsonFlag})
 			if format == render.FormatJSON {
 				return render.JSON(cmd.OutOrStdout(), weekReportJSON{
 					Schema:       "tdx.v1.weekReport",
