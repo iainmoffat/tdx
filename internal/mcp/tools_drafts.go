@@ -355,6 +355,21 @@ Recipe:
   2. If deletes are present, set allowDeletes=true and ideally surface them to the user before confirming.
   3. push_week_draft -> on hash mismatch, do NOT retry the same hash. Call diff_week_draft and re-preview.`,
 	}, pushDraftHandler(svcs))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name:        "copy_week_draft",
+		Description: "Clone a draft from src to dst. Cells are dimensionless so cross-week copies work without rewrites. Requires confirm=true. Refuses if dst already exists.",
+	}, copyDraftHandler(svcs))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name:        "rename_week_draft",
+		Description: "Rename a draft (preserves snapshot history). Auto-snapshots before any file motion. Requires confirm=true.",
+	}, renameDraftHandler(svcs))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name:        "reset_week_draft",
+		Description: "Discard local edits and re-pull from TD. Auto-snapshots first. Requires confirm=true.",
+	}, resetDraftHandler(svcs))
 }
 
 var dayNamesMCP = map[string]time.Weekday{
@@ -593,6 +608,103 @@ func createDraftHandler(svcs Services) func(context.Context, *sdkmcp.CallToolReq
 			Schema string           `json:"schema"`
 			Draft  domain.WeekDraft `json:"draft"`
 		}{Schema: "tdx.v1.weekDraftCreateResult", Draft: draft})
+	}
+}
+
+type copyDraftArgs struct {
+	Profile string `json:"profile,omitempty"`
+	Src     string `json:"src" jsonschema:"<date>[/<name>]"`
+	Dst     string `json:"dst" jsonschema:"<date>[/<name>]"`
+	Confirm bool   `json:"confirm"`
+}
+
+type renameDraftArgs struct {
+	Profile   string `json:"profile,omitempty"`
+	WeekStart string `json:"weekStart"`
+	OldName   string `json:"oldName"`
+	NewName   string `json:"newName"`
+	Confirm   bool   `json:"confirm"`
+}
+
+type resetDraftArgs struct {
+	Profile   string `json:"profile,omitempty"`
+	WeekStart string `json:"weekStart"`
+	Name      string `json:"name,omitempty"`
+	Confirm   bool   `json:"confirm"`
+}
+
+func copyDraftHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, copyDraftArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args copyDraftArgs) (*sdkmcp.CallToolResult, any, error) {
+		if r, ok := confirmGate(args.Confirm, "Set confirm=true to copy the draft."); !ok {
+			return r, nil, nil
+		}
+		profile := resolveProfile(svcs, args.Profile)
+		srcDate, srcName, err := parseDraftRefMCP(args.Src)
+		if err != nil {
+			return errorResult(fmt.Sprintf("src: %v", err)), nil, nil
+		}
+		dstDate, dstName, err := parseDraftRefMCP(args.Dst)
+		if err != nil {
+			return errorResult(fmt.Sprintf("dst: %v", err)), nil, nil
+		}
+		d, err := svcs.Drafts.Copy(profile, srcDate, srcName, profile, dstDate, dstName)
+		if err != nil {
+			return errorResult(fmt.Sprintf("copy: %v", err)), nil, nil
+		}
+		return jsonResult(struct {
+			Schema string           `json:"schema"`
+			Draft  domain.WeekDraft `json:"draft"`
+		}{Schema: "tdx.v1.weekDraftCopyResult", Draft: d})
+	}
+}
+
+func renameDraftHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, renameDraftArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args renameDraftArgs) (*sdkmcp.CallToolResult, any, error) {
+		if r, ok := confirmGate(args.Confirm, "Set confirm=true to rename the draft."); !ok {
+			return r, nil, nil
+		}
+		profile := resolveProfile(svcs, args.Profile)
+		weekStart, err := parseWeekStart(args.WeekStart)
+		if err != nil {
+			return errorResult(fmt.Sprintf("invalid weekStart: %v", err)), nil, nil
+		}
+		if args.OldName == "" || args.NewName == "" {
+			return errorResult("oldName and newName are required"), nil, nil
+		}
+		if err := svcs.Drafts.Rename(profile, weekStart, args.OldName, args.NewName); err != nil {
+			return errorResult(fmt.Sprintf("rename: %v", err)), nil, nil
+		}
+		return jsonResult(struct {
+			Schema    string `json:"schema"`
+			WeekStart string `json:"weekStart"`
+			OldName   string `json:"oldName"`
+			NewName   string `json:"newName"`
+		}{
+			Schema:    "tdx.v1.weekDraftRenameResult",
+			WeekStart: weekStart.Format("2006-01-02"),
+			OldName:   args.OldName, NewName: args.NewName,
+		})
+	}
+}
+
+func resetDraftHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, resetDraftArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args resetDraftArgs) (*sdkmcp.CallToolResult, any, error) {
+		if r, ok := confirmGate(args.Confirm, "Set confirm=true to reset the draft (discard local edits)."); !ok {
+			return r, nil, nil
+		}
+		profile := resolveProfile(svcs, args.Profile)
+		weekStart, err := parseWeekStart(args.WeekStart)
+		if err != nil {
+			return errorResult(fmt.Sprintf("invalid weekStart: %v", err)), nil, nil
+		}
+		name := args.Name
+		if name == "" {
+			name = "default"
+		}
+		if err := svcs.Drafts.Reset(ctx, profile, weekStart, name); err != nil {
+			return errorResult(fmt.Sprintf("reset: %v", err)), nil, nil
+		}
+		return textResult(fmt.Sprintf("Reset draft %s/%s.", weekStart.Format("2006-01-02"), name))
 	}
 }
 
