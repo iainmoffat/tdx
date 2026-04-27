@@ -109,7 +109,7 @@ func runSet(cmd *cobra.Command, f setFlags, args []string) error {
 	if err := drafts.Store().Save(d); err != nil {
 		return err
 	}
-	fmt.Fprintf(cmd.OutOrStdout(), "Updated %d cells in draft %s/%s.\n",
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Updated %d cells in draft %s/%s.\n",
 		len(writes), weekStart.Format("2006-01-02"), name)
 	return nil
 }

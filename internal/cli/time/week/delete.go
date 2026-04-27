@@ -75,7 +75,7 @@ func runDelete(cmd *cobra.Command, f deleteFlags, ref string) error {
 		weekStart.Format("2006-01-02"), name+".pulled.yaml")
 	_ = os.Remove(pulledPath)
 
-	fmt.Fprintf(cmd.OutOrStdout(), "Deleted draft %s/%s.\n",
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Deleted draft %s/%s.\n",
 		weekStart.Format("2006-01-02"), name)
 	return nil
 }

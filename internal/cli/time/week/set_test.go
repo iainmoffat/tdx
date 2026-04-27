@@ -29,7 +29,7 @@ func TestParseCellWrite_Invalid(t *testing.T) {
 func TestApplyCellWrite_UpdatesExistingCell(t *testing.T) {
 	d := domain.WeekDraft{
 		Rows: []domain.DraftRow{{
-			ID: "row-01",
+			ID:    "row-01",
 			Cells: []domain.DraftCell{{Day: time.Monday, Hours: 4.0}},
 		}},
 	}

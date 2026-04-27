@@ -81,7 +81,7 @@ func runNote(cmd *cobra.Command, f noteFlags, ref string) error {
 	if err := drafts.Store().Save(d); err != nil {
 		return err
 	}
-	fmt.Fprintf(cmd.OutOrStdout(), "Notes updated for draft %s/%s.\n",
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Notes updated for draft %s/%s.\n",
 		weekStart.Format("2006-01-02"), name)
 	return nil
 }
@@ -96,12 +96,12 @@ func openEditor(initial string) (string, error) {
 		return "", err
 	}
 	if _, err := file.WriteString(initial); err != nil {
-		file.Close()
-		os.Remove(file.Name())
+		_ = file.Close()
+		_ = os.Remove(file.Name())
 		return "", err
 	}
-	file.Close()
-	defer os.Remove(file.Name())
+	_ = file.Close()
+	defer func() { _ = os.Remove(file.Name()) }()
 
 	c := exec.Command(editor, file.Name())
 	c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr

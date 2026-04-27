@@ -26,7 +26,7 @@ func TestRenderHistory_JSON_Empty(t *testing.T) {
 
 func TestRenderHistory_TextEmpty(t *testing.T) {
 	var buf bytes.Buffer
-	renderHistory(&buf, nil, false)
+	_ = renderHistory(&buf, nil, false)
 	if !strings.Contains(buf.String(), "No snapshots.") {
 		t.Errorf("got %q", buf.String())
 	}
@@ -38,7 +38,7 @@ func TestRenderHistory_TextRows(t *testing.T) {
 		{Sequence: 2, Op: draftsvc.OpManual, Taken: time.Date(2026, 4, 28, 14, 0, 0, 0, time.UTC), Pinned: true, Note: "important"},
 	}
 	var buf bytes.Buffer
-	renderHistory(&buf, list, false)
+	_ = renderHistory(&buf, list, false)
 	out := buf.String()
 	for _, want := range []string{"SEQ", "OP", "pre-pull", "manual", "yes", "important"} {
 		if !strings.Contains(out, want) {

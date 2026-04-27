@@ -112,18 +112,18 @@ func renderPreview(w io.Writer, diff domain.ReconcileDiff, creates, updates, del
 		case domain.ActionDelete:
 			line += fmt.Sprintf("  (entry #%d)", a.DeleteEntryID)
 		}
-		fmt.Fprintln(w, line)
+		_, _ = fmt.Fprintln(w, line)
 	}
 	for _, b := range diff.Blockers {
-		fmt.Fprintf(w, "  %-8s  %-3s  blocked   %s (%s)\n",
+		_, _ = fmt.Fprintf(w, "  %-8s  %-3s  blocked   %s (%s)\n",
 			b.RowID, b.Date.Weekday().String()[:3], b.Kind, b.Reason)
 	}
-	fmt.Fprintf(w, "\nSummary: %d creates · %d updates · %d deletes · %d skips · %d blocked\n",
+	_, _ = fmt.Fprintf(w, "\nSummary: %d creates · %d updates · %d deletes · %d skips · %d blocked\n",
 		creates, updates, deletes, skips, len(diff.Blockers))
 	if len(diff.DiffHash) >= 16 {
-		fmt.Fprintf(w, "Diff hash: %s...\n", diff.DiffHash[:16])
+		_, _ = fmt.Fprintf(w, "Diff hash: %s...\n", diff.DiffHash[:16])
 	} else {
-		fmt.Fprintf(w, "Diff hash: %s\n", diff.DiffHash)
+		_, _ = fmt.Fprintf(w, "Diff hash: %s\n", diff.DiffHash)
 	}
 	return nil
 }

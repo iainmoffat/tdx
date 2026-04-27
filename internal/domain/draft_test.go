@@ -94,7 +94,7 @@ func TestWeekDraft_Validate(t *testing.T) {
 	valid := WeekDraft{
 		SchemaVersion: 1, Profile: "work", Name: "default",
 		WeekStart: time.Date(2026, 5, 3, 0, 0, 0, 0, EasternTZ),
-		Rows: []DraftRow{{ID: "row-01", Target: Target{Kind: TargetProject, ItemID: 1}}},
+		Rows:      []DraftRow{{ID: "row-01", Target: Target{Kind: TargetProject, ItemID: 1}}},
 	}
 	if err := valid.Validate(); err != nil {
 		t.Errorf("valid draft errored: %v", err)
@@ -111,7 +111,7 @@ func TestWeekDraft_Validate(t *testing.T) {
 			WeekStart: time.Date(2026, 5, 4, 0, 0, 0, 0, EasternTZ)}},
 		{"duplicate row IDs", WeekDraft{SchemaVersion: 1, Profile: "work", Name: "x",
 			WeekStart: valid.WeekStart,
-			Rows: []DraftRow{{ID: "row-01"}, {ID: "row-01"}}}},
+			Rows:      []DraftRow{{ID: "row-01"}, {ID: "row-01"}}}},
 	}
 	for _, c := range cases {
 		if err := c.d.Validate(); err == nil {

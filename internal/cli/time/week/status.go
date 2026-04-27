@@ -115,19 +115,19 @@ func renderStatus(w io.Writer, d domain.WeekDraft, state domain.DraftSyncState, 
 			RecommendedAction: action,
 		})
 	}
-	fmt.Fprintf(w, "%s / %s\n", d.WeekStart.Format("2006-01-02"), d.Name)
-	fmt.Fprintf(w, "  Profile:     %s\n", d.Profile)
-	fmt.Fprintf(w, "  Pulled:      %s\n", formatTimeWithAge(d.Provenance.PulledAt))
-	fmt.Fprintf(w, "  Pushed:      %s\n", formatPtrTimeWithAge(d.PushedAt))
+	_, _ = fmt.Fprintf(w, "%s / %s\n", d.WeekStart.Format("2006-01-02"), d.Name)
+	_, _ = fmt.Fprintf(w, "  Profile:     %s\n", d.Profile)
+	_, _ = fmt.Fprintf(w, "  Pulled:      %s\n", formatTimeWithAge(d.Provenance.PulledAt))
+	_, _ = fmt.Fprintf(w, "  Pushed:      %s\n", formatPtrTimeWithAge(d.PushedAt))
 	syncLabel := string(state.Sync)
 	if state.Stale {
 		syncLabel += " (and STALE)"
 	}
-	fmt.Fprintf(w, "  Sync state:  %s\n", syncLabel)
-	fmt.Fprintf(w, "  Cells:       %d untouched · %d edited · %d added · %d conflict\n",
+	_, _ = fmt.Fprintf(w, "  Sync state:  %s\n", syncLabel)
+	_, _ = fmt.Fprintf(w, "  Cells:       %d untouched · %d edited · %d added · %d conflict\n",
 		state.Untouched, state.Edited, state.Added, state.Conflict)
-	fmt.Fprintf(w, "  Total hours: %.1fh\n\n", state.TotalHours)
-	fmt.Fprintf(w, "  Action recommended:\n    %s\n", action)
+	_, _ = fmt.Fprintf(w, "  Total hours: %.1fh\n\n", state.TotalHours)
+	_, _ = fmt.Fprintf(w, "  Action recommended:\n    %s\n", action)
 	return nil
 }
 

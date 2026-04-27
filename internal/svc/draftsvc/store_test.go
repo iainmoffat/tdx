@@ -15,7 +15,7 @@ func TestStore_SaveLoad(t *testing.T) {
 	draft := domain.WeekDraft{
 		SchemaVersion: 1, Profile: "work", Name: "default",
 		WeekStart: time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ), // Sunday
-		Rows: []domain.DraftRow{{ID: "row-01"}},
+		Rows:      []domain.DraftRow{{ID: "row-01"}},
 	}
 	if err := s.Save(draft); err != nil {
 		t.Fatalf("Save: %v", err)

@@ -31,7 +31,7 @@ func NewServer(version string, svcs Services) *sdkmcp.Server {
 	RegisterTypeTools(srv, svcs)
 	RegisterTemplateTools(srv, svcs)
 	RegisterApplyTools(srv, svcs)
-	RegisterDraftTools(srv, svcs)          // read tools; mutating tools registered by Task 25
+	RegisterDraftTools(srv, svcs)         // read tools; mutating tools registered by Task 25
 	RegisterDraftMutatingTools(srv, svcs) // Task 25
 
 	return srv

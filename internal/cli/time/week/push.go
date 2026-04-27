@@ -115,16 +115,16 @@ func renderPushResult(w io.Writer, res draftsvc.ApplyResult, jsonOut bool) error
 			Failed:  res.Failed,
 		})
 	}
-	fmt.Fprintf(w, "Push complete: %d created · %d updated · %d deleted · %d skipped\n",
+	_, _ = fmt.Fprintf(w, "Push complete: %d created · %d updated · %d deleted · %d skipped\n",
 		res.Created, res.Updated, res.Deleted, res.Skipped)
 	if len(res.Failed) > 0 {
-		fmt.Fprintf(w, "\nFailures (%d):\n", len(res.Failed))
+		_, _ = fmt.Fprintf(w, "\nFailures (%d):\n", len(res.Failed))
 		for _, fail := range res.Failed {
 			id := ""
 			if fail.EntryID > 0 {
 				id = fmt.Sprintf(" (entry #%d)", fail.EntryID)
 			}
-			fmt.Fprintf(w, "  %s %s/%s: %s%s\n", fail.Kind, fail.RowID, fail.Date, fail.Message, id)
+			_, _ = fmt.Fprintf(w, "  %s %s/%s: %s%s\n", fail.Kind, fail.RowID, fail.Date, fail.Message, id)
 		}
 	}
 	return nil

@@ -25,13 +25,13 @@ type listFlags struct {
 }
 
 type weekDraftListItem struct {
-	WeekStart  string               `json:"weekStart"`
-	Name       string               `json:"name"`
-	Profile    string               `json:"profile"`
-	SyncState  string               `json:"syncState"`
+	WeekStart  string                `json:"weekStart"`
+	Name       string                `json:"name"`
+	Profile    string                `json:"profile"`
+	SyncState  string                `json:"syncState"`
 	SyncDetail domain.DraftSyncState `json:"syncDetail"`
-	TotalHours float64              `json:"totalHours"`
-	PulledAt   string               `json:"pulledAt,omitempty"`
+	TotalHours float64               `json:"totalHours"`
+	PulledAt   string                `json:"pulledAt,omitempty"`
 }
 
 type weekDraftListResp struct {
@@ -122,13 +122,13 @@ func writeListJSON(w io.Writer, items []weekDraftListItem) error {
 
 func writeListText(w io.Writer, items []weekDraftListItem) {
 	if len(items) == 0 {
-		fmt.Fprintln(w, "No drafts found.")
+		_, _ = fmt.Fprintln(w, "No drafts found.")
 		return
 	}
-	fmt.Fprintf(w, "%-12s  %-10s  %-12s  %5s  %s\n",
+	_, _ = fmt.Fprintf(w, "%-12s  %-10s  %-12s  %5s  %s\n",
 		"WEEK", "NAME", "STATE", "HOURS", "PULLED")
 	for _, it := range items {
-		fmt.Fprintf(w, "%-12s  %-10s  %-12s  %5.1f  %s\n",
+		_, _ = fmt.Fprintf(w, "%-12s  %-10s  %-12s  %5.1f  %s\n",
 			it.WeekStart, it.Name, it.SyncState, it.TotalHours, it.PulledAt)
 	}
 }

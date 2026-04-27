@@ -15,8 +15,8 @@ func TestBuildDraftFromReport_GroupsByTargetTypeBillable(t *testing.T) {
 		Status:  domain.ReportOpen,
 		Entries: []domain.TimeEntry{
 			{ID: 100, Date: week.AddDate(0, 0, 1), Minutes: 480,
-				Target:      domain.Target{Kind: domain.TargetTicket, AppID: 42, ItemID: 123},
-				TimeType:    domain.TimeType{ID: 7, Name: "Work"}, Billable: true,
+				Target:   domain.Target{Kind: domain.TargetTicket, AppID: 42, ItemID: 123},
+				TimeType: domain.TimeType{ID: 7, Name: "Work"}, Billable: true,
 				Description: "morning"},
 			{ID: 101, Date: week.AddDate(0, 0, 2), Minutes: 480,
 				Target:   domain.Target{Kind: domain.TargetTicket, AppID: 42, ItemID: 123},

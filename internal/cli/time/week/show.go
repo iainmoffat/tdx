@@ -86,7 +86,7 @@ func newShowCmd() *cobra.Command {
 
 			// Banner: surface a default draft if one exists for this week.
 			if drafts.Store().Exists(profileName, weekStart, "default") {
-				fmt.Fprintf(cmd.OutOrStdout(),
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(),
 					"Local draft exists for this week. View with `tdx time week show %s --draft`.\n\n",
 					weekStart.Format("2006-01-02"))
 			}
@@ -159,6 +159,6 @@ func renderDraftAsWeekReport(w io.Writer, d domain.WeekDraft) {
 		Days:         days,
 		Entries:      entries,
 	}
-	fmt.Fprintf(w, "Draft: %s/%s\n\n", weekStart.Format("2006-01-02"), d.Name)
+	_, _ = fmt.Fprintf(w, "Draft: %s/%s\n\n", weekStart.Format("2006-01-02"), d.Name)
 	render.WeekGrid(w, report)
 }

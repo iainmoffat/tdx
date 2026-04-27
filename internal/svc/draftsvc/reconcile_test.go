@@ -10,8 +10,8 @@ import (
 func TestReconcile_DeleteOnClearedPulledCell(t *testing.T) {
 	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
 	pulledRow := domain.DraftRow{
-		ID: "row-01",
-		Target: domain.Target{Kind: domain.TargetTicket, AppID: 42, ItemID: 123},
+		ID:       "row-01",
+		Target:   domain.Target{Kind: domain.TargetTicket, AppID: 42, ItemID: 123},
 		TimeType: domain.TimeType{ID: 7, Name: "Work"}, Billable: true,
 		Cells: []domain.DraftCell{
 			{Day: time.Monday, Hours: 8.0, SourceEntryID: 98731},
@@ -69,14 +69,14 @@ func TestReconcile_DeleteOnClearedPulledCell(t *testing.T) {
 func TestReconcile_HashStableAndIncludesWatermark(t *testing.T) {
 	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
 	row := domain.DraftRow{
-		ID: "row-01",
-		Target: domain.Target{Kind: domain.TargetTicket, AppID: 42, ItemID: 123},
+		ID:       "row-01",
+		Target:   domain.Target{Kind: domain.TargetTicket, AppID: 42, ItemID: 123},
 		TimeType: domain.TimeType{ID: 7, Name: "Work"}, Billable: true,
 		Cells: []domain.DraftCell{{Day: time.Monday, Hours: 6.0, SourceEntryID: 98731}},
 	}
 	draft := domain.WeekDraft{
 		SchemaVersion: 1, Profile: "work", Name: "default", WeekStart: week,
-		Rows: []domain.DraftRow{row},
+		Rows:       []domain.DraftRow{row},
 		Provenance: domain.DraftProvenance{Kind: domain.ProvenancePulled, RemoteFingerprint: "fpA"},
 	}
 	pulled := map[string]domain.DraftCell{
@@ -115,14 +115,14 @@ func TestReconcile_LockedDayBlocks(t *testing.T) {
 	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
 	monday := week.AddDate(0, 0, 1)
 	row := domain.DraftRow{
-		ID: "row-01",
-		Target: domain.Target{Kind: domain.TargetTicket, AppID: 42, ItemID: 123},
+		ID:       "row-01",
+		Target:   domain.Target{Kind: domain.TargetTicket, AppID: 42, ItemID: 123},
 		TimeType: domain.TimeType{ID: 7, Name: "Work"}, Billable: true,
 		Cells: []domain.DraftCell{{Day: time.Monday, Hours: 6.0, SourceEntryID: 98731}},
 	}
 	draft := domain.WeekDraft{
 		SchemaVersion: 1, Profile: "work", Name: "default", WeekStart: week,
-		Rows: []domain.DraftRow{row},
+		Rows:       []domain.DraftRow{row},
 		Provenance: domain.DraftProvenance{Kind: domain.ProvenancePulled, RemoteFingerprint: "fp"},
 	}
 	pulled := map[string]domain.DraftCell{
@@ -153,8 +153,8 @@ func TestReconcile_LockedDayBlocks(t *testing.T) {
 func TestReconcile_SubmittedWeekRefuses(t *testing.T) {
 	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
 	row := domain.DraftRow{
-		ID: "row-01",
-		Target: domain.Target{Kind: domain.TargetTicket, AppID: 42, ItemID: 123},
+		ID:       "row-01",
+		Target:   domain.Target{Kind: domain.TargetTicket, AppID: 42, ItemID: 123},
 		TimeType: domain.TimeType{ID: 7, Name: "Work"}, Billable: true,
 		Cells: []domain.DraftCell{
 			{Day: time.Monday, Hours: 6.0, SourceEntryID: 98731},
@@ -163,7 +163,7 @@ func TestReconcile_SubmittedWeekRefuses(t *testing.T) {
 	}
 	draft := domain.WeekDraft{
 		SchemaVersion: 1, Profile: "work", Name: "default", WeekStart: week,
-		Rows: []domain.DraftRow{row},
+		Rows:       []domain.DraftRow{row},
 		Provenance: domain.DraftProvenance{Kind: domain.ProvenancePulled, RemoteFingerprint: "fp"},
 	}
 	pulled := map[string]domain.DraftCell{

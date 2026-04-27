@@ -77,16 +77,16 @@ func renderHistory(w io.Writer, list []draftsvc.SnapshotInfo, jsonOut bool) erro
 		})
 	}
 	if len(list) == 0 {
-		fmt.Fprintln(w, "No snapshots.")
+		_, _ = fmt.Fprintln(w, "No snapshots.")
 		return nil
 	}
-	fmt.Fprintf(w, "%-4s  %-12s  %-20s  %-6s  %s\n", "SEQ", "OP", "TAKEN", "PINNED", "NOTE")
+	_, _ = fmt.Fprintf(w, "%-4s  %-12s  %-20s  %-6s  %s\n", "SEQ", "OP", "TAKEN", "PINNED", "NOTE")
 	for _, s := range list {
 		pin := ""
 		if s.Pinned {
 			pin = "yes"
 		}
-		fmt.Fprintf(w, "%-4d  %-12s  %-20s  %-6s  %s\n",
+		_, _ = fmt.Fprintf(w, "%-4d  %-12s  %-20s  %-6s  %s\n",
 			s.Sequence, s.Op, s.Taken.UTC().Format("2006-01-02 15:04:05"), pin, s.Note)
 	}
 	return nil

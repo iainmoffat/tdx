@@ -136,13 +136,13 @@ func renderDiff(w io.Writer, diff domain.ReconcileDiff, jsonOut bool) error {
 		if e.Kind == "match" {
 			continue
 		}
-		fmt.Fprintf(w, "  %-8s  %-3s  %-7s  %.1f -> %.1f", e.Row, e.Day[:3], e.Kind, e.Before, e.After)
+		_, _ = fmt.Fprintf(w, "  %-8s  %-3s  %-7s  %.1f -> %.1f", e.Row, e.Day[:3], e.Kind, e.Before, e.After)
 		if e.SourceID > 0 {
-			fmt.Fprintf(w, "  (entry #%d)", e.SourceID)
+			_, _ = fmt.Fprintf(w, "  (entry #%d)", e.SourceID)
 		}
-		fmt.Fprintln(w)
+		_, _ = fmt.Fprintln(w)
 	}
-	fmt.Fprintf(w, "\nSummary: %d adds · %d updates · %d deletes · %d matches\n",
+	_, _ = fmt.Fprintf(w, "\nSummary: %d adds · %d updates · %d deletes · %d matches\n",
 		summary.Adds, summary.Updates, summary.Deletes, summary.Matches)
 	return nil
 }

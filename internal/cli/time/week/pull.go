@@ -98,8 +98,8 @@ func writePullResultText(w io.Writer, d domain.WeekDraft) {
 			totalHours += cell.Hours
 		}
 	}
-	fmt.Fprintf(w, "Created draft %s/%s (%d rows, %d cells, %.1fh, status: %s)\n\n",
+	_, _ = fmt.Fprintf(w, "Created draft %s/%s (%d rows, %d cells, %.1fh, status: %s)\n\n",
 		d.WeekStart.Format("2006-01-02"), d.Name, len(d.Rows), totalCells, totalHours, d.Provenance.RemoteStatus)
-	fmt.Fprintf(w, "  tdx time week show %s --draft     # view the draft\n", d.WeekStart.Format("2006-01-02"))
-	fmt.Fprintf(w, "  tdx time week edit %s             # edit it\n", d.WeekStart.Format("2006-01-02"))
+	_, _ = fmt.Fprintf(w, "  tdx time week show %s --draft     # view the draft\n", d.WeekStart.Format("2006-01-02"))
+	_, _ = fmt.Fprintf(w, "  tdx time week edit %s             # edit it\n", d.WeekStart.Format("2006-01-02"))
 }

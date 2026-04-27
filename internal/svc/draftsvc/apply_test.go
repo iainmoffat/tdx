@@ -72,8 +72,8 @@ func TestApply_AllowDeletesGate(t *testing.T) {
 			RemoteStatus: domain.ReportOpen,
 		},
 		Rows: []domain.DraftRow{{
-			ID:       "row-01",
-			Target:   target, TimeType: timeType, Billable: true,
+			ID:     "row-01",
+			Target: target, TimeType: timeType, Billable: true,
 			Cells: []domain.DraftCell{{Day: time.Monday, Hours: 0, SourceEntryID: 98731}},
 		}},
 	}
