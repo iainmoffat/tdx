@@ -1,6 +1,7 @@
 package draftsvc
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -119,5 +120,37 @@ func TestService_RestoreSnapshot(t *testing.T) {
 	}
 	if !hasPreRestore {
 		t.Errorf("no pre-restore snapshot taken")
+	}
+}
+
+func TestSnapshotStore_PruneOlderThan(t *testing.T) {
+	paths := config.Paths{Root: t.TempDir()}
+	ss := NewSnapshotStore(paths, 100) // big retention so age is what matters
+	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
+	d := domain.WeekDraft{SchemaVersion: 1, Profile: "work", Name: "default", WeekStart: week}
+
+	s1, _ := ss.Take(d, OpManual, "")
+	s2, _ := ss.Take(d, OpManual, "")
+	s3, _ := ss.Take(d, OpManual, "")
+
+	old := time.Now().Add(-60 * 24 * time.Hour)
+	if err := os.Chtimes(s1.Path, old, old); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(s2.Path, old, old); err != nil {
+		t.Fatal(err)
+	}
+
+	n, err := ss.PruneOlderThan("work", week, "default", 30*24*time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 2 {
+		t.Errorf("pruned %d, want 2", n)
+	}
+
+	list, _ := ss.List("work", week, "default")
+	if len(list) != 1 || list[0].Sequence != s3.Sequence {
+		t.Errorf("survivors wrong: %+v", list)
 	}
 }
