@@ -24,5 +24,6 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(newHistoryCmd())
 	cmd.AddCommand(newCopyCmd())
 	cmd.AddCommand(newRenameCmd())
+	cmd.AddCommand(newResetCmd())
 	return cmd
 }
