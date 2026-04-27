@@ -52,6 +52,9 @@ type SnapshotInfo struct {
 
 // SnapshotStore manages per-draft snapshot files in <draftName>.snapshots/.
 // Snapshot filenames follow the pattern NNNN-<op>-<ts>[-<note>].yaml.
+//
+// Not safe for concurrent use on the same draft: Take has a TOCTOU window
+// between sequence assignment and file write. Single-caller use only.
 type SnapshotStore struct {
 	paths     config.Paths
 	retention int
@@ -90,7 +93,8 @@ func (ss *SnapshotStore) Take(d domain.WeekDraft, op OpTag, note string) (Snapsh
 		return SnapshotInfo{}, err
 	}
 
-	ts := time.Now().UTC().Format("20060102T150405Z")
+	taken := time.Now().UTC()
+	ts := taken.Format("20060102T150405Z")
 	suffix := ""
 	if note != "" {
 		// Sanitize note for filename use: lower-case alphanumerics and hyphens only.
@@ -119,7 +123,7 @@ func (ss *SnapshotStore) Take(d domain.WeekDraft, op OpTag, note string) (Snapsh
 	if err := ss.prune(d.Profile, d.WeekStart, d.Name); err != nil {
 		return SnapshotInfo{}, err
 	}
-	return SnapshotInfo{Sequence: seq, Op: op, Taken: time.Now().UTC(), Note: note, Path: p}, nil
+	return SnapshotInfo{Sequence: seq, Op: op, Taken: taken, Note: note, Path: p}, nil
 }
 
 // List returns all snapshots for the given draft, ordered by sequence ascending.
@@ -165,8 +169,9 @@ func (ss *SnapshotStore) List(profile string, weekStart time.Time, name string) 
 	return out, nil
 }
 
-// Pin marks a snapshot as exempt from retention pruning.
-// The pin is recorded in a .pinned sidecar file in the snapshots directory.
+// Pin marks a snapshot as exempt from retention pruning. The note parameter
+// is reserved for a future Phase B feature (history display); it is accepted
+// for forward-compatible call sites but is not currently persisted.
 func (ss *SnapshotStore) Pin(profile string, weekStart time.Time, name string, seq int, note string) error {
 	dir := ss.dir(profile, weekStart, name)
 	pinned, _ := ss.loadPinned(dir)
@@ -274,10 +279,14 @@ func (ss *SnapshotStore) savePinned(dir string, pinned map[int]bool) error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	var lines []string
+	seqs := make([]int, 0, len(pinned))
 	for seq := range pinned {
-		lines = append(lines, strconv.Itoa(seq))
+		seqs = append(seqs, seq)
 	}
-	sort.Strings(lines)
+	sort.Ints(seqs)
+	lines := make([]string, len(seqs))
+	for i, s := range seqs {
+		lines[i] = strconv.Itoa(s)
+	}
 	return os.WriteFile(filepath.Join(dir, ".pinned"), []byte(strings.Join(lines, "\n")+"\n"), 0o600)
 }
