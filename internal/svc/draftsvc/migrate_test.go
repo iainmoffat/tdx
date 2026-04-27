@@ -21,7 +21,7 @@ func TestMigrate_SingleProfile_AutoYes(t *testing.T) {
 	paths := config.Paths{Root: home, LegacyTemplatesDir: legacy}
 	profiles := []string{"work"}
 
-	result, err := Migrate(paths, profiles, "work", &silentPrompter{})
+	result, err := Migrate(paths, profiles, "work", &panicPrompter{t: t})
 	if err != nil {
 		t.Fatalf("Migrate: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestMigrate_SingleProfile_AutoYes(t *testing.T) {
 		t.Errorf(".migrated marker missing: %v", err)
 	}
 
-	result2, err := Migrate(paths, profiles, "work", &silentPrompter{})
+	result2, err := Migrate(paths, profiles, "work", &panicPrompter{t: t})
 	if err != nil {
 		t.Fatalf("re-Migrate: %v", err)
 	}
@@ -47,9 +47,12 @@ func TestMigrate_SingleProfile_AutoYes(t *testing.T) {
 	}
 }
 
-type silentPrompter struct{}
+type panicPrompter struct{ t *testing.T }
 
-func (silentPrompter) Confirm(question string) (bool, error) { return true, nil }
+func (p *panicPrompter) Confirm(q string) (bool, error) {
+	p.t.Errorf("Confirm called unexpectedly for single-profile case: %q", q)
+	return false, nil
+}
 
 func TestMigrate_MultiProfile_PromptsAndRespects(t *testing.T) {
 	home := t.TempDir()

@@ -1,11 +1,13 @@
 package draftsvc
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/iainmoffat/tdx/internal/config"
 )
@@ -88,8 +90,12 @@ func Migrate(paths config.Paths, profiles []string, activeProfile string, prompt
 // moveFile moves src to dst, falling back to a copy-then-delete if os.Rename
 // fails (e.g. cross-device moves).
 func moveFile(src, dst string) error {
-	if err := os.Rename(src, dst); err == nil {
+	err := os.Rename(src, dst)
+	if err == nil {
 		return nil
+	}
+	if !errors.Is(err, syscall.EXDEV) {
+		return err // surface non-cross-device errors directly
 	}
 	in, err := os.Open(src)
 	if err != nil {
@@ -106,6 +112,7 @@ func moveFile(src, dst string) error {
 		return err
 	}
 	if err := out.Close(); err != nil {
+		os.Remove(dst)
 		return err
 	}
 	return os.Remove(src)

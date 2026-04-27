@@ -14,7 +14,11 @@ import (
 // runStartupMigration performs the one-shot templates-per-profile migration.
 // Errors are non-fatal: a warning is printed to stderr and the command proceeds.
 func runStartupMigration() {
-	paths := config.MustPaths()
+	paths, err := config.ResolvePaths()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "tdx: templates migration warning: %v\n", err)
+		return
+	}
 	store := config.NewProfileStore(paths)
 	cfg, err := store.Load()
 	if err != nil || cfg.DefaultProfile == "" {
@@ -39,10 +43,13 @@ func runStartupMigration() {
 // isNonInteractiveCommand returns true for subcommands that should never
 // trigger a migration prompt (mcp serve, completion scripts, version).
 func isNonInteractiveCommand(cmd *cobra.Command) bool {
-	full := cmd.CommandPath()
-	return strings.Contains(full, "mcp") ||
-		strings.Contains(full, "completion") ||
-		strings.Contains(full, "version")
+	for _, seg := range strings.Fields(cmd.CommandPath()) {
+		switch seg {
+		case "mcp", "completion", "version":
+			return true
+		}
+	}
+	return false
 }
 
 // cliPrompter reads a y/yes confirmation from stdin when stdin is a TTY.
