@@ -11,16 +11,33 @@ import (
 	"github.com/iainmoffat/tdx/internal/svc/timesvc"
 )
 
+// timeWriter is the subset of timesvc.Service that draftsvc consumes.
+// timesvc.Service satisfies this interface implicitly. Tests can supply
+// a mock to avoid hitting a live tenant.
+type timeWriter interface {
+	AddEntry(ctx context.Context, profile string, input domain.EntryInput) (domain.TimeEntry, error)
+	UpdateEntry(ctx context.Context, profile string, id int, update domain.EntryUpdate) (domain.TimeEntry, error)
+	DeleteEntry(ctx context.Context, profile string, id int) error
+	GetWeekReport(ctx context.Context, profile string, date time.Time) (domain.WeekReport, error)
+	GetLockedDays(ctx context.Context, profile string, from, to time.Time) ([]domain.LockedDay, error)
+}
+
 // Service is the draft-aware service layer.
 type Service struct {
 	paths     config.Paths
 	store     *Store
 	snapshots *SnapshotStore
-	tsvc      *timesvc.Service
+	tsvc      timeWriter
 }
 
 // NewService constructs a Service backed by paths and the live TD time service.
 func NewService(paths config.Paths, tsvc *timesvc.Service) *Service {
+	return newServiceWithTimeWriter(paths, tsvc)
+}
+
+// newServiceWithTimeWriter constructs a Service using any timeWriter implementation.
+// Used in tests to inject a mock without hitting a live tenant.
+func newServiceWithTimeWriter(paths config.Paths, tsvc timeWriter) *Service {
 	return &Service{
 		paths:     paths,
 		store:     NewStore(paths),
