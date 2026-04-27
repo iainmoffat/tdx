@@ -134,6 +134,17 @@ func (s *Service) Reconcile(ctx context.Context, profile string, weekStart time.
 	return draft, diff, nil
 }
 
+// ProbeRemoteFingerprint fetches the current remote week report and returns
+// its fingerprint. Returns "" on any error, intended for staleness probes
+// where failure is non-fatal (the caller renders state without the staleness flag).
+func (s *Service) ProbeRemoteFingerprint(ctx context.Context, profile string, weekStart time.Time) string {
+	report, err := s.tsvc.GetWeekReport(ctx, profile, weekStart)
+	if err != nil {
+		return ""
+	}
+	return computeRemoteFingerprint(report)
+}
+
 // pulledCellsByKey extracts the cells-with-source-id map from a draft.
 // Used internally by PulledCellsByKey on the loaded pulled snapshot.
 func pulledCellsByKey(d domain.WeekDraft) map[string]domain.DraftCell {

@@ -11,5 +11,6 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(newShowCmd())
 	cmd.AddCommand(newLockedCmd())
 	cmd.AddCommand(newPullCmd())
+	cmd.AddCommand(newListCmd())
 	return cmd
 }
