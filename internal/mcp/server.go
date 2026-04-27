@@ -4,6 +4,7 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/iainmoffat/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/svc/draftsvc"
 	"github.com/iainmoffat/tdx/internal/svc/timesvc"
 	"github.com/iainmoffat/tdx/internal/svc/tmplsvc"
 )
@@ -13,6 +14,7 @@ type Services struct {
 	Auth     *authsvc.Service
 	Time     *timesvc.Service
 	Template *tmplsvc.Service
+	Drafts   *draftsvc.Service
 	Profile  string // default profile name
 }
 
@@ -29,6 +31,7 @@ func NewServer(version string, svcs Services) *sdkmcp.Server {
 	RegisterTypeTools(srv, svcs)
 	RegisterTemplateTools(srv, svcs)
 	RegisterApplyTools(srv, svcs)
+	RegisterDraftTools(srv, svcs) // read tools; mutating tools registered by Task 25
 
 	return srv
 }

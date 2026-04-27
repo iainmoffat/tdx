@@ -11,6 +11,7 @@ import (
 	"github.com/iainmoffat/tdx/internal/config"
 	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/iainmoffat/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/svc/draftsvc"
 	"github.com/iainmoffat/tdx/internal/svc/timesvc"
 	"github.com/iainmoffat/tdx/internal/svc/tmplsvc"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -38,11 +39,13 @@ func mcpHarness(t *testing.T, tenantURL string) Services {
 	auth := authsvc.New(paths)
 	tsvc := timesvc.New(paths)
 	tmsvc := tmplsvc.New(paths, tsvc)
+	drafts := draftsvc.NewService(paths, tsvc)
 
 	return Services{
 		Auth:     auth,
 		Time:     tsvc,
 		Template: tmsvc,
+		Drafts:   drafts,
 		Profile:  "default",
 	}
 }
