@@ -66,3 +66,45 @@ func TestCreateDraft_ConfirmGate(t *testing.T) {
 		t.Errorf("expected error result for confirm=false")
 	}
 }
+
+func TestRefreshDraft_RequiresConfirm(t *testing.T) {
+	stub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	t.Cleanup(stub.Close)
+
+	svcs := mcpHarness(t, stub.URL)
+	handler := refreshDraftHandler(svcs)
+	res, _, err := handler(context.Background(), &sdkmcp.CallToolRequest{}, refreshDraftArgs{
+		WeekStart: "2026-05-03",
+		Strategy:  "abort",
+		Confirm:   false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.IsError {
+		t.Errorf("expected error result for confirm=false, got non-error result")
+	}
+}
+
+func TestRefreshDraft_RejectsUnknownStrategy(t *testing.T) {
+	stub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	t.Cleanup(stub.Close)
+
+	svcs := mcpHarness(t, stub.URL)
+	handler := refreshDraftHandler(svcs)
+	res, _, err := handler(context.Background(), &sdkmcp.CallToolRequest{}, refreshDraftArgs{
+		WeekStart: "2026-05-03",
+		Strategy:  "merge",
+		Confirm:   true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.IsError {
+		t.Errorf("expected error result for unknown strategy, got non-error result")
+	}
+}
