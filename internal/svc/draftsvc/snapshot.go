@@ -30,6 +30,10 @@ const (
 	OpPreRestore OpTag = "pre-restore"
 	// OpPreDelete tags a snapshot taken before deleting a draft.
 	OpPreDelete OpTag = "pre-delete"
+	// OpPreRename tags a snapshot taken before a draft is renamed.
+	OpPreRename OpTag = "pre-rename"
+	// OpPreReset tags a snapshot taken before discarding local edits.
+	OpPreReset OpTag = "pre-reset"
 	// OpManual tags a snapshot taken by explicit user request.
 	OpManual OpTag = "manual"
 )
@@ -289,4 +293,75 @@ func (ss *SnapshotStore) savePinned(dir string, pinned map[int]bool) error {
 		lines[i] = strconv.Itoa(s)
 	}
 	return os.WriteFile(filepath.Join(dir, ".pinned"), []byte(strings.Join(lines, "\n")+"\n"), 0o600)
+}
+
+// PruneOlderThan removes unpinned snapshots whose mtime is older than `maxAge`.
+// Returns the number pruned.
+func (ss *SnapshotStore) PruneOlderThan(profile string, weekStart time.Time, name string, maxAge time.Duration) (int, error) {
+	list, err := ss.List(profile, weekStart, name)
+	if err != nil {
+		return 0, err
+	}
+	cutoff := time.Now().Add(-maxAge)
+	pruned := 0
+	for _, s := range list {
+		if s.Pinned {
+			continue
+		}
+		info, err := os.Stat(s.Path)
+		if err != nil {
+			return pruned, err
+		}
+		if info.ModTime().After(cutoff) {
+			continue
+		}
+		if err := os.Remove(s.Path); err != nil {
+			return pruned, err
+		}
+		pruned++
+	}
+	return pruned, nil
+}
+
+// PruneToRetention exposes the internal retention-based prune.
+func (ss *SnapshotStore) PruneToRetention(profile string, weekStart time.Time, name string) (int, error) {
+	list, err := ss.List(profile, weekStart, name)
+	if err != nil {
+		return 0, err
+	}
+	var unpinned []SnapshotInfo
+	for _, s := range list {
+		if !s.Pinned {
+			unpinned = append(unpinned, s)
+		}
+	}
+	if len(unpinned) <= ss.retention {
+		return 0, nil
+	}
+	sort.SliceStable(unpinned, func(i, j int) bool { return unpinned[i].Sequence < unpinned[j].Sequence })
+	excess := len(unpinned) - ss.retention
+	for i := 0; i < excess; i++ {
+		if err := os.Remove(unpinned[i].Path); err != nil {
+			return i, err
+		}
+	}
+	return excess, nil
+}
+
+// RestoreSnapshot reloads a snapshot's contents back into the live draft.
+// Auto-snapshots the current state as pre-restore first.
+func (s *Service) RestoreSnapshot(profile string, weekStart time.Time, name string, seq int) error {
+	cur, err := s.store.Load(profile, weekStart, name)
+	if err != nil {
+		return fmt.Errorf("restore: load current: %w", err)
+	}
+	if _, err := s.snapshots.Take(cur, OpPreRestore, ""); err != nil {
+		return fmt.Errorf("restore: pre-snapshot: %w", err)
+	}
+	snap, err := s.snapshots.Load(profile, weekStart, name, seq)
+	if err != nil {
+		return fmt.Errorf("restore: load snapshot %d: %w", seq, err)
+	}
+	snap.ModifiedAt = time.Now().UTC()
+	return s.store.Save(snap)
 }
