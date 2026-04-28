@@ -82,7 +82,7 @@ artifact, validate, diff, preview, and push back with safety guarantees.
 | Command | Description | Key Flags |
 |---|---|---|
 | `tdx time week pull <date>` | Pull live week into a local draft | `--name`, `--force`, `--json` |
-| `tdx time week list` | List local drafts with sync state | `--dirty`, `--conflicted`, `--date`, `--no-remote-check`, `--json` |
+| `tdx time week list` | List local drafts with sync state | `--dirty`, `--conflicted`, `--date`, `--archived`, `--no-remote-check`, `--json` |
 | `tdx time week show <date> --draft [name]` | Show a draft as a grid | (flag added to existing `show`) |
 | `tdx time week status <date>[/<name>]` | One-screen draft status | `--json`, `--no-remote-check` |
 | `tdx time week edit <date>[/<name>]` | Edit a draft as YAML in $EDITOR | (vi fallback) |
@@ -93,6 +93,15 @@ artifact, validate, diff, preview, and push back with safety guarantees.
 | `tdx time week set <date>[/<name>] <row>:<day>=<h>` | Non-interactive cell write | (repeatable) |
 | `tdx time week note <date>[/<name>]` | Edit free-form notes | `--append`, `--clear` |
 | `tdx time week history <date>[/<name>]` | List snapshots | `--json`, `--limit N` |
+| `tdx time week new <date>` | Create blank/template-seeded/cloned draft | `--from-template`, `--from-draft`, `--shift`, `--name` |
+| `tdx time week copy <src> <dst>` | Clone a draft to a new ref | (positional) |
+| `tdx time week rename <date>[/<old>] <new>` | Rename a draft (preserves snapshots) | (positional) |
+| `tdx time week reset <date>[/<name>] --yes` | Discard local edits + re-pull (auto-snapshots) | `--yes` |
+| `tdx time week archive <date>[/<name>]` | Hide draft from default `list` | (none) |
+| `tdx time week unarchive <date>[/<name>]` | Show previously archived draft | (none) |
+| `tdx time week snapshot <date>[/<name>]` | Take a manual snapshot | `--keep`, `--note` |
+| `tdx time week restore <date>[/<name>] --snapshot N --yes` | Restore from snapshot | `--snapshot`, `--yes` |
+| `tdx time week prune <date>[/<name>] --yes` | Drop unpinned snapshots | `--older-than`, `--yes` |
 
 ### Time Types
 
@@ -143,7 +152,7 @@ Add tdx as an MCP server in your AI tool's configuration:
 }
 ```
 
-The MCP server exposes 28 tools (16 read-only, 12 mutating). All mutating
+The MCP server exposes 37 tools (17 read-only, 20 mutating). All mutating
 tools require `confirm: true`. Template applies require an `expectedDiffHash`
 from a prior preview call for race protection.
 
@@ -165,6 +174,26 @@ from a prior preview call for race protection.
 | `delete_week_draft` | Delete a draft (auto-snapshots) |
 | `push_week_draft` | Push to TD; requires `expectedDiffHash` and `allowDeletes` for any deletes |
 
+**Week drafts (Phase B.1 — read-only, 1 tool):**
+
+| Tool | Description |
+|------|-------------|
+| `list_week_draft_snapshots` | List snapshots for a draft |
+
+**Week drafts (Phase B.1 — mutating, 8 tools, all require `confirm: true`):**
+
+| Tool | Description |
+|------|-------------|
+| `create_week_draft` | Create a draft: blank, template:<n>, or draft:<ref> seed |
+| `copy_week_draft` | Clone a draft (src ref) to a new ref (dst ref) |
+| `rename_week_draft` | Rename a draft (preserves snapshot history) |
+| `reset_week_draft` | Discard local edits and re-pull from remote (auto-snapshots first) |
+| `archive_week_draft` | Hide a draft from default list output |
+| `unarchive_week_draft` | Show a previously archived draft in list output |
+| `snapshot_week_draft` | Take a manual snapshot; optional `--keep` to pin |
+| `restore_week_draft_snapshot` | Restore a draft from a snapshot by sequence number |
+| `prune_week_draft_snapshots` | Drop unpinned snapshots (by age or to retention cap) |
+
 ## JSON Output
 
 All commands support `--json` for machine-readable output with stable
@@ -178,6 +207,11 @@ Schema names introduced in Phase A: `tdx.v1.weekDraft`, `tdx.v1.weekDraftList`,
 `tdx.v1.weekDraftStatus`, `tdx.v1.weekDraftDiff`, `tdx.v1.weekDraftPreview`,
 `tdx.v1.weekDraftPullResult`, `tdx.v1.weekDraftPushResult`,
 `tdx.v1.weekDraftSnapshotList`.
+
+Schema names introduced in Phase B.1: `tdx.v1.weekDraftCreateResult`,
+`tdx.v1.weekDraftCopyResult`, `tdx.v1.weekDraftRenameResult`,
+`tdx.v1.weekDraftArchiveResult`, `tdx.v1.weekDraftSnapshot`,
+`tdx.v1.weekDraftSnapshotPruneResult`.
 
 ## Shell Completions
 
