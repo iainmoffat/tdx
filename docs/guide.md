@@ -764,6 +764,72 @@ drafts by default; pass `--archived` to include them. Because archiving is
 just a YAML flag, there are no rename collisions and the draft remains fully
 accessible to `show`, `diff`, `history`, and `cat`.
 
+### Refresh & rebase
+
+`tdx time week refresh <date>[/<name>]` re-fetches the live week and merges
+remote changes into the local draft using a three-way merge between three
+views:
+
+- **at-pull-time** — what the live week looked like when the draft was
+  created (from the `.pulled.yaml` watermark).
+- **current-local** — what the draft contains right now.
+- **current-remote** — what the live week contains right now.
+
+Each cell is classified per the merge rules in
+`docs/specs/2026-04-28-tdx-phase-B2a-design.md` and one of three things
+happens:
+
+- **Auto-merge** — local-only and remote-only changes both apply.
+- **Conflict + strategy** — both sides changed the same cell; behavior
+  depends on `--strategy`.
+- **Reality match** — local intent (e.g. cleared) and remote state
+  (already deleted) agree; the cell drops out silently.
+
+The `rebase` command is a verbatim alias of `refresh` for git-muscle-memory
+users — same flags, same behavior.
+
+#### Strategies
+
+```
+--strategy abort    (default) refuse to mutate if any cell-level conflict
+--strategy ours     on conflict, keep local
+--strategy theirs   on conflict, take remote
+```
+
+#### Worked example
+
+You pulled the week, edited Monday from 4.0h to 6.0h. Meanwhile a coworker
+edited the same row's Monday on TD to 8.0h:
+
+```
+$ tdx time week refresh 2026-05-03
+Refresh aborted: 1 cell(s) conflict between local edits and remote changes.
+
+  row-01  Mon  conflict
+    local:   updated to 6.0h
+    remote:  updated to 8.0h
+
+Choose one:
+  --strategy ours        (keep local for all conflicts; refresh succeeds)
+  --strategy theirs      (take remote for all conflicts; refresh succeeds)
+  tdx time week reset 2026-05-03 --yes  (give up local edits entirely, re-pull fresh)
+```
+
+Decide what you want and re-run with the strategy:
+
+```
+$ tdx time week refresh 2026-05-03 --strategy ours
+Refresh complete (--strategy ours).
+  Adopted (remote -> draft):  0 cells
+  Preserved (local edits):    0 cells
+  Resolved (same on both):    0 cells
+  Resolved by --strategy:     1 cells (local won)
+```
+
+A snapshot tagged `pre-refresh` is taken before any disk mutation. To roll
+back: `tdx time week history 2026-05-03` and
+`tdx time week restore 2026-05-03 --snapshot N --yes`.
+
 ## Storage layout
 
 Week drafts and templates live under per-profile directories:
@@ -880,7 +946,7 @@ tools require `confirm: true`.
 | `derive_time_template` | Derive template from live week |
 | `apply_time_template_to_week` | Apply template to a week |
 
-**Mutating (12 tools — week drafts):**
+**Mutating (14 tools — week drafts):**
 
 | Tool | Description |
 |------|-------------|
@@ -892,6 +958,7 @@ tools require `confirm: true`.
 | `copy_week_draft` | Clone a draft to a new ref |
 | `rename_week_draft` | Rename a draft (preserves snapshot history) |
 | `reset_week_draft` | Discard local edits and re-pull |
+| `refresh_week_draft` | Three-way merge against current remote (`abort`/`ours`/`theirs`) |
 | `archive_week_draft` | Hide a draft from default list output |
 | `unarchive_week_draft` | Show a previously archived draft |
 | `snapshot_week_draft` | Take a manual snapshot; optional pin |

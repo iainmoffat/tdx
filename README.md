@@ -97,6 +97,8 @@ artifact, validate, diff, preview, and push back with safety guarantees.
 | `tdx time week copy <src> <dst>` | Clone a draft to a new ref | (positional) |
 | `tdx time week rename <date>[/<old>] <new>` | Rename a draft (preserves snapshots) | (positional) |
 | `tdx time week reset <date>[/<name>] --yes` | Discard local edits + re-pull (auto-snapshots) | `--yes` |
+| `tdx time week refresh <date>[/<name>]` | Three-way merge against current remote | `--strategy abort\|ours\|theirs`, `--json` |
+| `tdx time week rebase <date>[/<name>]` | Alias of refresh (same flags, same behavior) | `--strategy abort\|ours\|theirs`, `--json` |
 | `tdx time week archive <date>[/<name>]` | Hide draft from default `list` | (none) |
 | `tdx time week unarchive <date>[/<name>]` | Show previously archived draft | (none) |
 | `tdx time week snapshot <date>[/<name>]` | Take a manual snapshot | `--keep`, `--note` |
@@ -194,6 +196,12 @@ from a prior preview call for race protection.
 | `restore_week_draft_snapshot` | Restore a draft from a snapshot by sequence number |
 | `prune_week_draft_snapshots` | Drop unpinned snapshots (by age or to retention cap) |
 
+**Week drafts (Phase B.2a — mutating, 1 tool, requires `confirm: true`):**
+
+| Tool | Description |
+|------|-------------|
+| `refresh_week_draft` | Three-way merge a draft against current remote; supports `strategy` `abort`/`ours`/`theirs` |
+
 ## JSON Output
 
 All commands support `--json` for machine-readable output with stable
@@ -212,6 +220,8 @@ Schema names introduced in Phase B.1: `tdx.v1.weekDraftCreateResult`,
 `tdx.v1.weekDraftCopyResult`, `tdx.v1.weekDraftRenameResult`,
 `tdx.v1.weekDraftArchiveResult`, `tdx.v1.weekDraftSnapshot`,
 `tdx.v1.weekDraftSnapshotPruneResult`.
+
+Schema names introduced in Phase B.2a: `tdx.v1.weekDraftRefreshResult`.
 
 ## Shell Completions
 
