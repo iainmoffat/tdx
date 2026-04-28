@@ -456,6 +456,10 @@ func (s *Service) Refresh(ctx context.Context, profile string, weekStart time.Ti
 	}
 	merged.ModifiedAt = time.Now().UTC()
 
+	if _, err := s.snapshots.Take(draft, OpPreRefresh, ""); err != nil {
+		return RefreshResult{}, fmt.Errorf("refresh: pre-refresh snapshot: %w", err)
+	}
+
 	if err := s.store.Save(merged); err != nil {
 		return RefreshResult{}, fmt.Errorf("refresh: save merged draft: %w", err)
 	}

@@ -533,3 +533,74 @@ func TestService_Refresh_SuccessPath_WritesMergedDraftAndWatermark(t *testing.T)
 	require.Equal(t, 0, res2.Adopted, "second refresh should be a no-op")
 	require.Equal(t, 1, res2.Preserved, "Mon edit still local-only relative to new watermark")
 }
+
+func TestService_Refresh_TakesPreRefreshSnapshot(t *testing.T) {
+	tmp := t.TempDir()
+	paths := config.Paths{Root: tmp}
+	mock := &mockTimeWriter{}
+	svc := newServiceWithTimeWriter(paths, mock)
+
+	weekStart := weekStartTuesday0501()
+	mock.weekRpt = domain.WeekReport{
+		WeekRef: domain.WeekRef{StartDate: weekStart},
+		Entries: []domain.TimeEntry{
+			{ID: 900, Date: time.Date(2026, 5, 4, 0, 0, 0, 0, domain.EasternTZ), Minutes: 240,
+				Target: domain.Target{Kind: domain.TargetTicket, ItemID: 555},
+				TimeType: domain.TimeType{ID: 17}},
+		},
+	}
+	_, err := svc.Pull(context.Background(), "p", weekStart, "default", false)
+	require.NoError(t, err)
+
+	// Edit local to 6h, remote bumps to 8h, refresh ours.
+	d, _ := svc.Store().Load("p", weekStart, "default")
+	d.Rows[0].Cells[0].Hours = 6
+	require.NoError(t, svc.Store().Save(d))
+	mock.weekRpt.Entries[0].Minutes = 480
+
+	_, err = svc.Refresh(context.Background(), "p", weekStart, "default", StrategyOurs)
+	require.NoError(t, err)
+
+	snaps, err := svc.Snapshots().List("p", weekStart, "default")
+	require.NoError(t, err)
+	var preRefresh []SnapshotInfo
+	for _, s := range snaps {
+		if s.Op == OpPreRefresh {
+			preRefresh = append(preRefresh, s)
+		}
+	}
+	require.Len(t, preRefresh, 1, "exactly one pre-refresh snapshot")
+}
+
+func TestService_Refresh_AbortPath_NoSnapshot(t *testing.T) {
+	tmp := t.TempDir()
+	paths := config.Paths{Root: tmp}
+	mock := &mockTimeWriter{}
+	svc := newServiceWithTimeWriter(paths, mock)
+
+	weekStart := weekStartTuesday0501()
+	mock.weekRpt = domain.WeekReport{
+		WeekRef: domain.WeekRef{StartDate: weekStart},
+		Entries: []domain.TimeEntry{
+			{ID: 900, Date: time.Date(2026, 5, 4, 0, 0, 0, 0, domain.EasternTZ), Minutes: 240,
+				Target: domain.Target{Kind: domain.TargetTicket, ItemID: 555},
+				TimeType: domain.TimeType{ID: 17}},
+		},
+	}
+	_, err := svc.Pull(context.Background(), "p", weekStart, "default", false)
+	require.NoError(t, err)
+
+	d, _ := svc.Store().Load("p", weekStart, "default")
+	d.Rows[0].Cells[0].Hours = 6
+	require.NoError(t, svc.Store().Save(d))
+	mock.weekRpt.Entries[0].Minutes = 480
+
+	_, err = svc.Refresh(context.Background(), "p", weekStart, "default", StrategyAbort)
+	require.NoError(t, err)
+
+	snaps, err := svc.Snapshots().List("p", weekStart, "default")
+	require.NoError(t, err)
+	for _, s := range snaps {
+		require.NotEqual(t, OpPreRefresh, s.Op, "abort must not snapshot")
+	}
+}
