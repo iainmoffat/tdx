@@ -17,3 +17,15 @@ func TestNewRefreshCmd_FlagsRegistered(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "abort", def, "default strategy must be abort")
 }
+
+func TestNewRebaseCmd_IsAliasOfRefresh(t *testing.T) {
+	cmd := newRebaseCmd()
+	require.NotNil(t, cmd)
+	require.Equal(t, "rebase <date>[/<name>]", cmd.Use)
+	require.NotNil(t, cmd.Flags().Lookup("strategy"))
+	require.NotNil(t, cmd.Flags().Lookup("profile"))
+	require.NotNil(t, cmd.Flags().Lookup("json"))
+	def, err := cmd.Flags().GetString("strategy")
+	require.NoError(t, err)
+	require.Equal(t, "abort", def)
+}
