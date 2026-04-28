@@ -446,7 +446,22 @@ func (s *Service) Refresh(ctx context.Context, profile string, weekStart time.Ti
 		}, nil
 	}
 
-	// Success branches added in Task 9.
+	// Success: assemble the merged draft, save it, refresh the watermark.
+	merged := draft
+	merged.Rows = res.rows
+	merged.Provenance = remoteDraft.Provenance // adopt the new pull-time/fingerprint/status
+	merged.Provenance.Kind = draft.Provenance.Kind // preserve original Kind (e.g. ProvenanceFromTemplate)
+	if merged.Provenance.Kind == "" {
+		merged.Provenance.Kind = domain.ProvenancePulled
+	}
+	merged.ModifiedAt = time.Now().UTC()
+
+	if err := s.store.Save(merged); err != nil {
+		return RefreshResult{}, fmt.Errorf("refresh: save merged draft: %w", err)
+	}
+	if err := s.store.SavePulledSnapshot(remoteDraft); err != nil {
+		return RefreshResult{}, fmt.Errorf("refresh: save watermark: %w", err)
+	}
 	return RefreshResult{
 		Strategy:           strategy,
 		Adopted:            res.counts.adopted,

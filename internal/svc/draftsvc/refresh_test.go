@@ -476,3 +476,60 @@ func TestService_Refresh_AbortPath_NoMutation(t *testing.T) {
 func weekStartTuesday0501() time.Time {
 	return time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
 }
+
+func TestService_Refresh_SuccessPath_WritesMergedDraftAndWatermark(t *testing.T) {
+	tmp := t.TempDir()
+	paths := config.Paths{Root: tmp}
+	mock := &mockTimeWriter{}
+	svc := newServiceWithTimeWriter(paths, mock)
+
+	weekStart := weekStartTuesday0501()
+	// Initial pull: Mon=4h, Tue=4h.
+	mock.weekRpt = domain.WeekReport{
+		WeekRef: domain.WeekRef{StartDate: weekStart},
+		Entries: []domain.TimeEntry{
+			{ID: 900, Date: time.Date(2026, 5, 4, 0, 0, 0, 0, domain.EasternTZ), Minutes: 240,
+				Target: domain.Target{Kind: domain.TargetTicket, ItemID: 555},
+				TimeType: domain.TimeType{ID: 17}},
+			{ID: 901, Date: time.Date(2026, 5, 5, 0, 0, 0, 0, domain.EasternTZ), Minutes: 240,
+				Target: domain.Target{Kind: domain.TargetTicket, ItemID: 555},
+				TimeType: domain.TimeType{ID: 17}},
+		},
+	}
+	_, err := svc.Pull(context.Background(), "p", weekStart, "default", false)
+	require.NoError(t, err)
+
+	// User edits Mon to 6h.
+	d, _ := svc.Store().Load("p", weekStart, "default")
+	for i := range d.Rows[0].Cells {
+		if d.Rows[0].Cells[i].Day == time.Monday {
+			d.Rows[0].Cells[i].Hours = 6
+		}
+	}
+	require.NoError(t, svc.Store().Save(d))
+
+	// Remote independently bumps Tue to 8h (no conflict, just adopt).
+	mock.weekRpt.Entries[1].Minutes = 480
+
+	res, err := svc.Refresh(context.Background(), "p", weekStart, "default", StrategyAbort)
+	require.NoError(t, err)
+	require.False(t, res.Aborted)
+	require.Equal(t, 1, res.Adopted, "Tue adopted from remote")
+	require.Equal(t, 1, res.Preserved, "Mon edit preserved")
+
+	// Local draft now has Mon=6 + Tue=8.
+	post, _ := svc.Store().Load("p", weekStart, "default")
+	cells := map[time.Weekday]float64{}
+	for _, c := range post.Rows[0].Cells {
+		cells[c.Day] = c.Hours
+	}
+	require.Equal(t, 6.0, cells[time.Monday])
+	require.Equal(t, 8.0, cells[time.Tuesday])
+
+	// Watermark now matches the post-refresh remote: a second refresh is a no-op.
+	res2, err := svc.Refresh(context.Background(), "p", weekStart, "default", StrategyAbort)
+	require.NoError(t, err)
+	require.False(t, res2.Aborted)
+	require.Equal(t, 0, res2.Adopted, "second refresh should be a no-op")
+	require.Equal(t, 1, res2.Preserved, "Mon edit still local-only relative to new watermark")
+}
