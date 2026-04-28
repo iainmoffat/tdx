@@ -157,10 +157,11 @@ func newListCmd() *cobra.Command {
 			}
 
 			// Human output: flat table.
-			headers := []string{"DATE", "HOURS", "TYPE", "TARGET", "DESCRIPTION"}
+			headers := []string{"ID", "DATE", "HOURS", "TYPE", "TARGET", "DESCRIPTION"}
 			rows := make([][]string, 0, len(entries))
 			for _, e := range entries {
 				rows = append(rows, []string{
+					fmt.Sprintf("%d", e.ID),
 					e.Date.Format("2006-01-02"),
 					fmt.Sprintf("%.2f", e.Hours()),
 					e.TimeType.Name,
