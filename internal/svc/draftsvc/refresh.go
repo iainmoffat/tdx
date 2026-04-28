@@ -305,3 +305,103 @@ func unionDays(a, b, c map[time.Weekday]domain.DraftCell) []time.Weekday {
 	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
 	return out
 }
+
+// classifyResult bundles a top-level classify() output.
+type classifyResult struct {
+	rows      []domain.DraftRow
+	counts    rowCounts
+	conflicts []MergeConflict
+	aborted   bool
+}
+
+// rowKey is the canonical alignment key across pulled/local/remote views.
+// Rows match if and only if their (Target, TimeType, Billable) tuples match.
+func rowKey(r domain.DraftRow) string {
+	return fmt.Sprintf("%s:%d:%d:%d:%d:%t",
+		r.Target.Kind, r.Target.AppID, r.Target.ItemID, r.Target.TaskID,
+		r.TimeType.ID, r.Billable)
+}
+
+// classify performs the whole-draft three-way merge. It is pure: no I/O.
+// Aborted=true with a non-empty conflicts list means "engine refuses; caller
+// must not mutate". Under ours/theirs, conflicts is always empty.
+func classify(pulled, local, remote domain.WeekDraft, strategy Strategy) classifyResult {
+	pulledByKey := indexRows(pulled.Rows)
+	localByKey := indexRows(local.Rows)
+	remoteByKey := indexRows(remote.Rows)
+
+	keys := unionKeys(pulledByKey, localByKey, remoteByKey)
+
+	out := classifyResult{}
+	for _, k := range keys {
+		p := pulledByKey[k]
+		l := localByKey[k]
+		r := remoteByKey[k]
+
+		// Pick a stable rowID: prefer local (user has been editing it),
+		// then pulled (matches snapshot), then remote (new row).
+		rowID, template := pickRowIdentity(l, p, r)
+
+		merged, counts, conflicts := classifyRow(rowID, p, l, r, strategy)
+
+		out.counts.adopted += counts.adopted
+		out.counts.preserved += counts.preserved
+		out.counts.resolved += counts.resolved
+		out.counts.resolvedByStrategy += counts.resolvedByStrategy
+		out.conflicts = append(out.conflicts, conflicts...)
+
+		if len(merged) == 0 {
+			continue // entire row drops out
+		}
+		row := template
+		row.ID = rowID
+		row.Cells = merged
+		out.rows = append(out.rows, row)
+	}
+
+	if strategy == StrategyAbort && len(out.conflicts) > 0 {
+		out.aborted = true
+		out.rows = nil // engine must not produce a merged set under abort
+	}
+	return out
+}
+
+func indexRows(rows []domain.DraftRow) map[string]*domain.DraftRow {
+	out := map[string]*domain.DraftRow{}
+	for i := range rows {
+		k := rowKey(rows[i])
+		out[k] = &rows[i]
+	}
+	return out
+}
+
+func unionKeys(maps ...map[string]*domain.DraftRow) []string {
+	seen := map[string]struct{}{}
+	for _, m := range maps {
+		for k := range m {
+			seen[k] = struct{}{}
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for k := range seen {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// pickRowIdentity selects the rowID and row-template for a merged row.
+// Local wins (user has been editing it); falls back to pulled (matches the
+// at-pull-time snapshot) and finally remote (brand-new remote row).
+func pickRowIdentity(local, pulled, remote *domain.DraftRow) (string, domain.DraftRow) {
+	if local != nil {
+		return local.ID, *local
+	}
+	if pulled != nil {
+		return pulled.ID, *pulled
+	}
+	if remote != nil {
+		return remote.ID, *remote
+	}
+	return "", domain.DraftRow{}
+}

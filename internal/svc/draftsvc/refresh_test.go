@@ -322,3 +322,93 @@ func TestClassifyRow_ConflictCarriesRowAndDay(t *testing.T) {
 	require.Equal(t, "updated to 6.0h", conflicts[0].LocalDescription)
 	require.Equal(t, "updated to 8.0h", conflicts[0].RemoteDescription)
 }
+
+// makeRow is a test helper for building DraftRow values with a target/type
+// signature that can be matched across views by rowKey().
+func makeRow(id string, kind domain.TargetKind, itemID, typeID int, cells ...domain.DraftCell) domain.DraftRow {
+	return domain.DraftRow{
+		ID:       id,
+		Target:   domain.Target{Kind: kind, ItemID: itemID},
+		TimeType: domain.TimeType{ID: typeID},
+		Cells:    cells,
+	}
+}
+
+func TestClassify_AdoptsNewRemoteRow(t *testing.T) {
+	pulled := domain.WeekDraft{Profile: "p", Name: "default"}
+	local := domain.WeekDraft{Profile: "p", Name: "default"}
+	remote := domain.WeekDraft{
+		Profile: "p", Name: "default",
+		Rows: []domain.DraftRow{
+			makeRow("row-01", domain.TargetTicket, 555, 17,
+				domain.DraftCell{Day: time.Monday, Hours: 4, SourceEntryID: 900}),
+		},
+	}
+
+	res := classify(pulled, local, remote, StrategyAbort)
+	require.False(t, res.aborted)
+	require.Empty(t, res.conflicts)
+	require.Equal(t, 1, res.counts.adopted)
+	require.Len(t, res.rows, 1, "new remote row joins merged set")
+	require.Len(t, res.rows[0].Cells, 1)
+}
+
+func TestClassify_KeepsLocalOnlyRow(t *testing.T) {
+	local := domain.WeekDraft{
+		Profile: "p", Name: "default",
+		Rows: []domain.DraftRow{
+			makeRow("row-localnew", domain.TargetTicket, 777, 19,
+				domain.DraftCell{Day: time.Tuesday, Hours: 2}),
+		},
+	}
+	pulled := domain.WeekDraft{Profile: "p", Name: "default"}
+	remote := domain.WeekDraft{Profile: "p", Name: "default"}
+
+	res := classify(pulled, local, remote, StrategyAbort)
+	require.False(t, res.aborted)
+	require.Empty(t, res.conflicts)
+	require.Equal(t, 1, res.counts.preserved)
+	require.Len(t, res.rows, 1)
+	require.Equal(t, "row-localnew", res.rows[0].ID, "local rowID preserved")
+}
+
+func TestClassify_AbortsOnConflict(t *testing.T) {
+	row := makeRow("row-01", domain.TargetTicket, 555, 17)
+	row.Cells = []domain.DraftCell{{Day: time.Monday, Hours: 6, SourceEntryID: 900}}
+	rowPulled := makeRow("row-01", domain.TargetTicket, 555, 17)
+	rowPulled.Cells = []domain.DraftCell{{Day: time.Monday, Hours: 4, SourceEntryID: 900}}
+	rowRemote := makeRow("row-01", domain.TargetTicket, 555, 17)
+	rowRemote.Cells = []domain.DraftCell{{Day: time.Monday, Hours: 8, SourceEntryID: 900}}
+
+	res := classify(
+		domain.WeekDraft{Rows: []domain.DraftRow{rowPulled}},
+		domain.WeekDraft{Rows: []domain.DraftRow{row}},
+		domain.WeekDraft{Rows: []domain.DraftRow{rowRemote}},
+		StrategyAbort,
+	)
+	require.True(t, res.aborted)
+	require.Len(t, res.conflicts, 1)
+	require.Equal(t, "row-01", res.conflicts[0].RowID)
+	require.Empty(t, res.rows, "abort means no merged rows")
+}
+
+func TestClassify_StrategyOursCollapsesConflict(t *testing.T) {
+	rowPulled := makeRow("row-01", domain.TargetTicket, 555, 17,
+		domain.DraftCell{Day: time.Monday, Hours: 4, SourceEntryID: 900})
+	rowLocal := makeRow("row-01", domain.TargetTicket, 555, 17,
+		domain.DraftCell{Day: time.Monday, Hours: 6, SourceEntryID: 900})
+	rowRemote := makeRow("row-01", domain.TargetTicket, 555, 17,
+		domain.DraftCell{Day: time.Monday, Hours: 8, SourceEntryID: 900})
+
+	res := classify(
+		domain.WeekDraft{Rows: []domain.DraftRow{rowPulled}},
+		domain.WeekDraft{Rows: []domain.DraftRow{rowLocal}},
+		domain.WeekDraft{Rows: []domain.DraftRow{rowRemote}},
+		StrategyOurs,
+	)
+	require.False(t, res.aborted)
+	require.Empty(t, res.conflicts)
+	require.Equal(t, 1, res.counts.resolvedByStrategy)
+	require.Len(t, res.rows, 1)
+	require.Equal(t, 6.0, res.rows[0].Cells[0].Hours, "ours kept local 6.0h")
+}
