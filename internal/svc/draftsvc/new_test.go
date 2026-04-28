@@ -75,7 +75,7 @@ func TestService_NewFromDraft(t *testing.T) {
 		SchemaVersion: 1, Profile: "work", Name: "default", WeekStart: srcWeek,
 		Provenance: domain.DraftProvenance{Kind: domain.ProvenanceBlank},
 		Rows: []domain.DraftRow{{
-			ID: "row-01",
+			ID:    "row-01",
 			Cells: []domain.DraftCell{{Day: time.Monday, Hours: 4, SourceEntryID: 999}},
 		}},
 	}

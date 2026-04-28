@@ -390,12 +390,12 @@ Recipe:
 	}, resetDraftHandler(svcs))
 
 	sdkmcp.AddTool(srv, &sdkmcp.Tool{
-		Name: "archive_week_draft",
+		Name:        "archive_week_draft",
 		Description: "Hide a draft from default `list_week_drafts` output. Soft-archive via the `archived: true` flag — fully reversible via `unarchive_week_draft`. Requires confirm=true.",
 	}, archiveDraftHandler(svcs, true))
 
 	sdkmcp.AddTool(srv, &sdkmcp.Tool{
-		Name: "unarchive_week_draft",
+		Name:        "unarchive_week_draft",
 		Description: "Show a previously archived draft in default `list_week_drafts` output. Requires confirm=true.",
 	}, archiveDraftHandler(svcs, false))
 

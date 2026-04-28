@@ -16,20 +16,28 @@ func TestService_Copy_SameDateAlternate(t *testing.T) {
 	src := domain.WeekDraft{
 		SchemaVersion: 1, Profile: "work", Name: "default", WeekStart: week,
 		Notes: "primary",
-		Rows: []domain.DraftRow{{ID: "row-01", Cells: []domain.DraftCell{{Day: time.Monday, Hours: 4}}}},
+		Rows:  []domain.DraftRow{{ID: "row-01", Cells: []domain.DraftCell{{Day: time.Monday, Hours: 4}}}},
 	}
-	if err := s.store.Save(src); err != nil { t.Fatal(err) }
-	if err := s.store.SavePulledSnapshot(src); err != nil { t.Fatal(err) }
+	if err := s.store.Save(src); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.store.SavePulledSnapshot(src); err != nil {
+		t.Fatal(err)
+	}
 
 	dst, err := s.Copy("work", week, "default", "work", week, "pristine")
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if dst.Name != "pristine" || !dst.WeekStart.Equal(week) {
 		t.Errorf("dst identity wrong: %+v", dst)
 	}
 	if dst.Notes != "primary" {
 		t.Errorf("dst.Notes = %q, want %q", dst.Notes, "primary")
 	}
-	if !s.store.Exists("work", week, "pristine") { t.Errorf("dst not saved") }
+	if !s.store.Exists("work", week, "pristine") {
+		t.Errorf("dst not saved")
+	}
 	if _, err := s.store.LoadPulledSnapshot("work", week, "pristine"); err != nil {
 		t.Errorf("dst pulled snapshot missing: %v", err)
 	}
@@ -45,12 +53,20 @@ func TestService_Copy_CrossWeek_DropsPulledSnapshot(t *testing.T) {
 		SchemaVersion: 1, Profile: "work", Name: "default", WeekStart: srcWeek,
 		Rows: []domain.DraftRow{{ID: "row-01", Cells: []domain.DraftCell{{Day: time.Monday, Hours: 4, SourceEntryID: 100}}}},
 	}
-	if err := s.store.Save(src); err != nil { t.Fatal(err) }
-	if err := s.store.SavePulledSnapshot(src); err != nil { t.Fatal(err) }
+	if err := s.store.Save(src); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.store.SavePulledSnapshot(src); err != nil {
+		t.Fatal(err)
+	}
 
 	dst, err := s.Copy("work", srcWeek, "default", "work", dstWeek, "default")
-	if err != nil { t.Fatal(err) }
-	if !dst.WeekStart.Equal(dstWeek) { t.Errorf("dst week wrong") }
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !dst.WeekStart.Equal(dstWeek) {
+		t.Errorf("dst week wrong")
+	}
 	if _, err := s.store.LoadPulledSnapshot("work", dstWeek, "default"); err == nil {
 		t.Errorf("dst should NOT have a pulled snapshot for cross-week copy")
 	}
@@ -67,8 +83,12 @@ func TestService_Copy_RefusesCollision(t *testing.T) {
 
 	src := domain.WeekDraft{SchemaVersion: 1, Profile: "work", Name: "default", WeekStart: week}
 	dst := domain.WeekDraft{SchemaVersion: 1, Profile: "work", Name: "pristine", WeekStart: week}
-	if err := s.store.Save(src); err != nil { t.Fatal(err) }
-	if err := s.store.Save(dst); err != nil { t.Fatal(err) }
+	if err := s.store.Save(src); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.store.Save(dst); err != nil {
+		t.Fatal(err)
+	}
 
 	if _, err := s.Copy("work", week, "default", "work", week, "pristine"); err == nil {
 		t.Errorf("Copy should refuse on dst collision")

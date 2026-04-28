@@ -30,7 +30,7 @@ func TestService_Reset_DiscardsLocalAndRePulls(t *testing.T) {
 	edited := domain.WeekDraft{
 		SchemaVersion: 1, Profile: "work", Name: "default", WeekStart: week,
 		Notes: "local edits",
-		Rows: []domain.DraftRow{{ID: "row-99", Cells: []domain.DraftCell{{Day: time.Friday, Hours: 99}}}},
+		Rows:  []domain.DraftRow{{ID: "row-99", Cells: []domain.DraftCell{{Day: time.Friday, Hours: 99}}}},
 	}
 	if err := s.store.Save(edited); err != nil {
 		t.Fatal(err)
