@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 )
 
@@ -72,4 +73,26 @@ func TestResolveWeekRef_InvalidDate(t *testing.T) {
 func TestResolveWeekRef_EmptyNameAfterSlash(t *testing.T) {
 	_, _, err := ResolveWeekRef("2026-05-04/")
 	require.Error(t, err, "empty name after slash should fail (delegates to ParseDraftRef)")
+}
+
+func TestSingleArgWeekCommands_AcceptZeroArgs(t *testing.T) {
+	cases := []struct {
+		name string
+		cmd  *cobra.Command
+	}{
+		{"pull", newPullCmd()},
+		{"status", newStatusCmd()},
+		{"refresh", newRefreshCmd()},
+		{"new", newNewCmd()},
+		{"history", newHistoryCmd()},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.NotNil(t, tc.cmd)
+			require.NoError(t, tc.cmd.Args(tc.cmd, []string{}),
+				"%s should accept zero args after migration", tc.name)
+			require.NoError(t, tc.cmd.Args(tc.cmd, []string{"2026-05-04"}),
+				"%s should still accept one arg", tc.name)
+		})
+	}
 }

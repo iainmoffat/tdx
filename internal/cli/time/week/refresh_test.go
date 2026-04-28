@@ -13,7 +13,7 @@ import (
 func TestNewRefreshCmd_FlagsRegistered(t *testing.T) {
 	cmd := newRefreshCmd()
 	require.NotNil(t, cmd)
-	require.Equal(t, "refresh <date>[/<name>]", cmd.Use)
+	require.Equal(t, "refresh [date[/name]]", cmd.Use)
 	require.NotNil(t, cmd.Flags().Lookup("strategy"), "--strategy flag missing")
 	require.NotNil(t, cmd.Flags().Lookup("profile"), "--profile flag missing")
 	require.NotNil(t, cmd.Flags().Lookup("json"), "--json flag missing")
@@ -25,7 +25,7 @@ func TestNewRefreshCmd_FlagsRegistered(t *testing.T) {
 func TestNewRebaseCmd_IsAliasOfRefresh(t *testing.T) {
 	cmd := newRebaseCmd()
 	require.NotNil(t, cmd)
-	require.Equal(t, "rebase <date>[/<name>]", cmd.Use)
+	require.Equal(t, "rebase [date[/name]]", cmd.Use)
 	require.NotNil(t, cmd.Flags().Lookup("strategy"))
 	require.NotNil(t, cmd.Flags().Lookup("profile"))
 	require.NotNil(t, cmd.Flags().Lookup("json"))

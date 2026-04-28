@@ -20,9 +20,9 @@ type restoreFlags struct {
 func newRestoreCmd() *cobra.Command {
 	var f restoreFlags
 	cmd := &cobra.Command{
-		Use:   "restore <date>[/<name>] --snapshot N --yes",
-		Short: "Restore a draft from a snapshot (auto-snapshots current first)",
-		Args:  cobra.ExactArgs(1),
+		Use:   "restore [date[/name]] --snapshot N --yes",
+		Short: "Restore a draft from a snapshot, auto-snapshots current first (defaults to the current week)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !f.yes {
 				return fmt.Errorf("pass --yes to overwrite the current draft")
@@ -30,7 +30,11 @@ func newRestoreCmd() *cobra.Command {
 			if f.snapshot <= 0 {
 				return fmt.Errorf("--snapshot is required (use `tdx time week history` to find sequence numbers)")
 			}
-			weekStart, name, err := ParseDraftRef(args[0])
+			ref := ""
+			if len(args) > 0 {
+				ref = args[0]
+			}
+			weekStart, name, err := ResolveWeekRef(ref)
 			if err != nil {
 				return err
 			}

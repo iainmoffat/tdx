@@ -14,11 +14,15 @@ import (
 func newArchiveCmd() *cobra.Command {
 	var profile string
 	cmd := &cobra.Command{
-		Use:   "archive <date>[/<name>]",
-		Short: "Hide a draft from default `list` output",
-		Args:  cobra.ExactArgs(1),
+		Use:   "archive [date[/name]]",
+		Short: "Hide a draft from default `list` output (defaults to the current week)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runArchive(cmd, profile, args[0], true)
+			ref := ""
+			if len(args) > 0 {
+				ref = args[0]
+			}
+			return runArchive(cmd, profile, ref, true)
 		},
 	}
 	cmd.Flags().StringVar(&profile, "profile", "", "profile name")
@@ -28,11 +32,15 @@ func newArchiveCmd() *cobra.Command {
 func newUnarchiveCmd() *cobra.Command {
 	var profile string
 	cmd := &cobra.Command{
-		Use:   "unarchive <date>[/<name>]",
-		Short: "Show a previously archived draft in default `list` output",
-		Args:  cobra.ExactArgs(1),
+		Use:   "unarchive [date[/name]]",
+		Short: "Show a previously archived draft in default `list` output (defaults to the current week)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runArchive(cmd, profile, args[0], false)
+			ref := ""
+			if len(args) > 0 {
+				ref = args[0]
+			}
+			return runArchive(cmd, profile, ref, false)
 		},
 	}
 	cmd.Flags().StringVar(&profile, "profile", "", "profile name")
@@ -40,7 +48,7 @@ func newUnarchiveCmd() *cobra.Command {
 }
 
 func runArchive(cmd *cobra.Command, profileFlag, ref string, archive bool) error {
-	weekStart, name, err := ParseDraftRef(ref)
+	weekStart, name, err := ResolveWeekRef(ref)
 	if err != nil {
 		return err
 	}

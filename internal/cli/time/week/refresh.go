@@ -23,8 +23,8 @@ type refreshFlags struct {
 func newRefreshCmd() *cobra.Command {
 	var f refreshFlags
 	cmd := &cobra.Command{
-		Use:   "refresh <date>[/<name>]",
-		Short: "Three-way merge a draft against the latest remote",
+		Use:   "refresh [date[/name]]",
+		Short: "Three-way merge a draft against the latest remote (defaults to the current week)",
 		Long: `Refresh re-fetches the live week and merges remote changes into the local draft.
 
   --strategy abort    (default) refuse to mutate if any cell-level conflict
@@ -35,9 +35,13 @@ On --strategy abort with conflicts, refresh exits non-zero and prints the
 list of conflicts. The local draft is unchanged. Re-run with --strategy ours
 or --strategy theirs to proceed, or 'tdx time week reset --yes' to discard
 local edits and re-pull.`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runRefresh(cmd, f, args[0])
+			ref := ""
+			if len(args) > 0 {
+				ref = args[0]
+			}
+			return runRefresh(cmd, f, ref)
 		},
 	}
 	cmd.Flags().StringVar(&f.profile, "profile", "", "profile name")
@@ -47,7 +51,7 @@ local edits and re-pull.`,
 }
 
 func runRefresh(cmd *cobra.Command, f refreshFlags, ref string) error {
-	weekStart, name, err := ParseDraftRef(ref)
+	weekStart, name, err := ResolveWeekRef(ref)
 	if err != nil {
 		return err
 	}

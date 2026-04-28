@@ -20,14 +20,18 @@ type pruneFlags struct {
 func newPruneCmd() *cobra.Command {
 	var f pruneFlags
 	cmd := &cobra.Command{
-		Use:   "prune <date>[/<name>]",
-		Short: "Drop unpinned snapshots older than --older-than (default: prune to retention cap)",
-		Args:  cobra.ExactArgs(1),
+		Use:   "prune [date[/name]]",
+		Short: "Drop unpinned snapshots older than --older-than, default prunes to retention cap (defaults to the current week)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !f.yes {
 				return fmt.Errorf("pass --yes to actually delete snapshots")
 			}
-			weekStart, name, err := ParseDraftRef(args[0])
+			ref := ""
+			if len(args) > 0 {
+				ref = args[0]
+			}
+			weekStart, name, err := ResolveWeekRef(ref)
 			if err != nil {
 				return err
 			}

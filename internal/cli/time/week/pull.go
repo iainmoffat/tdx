@@ -31,11 +31,15 @@ type weekDraftPullResult struct {
 func newPullCmd() *cobra.Command {
 	var f pullFlags
 	cmd := &cobra.Command{
-		Use:   "pull <date>",
-		Short: "Pull a live week into a local draft",
-		Args:  cobra.ExactArgs(1),
+		Use:   "pull [date]",
+		Short: "Pull a live week into a local draft (defaults to the current week)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPull(cmd, f, args[0])
+			ref := ""
+			if len(args) > 0 {
+				ref = args[0]
+			}
+			return runPull(cmd, f, ref)
 		},
 	}
 	cmd.Flags().StringVar(&f.profile, "profile", "", "profile name (defaults to active profile)")
@@ -46,7 +50,7 @@ func newPullCmd() *cobra.Command {
 }
 
 func runPull(cmd *cobra.Command, f pullFlags, ref string) error {
-	weekStart, name, err := ParseDraftRef(ref)
+	weekStart, name, err := ResolveWeekRef(ref)
 	if err != nil {
 		return err
 	}

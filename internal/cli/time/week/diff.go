@@ -45,11 +45,15 @@ type weekDraftDiffResp struct {
 func newDiffCmd() *cobra.Command {
 	var f diffFlags
 	cmd := &cobra.Command{
-		Use:   "diff <date>[/<name>]",
-		Short: "Diff a draft against current remote",
-		Args:  cobra.ExactArgs(1),
+		Use:   "diff [date[/name]]",
+		Short: "Diff a draft against current remote (defaults to the current week)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runDiff(cmd, f, args[0])
+			ref := ""
+			if len(args) > 0 {
+				ref = args[0]
+			}
+			return runDiff(cmd, f, ref)
 		},
 	}
 	cmd.Flags().StringVar(&f.profile, "profile", "", "profile name")
@@ -63,7 +67,7 @@ func runDiff(cmd *cobra.Command, f diffFlags, ref string) error {
 		return fmt.Errorf("--against %q not supported in Phase A (only \"remote\"; Phase D adds template/snapshot/draft)", f.against)
 	}
 
-	weekStart, name, err := ParseDraftRef(ref)
+	weekStart, name, err := ResolveWeekRef(ref)
 	if err != nil {
 		return err
 	}

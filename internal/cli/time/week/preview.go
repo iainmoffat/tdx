@@ -34,11 +34,15 @@ type weekDraftPreviewResp struct {
 func newPreviewCmd() *cobra.Command {
 	var f previewFlags
 	cmd := &cobra.Command{
-		Use:   "preview <date>[/<name>]",
-		Short: "Preview what tdx time week push will do",
-		Args:  cobra.ExactArgs(1),
+		Use:   "preview [date[/name]]",
+		Short: "Preview what tdx time week push will do (defaults to the current week)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPreview(cmd, f, args[0])
+			ref := ""
+			if len(args) > 0 {
+				ref = args[0]
+			}
+			return runPreview(cmd, f, ref)
 		},
 	}
 	cmd.Flags().StringVar(&f.profile, "profile", "", "profile name")
@@ -47,7 +51,7 @@ func newPreviewCmd() *cobra.Command {
 }
 
 func runPreview(cmd *cobra.Command, f previewFlags, ref string) error {
-	weekStart, name, err := ParseDraftRef(ref)
+	weekStart, name, err := ResolveWeekRef(ref)
 	if err != nil {
 		return err
 	}

@@ -28,11 +28,15 @@ type weekDraftSnapshotResp struct {
 func newSnapshotCmd() *cobra.Command {
 	var f snapshotFlags
 	cmd := &cobra.Command{
-		Use:   "snapshot <date>[/<name>]",
-		Short: "Take a manual snapshot of a draft",
-		Args:  cobra.ExactArgs(1),
+		Use:   "snapshot [date[/name]]",
+		Short: "Take a manual snapshot of a draft (defaults to the current week)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runSnapshot(cmd, f, args[0])
+			ref := ""
+			if len(args) > 0 {
+				ref = args[0]
+			}
+			return runSnapshot(cmd, f, ref)
 		},
 	}
 	cmd.Flags().StringVar(&f.profile, "profile", "", "profile name")
@@ -43,7 +47,7 @@ func newSnapshotCmd() *cobra.Command {
 }
 
 func runSnapshot(cmd *cobra.Command, f snapshotFlags, ref string) error {
-	weekStart, name, err := ParseDraftRef(ref)
+	weekStart, name, err := ResolveWeekRef(ref)
 	if err != nil {
 		return err
 	}
