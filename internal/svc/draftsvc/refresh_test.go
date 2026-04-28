@@ -287,7 +287,7 @@ func TestClassifyRow_MixedOutcomesPerRow(t *testing.T) {
 
 	merged, counts, conflicts := classifyRow("row-01", &pulled, &row, &remote, StrategyAbort)
 	require.Empty(t, conflicts)
-	require.Equal(t, 1, counts.adopted, "Tue should be adopted from remote")
+	require.Equal(t, 2, counts.adopted, "Tue (remote change taken) + Wed (remote-only add) both adopted")
 	require.Equal(t, 1, counts.preserved, "Mon should be preserved (local edit)")
 	require.Equal(t, 0, counts.resolved)
 	// Untouched cells aren't counted in the result struct, but they still

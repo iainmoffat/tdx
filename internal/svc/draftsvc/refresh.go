@@ -245,11 +245,7 @@ func classifyRow(rowID string, pulled, local, remote *domain.DraftRow, strategy 
 		case outcomeUntouched:
 			// no counter; still part of merged
 		case outcomeAdopted:
-			// Only count as adopted if cell existed in pulled (change adoption,
-			// not fresh additions from remote).
-			if cellPresent(p) {
-				counts.adopted++
-			}
+			counts.adopted++
 		case outcomePreserved:
 			counts.preserved++
 		case outcomeResolved:
