@@ -123,3 +123,52 @@ func TestClassifyCell_HappyPaths(t *testing.T) {
 	}
 	runClassifyCellTCs(t, tcs)
 }
+
+func TestClassifyCell_AbortConflicts(t *testing.T) {
+	pulled := cell(4, 100)
+	localEdit := cell(6, 100)
+	remoteEdit := cell(8, 100)
+	cleared := cell(0, 100) // hours=0 but sourceEntryID kept = "delete on push"
+	addLocal := cell(3, 0)
+	addRemoteSame := cell(3, 555) // remote added same target/day independently
+	addRemoteDifferent := cell(5, 555)
+
+	tcs := []classifyCellTC{
+		{
+			name:         "both changed, different values -> conflict",
+			pulled:       &pulled, local: &localEdit, remote: &remoteEdit,
+			strategy:     StrategyAbort,
+			wantOutcome:  outcomeNone, // abort reports conflict, no merged cell
+			wantConflict: true,
+		},
+		{
+			name:         "local edited, remote deleted -> conflict",
+			pulled:       &pulled, local: &localEdit, remote: nil,
+			strategy:     StrategyAbort,
+			wantOutcome:  outcomeNone,
+			wantConflict: true,
+		},
+		{
+			name:         "local cleared, remote modified -> conflict",
+			pulled:       &pulled, local: &cleared, remote: &remoteEdit,
+			strategy:     StrategyAbort,
+			wantOutcome:  outcomeNone,
+			wantConflict: true,
+		},
+		{
+			name:         "both added different rows-on-same-key -> conflict",
+			pulled:       nil, local: &addLocal, remote: &addRemoteDifferent,
+			strategy:     StrategyAbort,
+			wantOutcome:  outcomeNone,
+			wantConflict: true,
+		},
+		{
+			name:          "both added same hours -> resolved (converged add)",
+			pulled:        nil, local: &addLocal, remote: &addRemoteSame,
+			strategy:      StrategyAbort,
+			wantOutcome:   outcomeResolved,
+			wantMergeCell: &addRemoteSame, // adopt remote's sourceEntryID
+		},
+	}
+	runClassifyCellTCs(t, tcs)
+}

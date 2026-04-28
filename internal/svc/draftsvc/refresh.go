@@ -99,9 +99,11 @@ func classifyCell(pulled, local, remote *domain.DraftCell, strategy Strategy) ce
 	pulledExists := cellPresent(pulled)
 	localExists := cellPresent(local)
 	remoteExists := cellPresent(remote)
+	pulledExistedRaw := pulled != nil && pulled.SourceEntryID != 0
+	localCleared := pulledExistedRaw && local != nil && local.Hours == 0 && local.SourceEntryID != 0
 
 	switch {
-	// Cell exists in all three views.
+	// All three present.
 	case pulledExists && localExists && remoteExists:
 		localUnchanged := cellEqual(*pulled, *local)
 		remoteUnchanged := cellEqual(*pulled, *remote)
@@ -117,28 +119,71 @@ func classifyCell(pulled, local, remote *domain.DraftCell, strategy Strategy) ce
 			merged := *local
 			return cellClassification{outcome: outcomePreserved, merged: &merged}
 		}
-		// Both sides changed.
 		if cellEqual(*local, *remote) {
 			merged := *local
 			return cellClassification{outcome: outcomeResolved, merged: &merged}
 		}
-		// True conflict; later task fills in this branch.
+		return makeConflict(local, remote)
 
-	// Brand-new on remote only.
+	// Local cleared (delete-on-push), remote modified.
+	case localCleared && remoteExists && !cellEqual(*pulled, *remote):
+		return makeConflict(local, remote)
+
+	// Local edited (still has hours), remote deleted.
+	case pulledExistedRaw && localExists && local.Hours > 0 && !remoteExists:
+		if cellEqual(*pulled, *local) {
+			// Local unchanged, remote deleted -> stale source. Task 5 handles this branch.
+			return cellClassification{outcome: outcomeNone}
+		}
+		return makeConflict(local, remote)
+
+	// Both sides added independently (no pulled cell).
+	case !pulledExists && localExists && remoteExists:
+		if local.Hours == remote.Hours {
+			merged := *remote // adopt remote: it has the real sourceEntryID
+			return cellClassification{outcome: outcomeResolved, merged: &merged}
+		}
+		return makeConflict(local, remote)
+
+	// Cell exists only on remote (Task 2 already covers this).
 	case !pulledExists && !localExists && remoteExists:
 		merged := *remote
 		return cellClassification{outcome: outcomeAdopted, merged: &merged}
 
-	// Brand-new on local only.
+	// Cell exists only on local (Task 2 already covers this).
 	case !pulledExists && localExists && !remoteExists:
 		merged := *local
 		return cellClassification{outcome: outcomePreserved, merged: &merged}
 
-	// Absent everywhere (defensive — caller shouldn't pass this key).
 	case !pulledExists && !localExists && !remoteExists:
 		return cellClassification{outcome: outcomeDropped}
 	}
 
-	// Conflict + edge-case branches handled in later tasks.
 	return cellClassification{outcome: outcomeNone}
+}
+
+// makeConflict builds an abort-strategy conflict result from local + remote
+// cell pointers. Description summaries are produced by describeIntent.
+func makeConflict(local, remote *domain.DraftCell) cellClassification {
+	return cellClassification{
+		outcome: outcomeNone,
+		conflict: &MergeConflict{
+			LocalDescription:  describeIntent(local),
+			RemoteDescription: describeIntent(remote),
+			// RowID and Day are filled in by classify() (the per-row caller).
+		},
+	}
+}
+
+// describeIntent renders a one-line summary of a cell's role in the merge.
+// nil = absent; hours==0 with sourceEntryID set = "cleared"; otherwise the
+// hours value.
+func describeIntent(c *domain.DraftCell) string {
+	if c == nil {
+		return "deleted on remote"
+	}
+	if c.Hours == 0 && c.SourceEntryID != 0 {
+		return "cleared (delete on push)"
+	}
+	return fmt.Sprintf("updated to %.1fh", c.Hours)
 }
