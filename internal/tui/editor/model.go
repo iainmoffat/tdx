@@ -1,7 +1,6 @@
 package editor
 
 import (
-	"sort"
 	"strconv"
 	"time"
 
@@ -20,10 +19,12 @@ func (c cursor) weekday() time.Weekday {
 	return time.Weekday(c.col)
 }
 
-// Model is the bubbletea model for the template editor.
+// Model is the bubbletea model for the grid editor. It operates on a Sheet,
+// which abstracts over Templates, WeekDrafts, and any other hours-per-day
+// data shape.
 type Model struct {
 	name     string
-	rows     []domain.TemplateRow
+	rows     []SheetRow
 	original []domain.WeekHours
 	cursor   cursor
 	typing   bool
@@ -36,46 +37,33 @@ type Model struct {
 	height   int
 }
 
-// New creates a new editor Model for the given template rows.
-// Rows are sorted into display order (grouped by GroupName, then by Label)
-// so that cursor navigation matches the visual layout.
-func New(name string, rows []domain.TemplateRow) Model {
-	// Sort into display order: grouped rows by GroupName then Label,
-	// ungrouped rows by Label. This matches the view's grouping logic.
-	sorted := make([]domain.TemplateRow, len(rows))
-	copy(sorted, rows)
-	sort.SliceStable(sorted, func(i, j int) bool {
-		gi, gj := sorted[i].Target.GroupName, sorted[j].Target.GroupName
-		if gi != gj {
-			return gi < gj
-		}
-		li, lj := rowSortLabel(sorted[i]), rowSortLabel(sorted[j])
-		return li < lj
-	})
-
-	orig := make([]domain.WeekHours, len(sorted))
-	for i, r := range sorted {
+// New creates a new editor Model from a Sheet. Rows are taken in the order
+// the caller provides — sorting (e.g. by group then label) is the
+// adapter's responsibility.
+func New(sheet Sheet) Model {
+	rows := make([]SheetRow, len(sheet.Rows))
+	copy(rows, sheet.Rows)
+	orig := make([]domain.WeekHours, len(rows))
+	for i, r := range rows {
 		orig[i] = r.Hours
 	}
 	return Model{
-		name:     name,
-		rows:     sorted,
+		name:     sheet.Name,
+		rows:     rows,
 		original: orig,
 	}
-}
-
-func rowSortLabel(r domain.TemplateRow) string {
-	if r.Label != "" {
-		return r.Label
-	}
-	return r.Target.DisplayRef
 }
 
 // Saved reports whether the user chose to save.
 func (m Model) Saved() bool { return m.saved }
 
-// Rows returns the (possibly edited) template rows.
-func (m Model) Rows() []domain.TemplateRow { return m.rows }
+// Sheet returns the (possibly edited) sheet. The Name and row identities
+// are unchanged; only Hours per row may have been modified.
+func (m Model) Sheet() Sheet {
+	rows := make([]SheetRow, len(m.rows))
+	copy(rows, m.rows)
+	return Sheet{Name: m.name, Rows: rows}
+}
 
 // Init implements tea.Model.
 func (m Model) Init() tea.Cmd { return nil }

@@ -85,7 +85,7 @@ artifact, validate, diff, preview, and push back with safety guarantees.
 | `tdx time week list` | List local drafts with sync state | `--dirty`, `--conflicted`, `--date`, `--archived`, `--no-remote-check`, `--json` |
 | `tdx time week show [date] --draft [name]` | Show a draft as a grid | (flag added to existing `show`) |
 | `tdx time week status [date[/name]]` | One-screen draft status | `--json`, `--no-remote-check` |
-| `tdx time week edit [date[/name]]` | Edit a draft as YAML in $EDITOR | (vi fallback) |
+| `tdx time week edit [date[/name]]` | Edit a draft in an interactive grid | `--web`, `--profile` |
 | `tdx time week diff [date[/name]]` | Diff a draft vs current remote | `--against remote`, `--json` |
 | `tdx time week preview [date[/name]]` | Preview what `push` will do | `--json` |
 | `tdx time week push [date[/name]] --yes` | Push a draft to TD | `--allow-deletes`, `--expected-diff-hash`, `--json` |

@@ -2,34 +2,38 @@ package week
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
+	"sort"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 
 	"github.com/iainmoffat/tdx/internal/config"
 	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/iainmoffat/tdx/internal/svc/authsvc"
 	"github.com/iainmoffat/tdx/internal/svc/draftsvc"
 	"github.com/iainmoffat/tdx/internal/svc/timesvc"
+	"github.com/iainmoffat/tdx/internal/tui/editor"
+	webeditor "github.com/iainmoffat/tdx/internal/web/editor"
 )
 
 type editFlags struct {
 	profile string
+	web     bool
 }
 
 func newEditCmd() *cobra.Command {
 	var f editFlags
 	cmd := &cobra.Command{
 		Use:   "edit [date[/name]]",
-		Short: "Edit a draft as YAML in $EDITOR (defaults to the current week)",
-		Long: `Open the draft's YAML file in $EDITOR (defaults to vi) for in-place editing.
+		Short: "Edit a draft in an interactive grid (defaults to the current week)",
+		Long: `Edit a draft's hours in an interactive grid (the same editor used by ` +
+			"`tdx time template edit`" + `).
 
-Phase A MVP uses YAML-text editing. A grid-aware TUI editor for drafts is
-planned for a later phase. Saved YAML is validated against the WeekDraft
-schema before being written back to disk; an invalid edit is rejected.`,
+Use --web to open the editor in your browser instead of the terminal.
+
+Only hours within existing rows can be edited. To add or remove rows, use
+` + "`tdx time week new --from-template`" + ` or ` + "`tdx time week set`" + `.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ref := ""
@@ -39,6 +43,7 @@ schema before being written back to disk; an invalid edit is rejected.`,
 			return runEdit(cmd, f, ref)
 		},
 	}
+	cmd.Flags().BoolVar(&f.web, "web", false, "open the editor in your browser")
 	cmd.Flags().StringVar(&f.profile, "profile", "", "profile name")
 	return cmd
 }
@@ -67,70 +72,137 @@ func runEdit(cmd *cobra.Command, f editFlags, ref string) error {
 		return err
 	}
 
-	initial, err := yaml.Marshal(d)
+	if f.web {
+		return runWebEditor(cmd, drafts, d)
+	}
+	return runTUIEditor(cmd, drafts, d)
+}
+
+func runTUIEditor(cmd *cobra.Command, drafts *draftsvc.Service, d domain.WeekDraft) error {
+	sheet := draftToSheet(d)
+	m := editor.New(sheet)
+	p := tea.NewProgram(m, tea.WithAltScreen())
+	result, err := p.Run()
 	if err != nil {
-		return fmt.Errorf("marshal draft: %w", err)
+		return fmt.Errorf("editor: %w", err)
 	}
 
-	edited, err := openYAMLEditor(string(initial))
-	if err != nil {
-		return err
+	final, _ := result.(editor.Model)
+	if !final.Saved() {
+		return nil
 	}
 
-	var updated domain.WeekDraft
-	if err := yaml.Unmarshal([]byte(edited), &updated); err != nil {
-		return fmt.Errorf("invalid YAML: %w", err)
-	}
-	if err := updated.Validate(); err != nil {
-		return fmt.Errorf("invalid draft: %w", err)
-	}
-	// Preserve identity fields against accidental edits.
-	if updated.Profile != d.Profile {
-		return fmt.Errorf("profile cannot be changed via edit (%q -> %q)", d.Profile, updated.Profile)
-	}
-	if !updated.WeekStart.Equal(d.WeekStart) {
-		return fmt.Errorf("weekStart cannot be changed via edit")
-	}
-	if updated.Name != d.Name {
-		return fmt.Errorf("name cannot be changed via edit (use copy/rename in a future phase)")
-	}
-	updated.ModifiedAt = time.Now().UTC()
-
-	if err := drafts.Store().Save(updated); err != nil {
+	applySheetToDraft(final.Sheet(), &d)
+	d.ModifiedAt = time.Now().UTC()
+	if err := drafts.Store().Save(d); err != nil {
 		return err
 	}
 	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Saved draft %s/%s.\n",
-		weekStart.Format("2006-01-02"), name)
+		d.WeekStart.Format("2006-01-02"), d.Name)
 	return nil
 }
 
-// openYAMLEditor writes initial to a temp file, invokes $EDITOR (vi fallback),
-// and returns the user-edited contents.
-func openYAMLEditor(initial string) (string, error) {
-	editor := os.Getenv("EDITOR")
-	if editor == "" {
-		editor = "vi"
+func runWebEditor(cmd *cobra.Command, drafts *draftsvc.Service, d domain.WeekDraft) error {
+	sheet := draftToSheet(d)
+	saveFn := func(s editor.Sheet) error {
+		applySheetToDraft(s, &d)
+		d.ModifiedAt = time.Now().UTC()
+		return drafts.Store().Save(d)
 	}
-	file, err := os.CreateTemp("", "tdx-week-*.yaml")
+	res, err := webeditor.Run(sheet, saveFn)
 	if err != nil {
-		return "", err
+		return fmt.Errorf("web editor: %w", err)
 	}
-	if _, err := file.WriteString(initial); err != nil {
-		_ = file.Close()
-		_ = os.Remove(file.Name())
-		return "", err
+	if res.Saved {
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Saved draft %s/%s.\n",
+			d.WeekStart.Format("2006-01-02"), d.Name)
 	}
-	_ = file.Close()
-	defer func() { _ = os.Remove(file.Name()) }()
+	return nil
+}
 
-	c := exec.Command(editor, file.Name())
-	c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
-	if err := c.Run(); err != nil {
-		return "", fmt.Errorf("editor %q: %w", editor, err)
+// draftToSheet builds a Sheet from a draft, with rows in display order
+// (group, then label) and dense WeekHours assembled from sparse cells.
+func draftToSheet(d domain.WeekDraft) editor.Sheet {
+	rows := make([]editor.SheetRow, 0, len(d.Rows))
+	for _, r := range d.Rows {
+		var h domain.WeekHours
+		for _, c := range r.Cells {
+			h.SetDay(c.Day, c.Hours)
+		}
+		rows = append(rows, editor.SheetRow{
+			ID:         r.ID,
+			Label:      r.Label,
+			GroupName:  r.Target.GroupName,
+			DisplayRef: r.Target.DisplayRef,
+			TypeName:   r.TimeType.Name,
+			Hours:      h,
+		})
 	}
-	data, err := os.ReadFile(file.Name())
-	if err != nil {
-		return "", err
+	sort.SliceStable(rows, func(i, j int) bool {
+		if rows[i].GroupName != rows[j].GroupName {
+			return rows[i].GroupName < rows[j].GroupName
+		}
+		li := rows[i].Label
+		if li == "" {
+			li = rows[i].DisplayRef
+		}
+		lj := rows[j].Label
+		if lj == "" {
+			lj = rows[j].DisplayRef
+		}
+		return li < lj
+	})
+	return editor.Sheet{Name: d.Name, Rows: rows}
+}
+
+// applySheetToDraft writes hours from sheet rows back into draft cells,
+// preserving SourceEntryID and PerCell metadata. Per spec §8:
+//   - cell exists, hours unchanged → no-op
+//   - cell exists with SourceEntryID, hours=0 → set to 0 (delete-on-push)
+//   - cell exists without SourceEntryID, hours=0 → drop the cell
+//   - cell exists, hours>0 → update Hours (preserves PerCell)
+//   - cell absent, hours=0 → no-op
+//   - cell absent, hours>0 → add new {Day, Hours, SourceEntryID=0}
+//
+// Cells in each row are sorted by Day after the apply.
+func applySheetToDraft(sheet editor.Sheet, d *domain.WeekDraft) {
+	hoursByID := make(map[string]domain.WeekHours, len(sheet.Rows))
+	for _, r := range sheet.Rows {
+		hoursByID[r.ID] = r.Hours
 	}
-	return string(data), nil
+
+	for ri := range d.Rows {
+		row := &d.Rows[ri]
+		newHours, ok := hoursByID[row.ID]
+		if !ok {
+			continue
+		}
+
+		cellsByDay := make(map[time.Weekday]int, len(row.Cells))
+		for ci, c := range row.Cells {
+			cellsByDay[c.Day] = ci
+		}
+
+		var rebuilt []domain.DraftCell
+		for ci := 0; ci < 7; ci++ {
+			wd := time.Weekday(ci)
+			h := newHours.ForDay(wd)
+			idx, exists := cellsByDay[wd]
+			switch {
+			case exists:
+				cell := row.Cells[idx]
+				if h == 0 && cell.SourceEntryID == 0 {
+					continue // drop local-only cell
+				}
+				cell.Hours = h
+				rebuilt = append(rebuilt, cell)
+			case !exists && h > 0:
+				rebuilt = append(rebuilt, domain.DraftCell{Day: wd, Hours: h})
+			}
+		}
+		sort.SliceStable(rebuilt, func(i, j int) bool {
+			return rebuilt[i].Day < rebuilt[j].Day
+		})
+		row.Cells = rebuilt
+	}
 }
