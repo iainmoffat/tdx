@@ -238,3 +238,24 @@ func TestClassifyCell_StrategyTheirsOnClearedVsModified(t *testing.T) {
 	require.NotNil(t, res.merged)
 	require.Equal(t, 8.0, res.merged.Hours, "theirs takes the remote modification")
 }
+
+func TestClassifyCell_StaleSource(t *testing.T) {
+	pulled := cell(4, 100)
+	local := cell(4, 100) // unchanged from pull
+	res := classifyCell(&pulled, &local, nil, StrategyAbort)
+	require.Equal(t, outcomeAdopted, res.outcome,
+		"local unchanged + remote deleted = adopt remote (clear sourceID, mark as added)")
+	require.NotNil(t, res.merged)
+	require.Equal(t, 4.0, res.merged.Hours, "hours preserved")
+	require.Equal(t, 0, res.merged.SourceEntryID, "sourceID cleared (re-add on next push)")
+}
+
+func TestClassifyCell_ClearedAndDeleted_DropsOut(t *testing.T) {
+	pulled := cell(4, 100)
+	cleared := cell(0, 100)
+	res := classifyCell(&pulled, &cleared, nil, StrategyAbort)
+	require.Equal(t, outcomeDropped, res.outcome,
+		"local intent (delete) and remote reality (already deleted) match -> drop")
+	require.Nil(t, res.merged)
+	require.Nil(t, res.conflict)
+}

@@ -129,12 +129,20 @@ func classifyCell(pulled, local, remote *domain.DraftCell, strategy Strategy) ce
 	case localCleared && remoteExists && !cellEqual(*pulled, *remote):
 		return makeConflict(local, remote, strategy)
 
-	// Local edited (still has hours), remote deleted.
-	case pulledExistedRaw && localExists && local.Hours > 0 && !remoteExists:
-		if cellEqual(*pulled, *local) {
-			// Local unchanged, remote deleted -> stale source. Task 5 handles this branch.
-			return cellClassification{outcome: outcomeNone}
-		}
+	// Local cleared, remote already deleted -> reality matches local intent.
+	case pulledExistedRaw && localCleared && !remoteExists:
+		return cellClassification{outcome: outcomeDropped}
+
+	// Pulled+local match (unchanged), remote deleted -> stale source.
+	// Clear sourceEntryID; cell becomes a fresh local addition that will
+	// re-Create on next push. Reconcile already does this; we mirror.
+	case pulledExistedRaw && localExists && !remoteExists && cellEqual(*pulled, *local):
+		merged := *local
+		merged.SourceEntryID = 0
+		return cellClassification{outcome: outcomeAdopted, merged: &merged}
+
+	// Local edited (hours changed), remote deleted -> conflict.
+	case pulledExistedRaw && localExists && !remoteExists && !cellEqual(*pulled, *local):
 		return makeConflict(local, remote, strategy)
 
 	// Both sides added independently (no pulled cell).
