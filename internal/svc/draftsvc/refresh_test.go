@@ -2,6 +2,7 @@ package draftsvc
 
 import (
 	"testing"
+	"time"
 
 	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
@@ -258,4 +259,66 @@ func TestClassifyCell_ClearedAndDeleted_DropsOut(t *testing.T) {
 		"local intent (delete) and remote reality (already deleted) match -> drop")
 	require.Nil(t, res.merged)
 	require.Nil(t, res.conflict)
+}
+
+func TestClassifyRow_MixedOutcomesPerRow(t *testing.T) {
+	row := domain.DraftRow{
+		ID: "row-01",
+		Cells: []domain.DraftCell{
+			{Day: time.Monday, Hours: 6, SourceEntryID: 100},  // edited locally
+			{Day: time.Tuesday, Hours: 4, SourceEntryID: 101}, // unchanged
+		},
+	}
+	pulled := domain.DraftRow{
+		ID: "row-01",
+		Cells: []domain.DraftCell{
+			{Day: time.Monday, Hours: 4, SourceEntryID: 100},
+			{Day: time.Tuesday, Hours: 4, SourceEntryID: 101},
+		},
+	}
+	remote := domain.DraftRow{
+		ID: "row-01",
+		Cells: []domain.DraftCell{
+			{Day: time.Monday, Hours: 4, SourceEntryID: 100},   // unchanged
+			{Day: time.Tuesday, Hours: 8, SourceEntryID: 101},  // edited remotely
+			{Day: time.Wednesday, Hours: 3, SourceEntryID: 102}, // added remotely
+		},
+	}
+
+	merged, counts, conflicts := classifyRow("row-01", &pulled, &row, &remote, StrategyAbort)
+	require.Empty(t, conflicts)
+	require.Equal(t, 1, counts.adopted, "Tue should be adopted from remote")
+	require.Equal(t, 1, counts.preserved, "Mon should be preserved (local edit)")
+	require.Equal(t, 0, counts.resolved)
+	// Untouched cells aren't counted in the result struct, but they still
+	// flow through merged.
+	require.Len(t, merged, 3, "Mon (kept) + Tue (adopted) + Wed (added remote)")
+}
+
+func TestClassifyRow_ConflictCarriesRowAndDay(t *testing.T) {
+	row := domain.DraftRow{
+		ID: "row-01",
+		Cells: []domain.DraftCell{
+			{Day: time.Monday, Hours: 6, SourceEntryID: 100},
+		},
+	}
+	pulled := domain.DraftRow{
+		ID: "row-01",
+		Cells: []domain.DraftCell{
+			{Day: time.Monday, Hours: 4, SourceEntryID: 100},
+		},
+	}
+	remote := domain.DraftRow{
+		ID: "row-01",
+		Cells: []domain.DraftCell{
+			{Day: time.Monday, Hours: 8, SourceEntryID: 100},
+		},
+	}
+
+	_, _, conflicts := classifyRow("row-01", &pulled, &row, &remote, StrategyAbort)
+	require.Len(t, conflicts, 1)
+	require.Equal(t, "row-01", conflicts[0].RowID)
+	require.Equal(t, "Monday", conflicts[0].Day)
+	require.Equal(t, "updated to 6.0h", conflicts[0].LocalDescription)
+	require.Equal(t, "updated to 8.0h", conflicts[0].RemoteDescription)
 }

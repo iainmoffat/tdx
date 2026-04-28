@@ -2,6 +2,8 @@ package draftsvc
 
 import (
 	"fmt"
+	"sort"
+	"time"
 
 	"github.com/iainmoffat/tdx/internal/domain"
 )
@@ -212,4 +214,98 @@ func describeIntent(c *domain.DraftCell) string {
 		return "cleared (delete on push)"
 	}
 	return fmt.Sprintf("updated to %.1fh", c.Hours)
+}
+
+// rowCounts accumulates outcome counts for one classifyRow call.
+type rowCounts struct {
+	adopted, preserved, resolved, resolvedByStrategy int
+}
+
+// classifyRow drives classifyCell across the union of weekday keys present
+// in any of the three views for one rowID. Returns the merged cell slice
+// (sorted by weekday), per-row counts, and any conflicts (with RowID and
+// Day populated).
+func classifyRow(rowID string, pulled, local, remote *domain.DraftRow, strategy Strategy) ([]domain.DraftCell, rowCounts, []MergeConflict) {
+	pulledByDay := cellsByDay(pulled)
+	localByDay := cellsByDay(local)
+	remoteByDay := cellsByDay(remote)
+
+	days := unionDays(pulledByDay, localByDay, remoteByDay)
+
+	var merged []domain.DraftCell
+	var counts rowCounts
+	var conflicts []MergeConflict
+
+	for _, day := range days {
+		p := dayPtr(pulledByDay, day)
+		l := dayPtr(localByDay, day)
+		r := dayPtr(remoteByDay, day)
+		res := classifyCell(p, l, r, strategy)
+		switch res.outcome {
+		case outcomeUntouched:
+			// no counter; still part of merged
+		case outcomeAdopted:
+			// Only count as adopted if cell existed in pulled (change adoption,
+			// not fresh additions from remote).
+			if cellPresent(p) {
+				counts.adopted++
+			}
+		case outcomePreserved:
+			counts.preserved++
+		case outcomeResolved:
+			counts.resolved++
+		case outcomeResolvedByStrategy:
+			counts.resolvedByStrategy++
+		}
+		if res.conflict != nil {
+			c := *res.conflict
+			c.RowID = rowID
+			c.Day = day.String()
+			conflicts = append(conflicts, c)
+			continue
+		}
+		if res.merged != nil {
+			cell := *res.merged
+			cell.Day = day
+			merged = append(merged, cell)
+		}
+	}
+	return merged, counts, conflicts
+}
+
+func cellsByDay(r *domain.DraftRow) map[time.Weekday]domain.DraftCell {
+	out := map[time.Weekday]domain.DraftCell{}
+	if r == nil {
+		return out
+	}
+	for _, c := range r.Cells {
+		out[c.Day] = c
+	}
+	return out
+}
+
+func dayPtr(m map[time.Weekday]domain.DraftCell, day time.Weekday) *domain.DraftCell {
+	if c, ok := m[day]; ok {
+		return &c
+	}
+	return nil
+}
+
+func unionDays(a, b, c map[time.Weekday]domain.DraftCell) []time.Weekday {
+	seen := map[time.Weekday]struct{}{}
+	for d := range a {
+		seen[d] = struct{}{}
+	}
+	for d := range b {
+		seen[d] = struct{}{}
+	}
+	for d := range c {
+		seen[d] = struct{}{}
+	}
+	out := make([]time.Weekday, 0, len(seen))
+	for d := range seen {
+		out = append(out, d)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
+	return out
 }
