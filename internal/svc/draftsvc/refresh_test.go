@@ -1,9 +1,11 @@
 package draftsvc
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/iainmoffat/tdx/internal/config"
 	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
 )
@@ -411,4 +413,66 @@ func TestClassify_StrategyOursCollapsesConflict(t *testing.T) {
 	require.Equal(t, 1, res.counts.resolvedByStrategy)
 	require.Len(t, res.rows, 1)
 	require.Equal(t, 6.0, res.rows[0].Cells[0].Hours, "ours kept local 6.0h")
+}
+
+func TestService_Refresh_AbortPath_NoMutation(t *testing.T) {
+	tmp := t.TempDir()
+	paths := config.Paths{Root: tmp}
+	mock := &mockTimeWriter{
+		weekRpt: domain.WeekReport{
+			WeekRef: domain.WeekRef{StartDate: weekStartTuesday0501()},
+			Entries: []domain.TimeEntry{
+				{
+					ID: 900, Date: time.Date(2026, 5, 4, 0, 0, 0, 0, domain.EasternTZ),
+					Minutes: 480, // 8h on remote
+					Target:  domain.Target{Kind: domain.TargetTicket, ItemID: 555},
+					TimeType: domain.TimeType{ID: 17},
+				},
+			},
+		},
+	}
+	svc := newServiceWithTimeWriter(paths, mock)
+
+	// Set up: pull (4h), then locally edit to 6h.
+	weekStart := weekStartTuesday0501()
+	pulledReport := domain.WeekReport{
+		WeekRef: domain.WeekRef{StartDate: weekStart},
+		Entries: []domain.TimeEntry{
+			{
+				ID: 900, Date: time.Date(2026, 5, 4, 0, 0, 0, 0, domain.EasternTZ),
+				Minutes: 240, // 4h originally pulled
+				Target:  domain.Target{Kind: domain.TargetTicket, ItemID: 555},
+				TimeType: domain.TimeType{ID: 17},
+			},
+		},
+	}
+	mock.weekRpt = pulledReport
+	_, err := svc.Pull(context.Background(), "p", weekStart, "default", false)
+	require.NoError(t, err)
+
+	// Edit local to 6h.
+	d, err := svc.Store().Load("p", weekStart, "default")
+	require.NoError(t, err)
+	d.Rows[0].Cells[0].Hours = 6
+	require.NoError(t, svc.Store().Save(d))
+
+	// Now remote bumps to 8h; refresh under abort.
+	mock.weekRpt.Entries[0].Minutes = 480
+
+	res, err := svc.Refresh(context.Background(), "p", weekStart, "default", StrategyAbort)
+	require.NoError(t, err)
+	require.True(t, res.Aborted)
+	require.Len(t, res.Conflicts, 1)
+	require.Equal(t, StrategyAbort, res.Strategy)
+
+	// Disk verification: local draft still has 6h.
+	post, err := svc.Store().Load("p", weekStart, "default")
+	require.NoError(t, err)
+	require.Equal(t, 6.0, post.Rows[0].Cells[0].Hours, "abort must not mutate disk")
+}
+
+// weekStartTuesday0501 returns the Sunday containing 2026-05-04 (a Tuesday)
+// in EasternTZ — i.e. 2026-05-03.
+func weekStartTuesday0501() time.Time {
+	return time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
 }

@@ -1,6 +1,7 @@
 package draftsvc
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"time"
@@ -404,4 +405,53 @@ func pickRowIdentity(local, pulled, remote *domain.DraftRow) (string, domain.Dra
 		return remote.ID, *remote
 	}
 	return "", domain.DraftRow{}
+}
+
+// Refresh fetches the current remote week, performs a three-way merge against
+// the at-pull-time watermark and the current local draft, and either updates
+// the draft (success / ours / theirs) or aborts (StrategyAbort with conflicts).
+//
+// On StrategyAbort with conflicts, no disk mutation occurs and the returned
+// RefreshResult has Aborted=true.
+func (s *Service) Refresh(ctx context.Context, profile string, weekStart time.Time, name string, strategy Strategy) (RefreshResult, error) {
+	if name == "" {
+		name = "default"
+	}
+	if err := strategy.Validate(); err != nil {
+		return RefreshResult{}, err
+	}
+
+	draft, err := s.store.Load(profile, weekStart, name)
+	if err != nil {
+		return RefreshResult{}, err
+	}
+	pulled, err := s.store.LoadPulledSnapshot(profile, weekStart, name)
+	if err != nil {
+		return RefreshResult{}, fmt.Errorf("refresh: load pull watermark: %w (try `tdx time week pull --force` first)", err)
+	}
+
+	report, err := s.tsvc.GetWeekReport(ctx, profile, weekStart)
+	if err != nil {
+		return RefreshResult{}, fmt.Errorf("refresh: fetch remote: %w", err)
+	}
+	remoteDraft := buildDraftFromReport(profile, name, report)
+
+	res := classify(pulled, draft, remoteDraft, strategy)
+
+	if res.aborted {
+		return RefreshResult{
+			Strategy:  strategy,
+			Aborted:   true,
+			Conflicts: res.conflicts,
+		}, nil
+	}
+
+	// Success branches added in Task 9.
+	return RefreshResult{
+		Strategy:           strategy,
+		Adopted:            res.counts.adopted,
+		Preserved:          res.counts.preserved,
+		Resolved:           res.counts.resolved,
+		ResolvedByStrategy: res.counts.resolvedByStrategy,
+	}, nil
 }
