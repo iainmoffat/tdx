@@ -2,6 +2,7 @@ package template
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -55,7 +56,8 @@ func newEditCmd() *cobra.Command {
 }
 
 func runTUIEditor(cmd *cobra.Command, profile string, tmpl domain.Template, store *tmplsvc.Store) error {
-	m := editor.New(tmpl.Name, tmpl.Rows)
+	sheet := templateToSheet(tmpl)
+	m := editor.New(sheet)
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	result, err := p.Run()
 	if err != nil {
@@ -67,7 +69,7 @@ func runTUIEditor(cmd *cobra.Command, profile string, tmpl domain.Template, stor
 		return nil
 	}
 
-	tmpl.Rows = final.Rows()
+	applySheetToTemplate(final.Sheet(), &tmpl)
 	tmpl.ModifiedAt = time.Now().UTC()
 	if err := store.Save(profile, tmpl); err != nil {
 		return fmt.Errorf("save: %w", err)
@@ -77,11 +79,15 @@ func runTUIEditor(cmd *cobra.Command, profile string, tmpl domain.Template, stor
 }
 
 func runWebEditor(cmd *cobra.Command, profile string, tmpl domain.Template, store *tmplsvc.Store) error {
-	saveFn := func(t domain.Template) error {
-		return store.Save(profile, t)
+	sheet := templateToSheet(tmpl)
+
+	saveFn := func(s editor.Sheet) error {
+		applySheetToTemplate(s, &tmpl)
+		tmpl.ModifiedAt = time.Now().UTC()
+		return store.Save(profile, tmpl)
 	}
 
-	res, err := webeditor.Run(tmpl, saveFn)
+	res, err := webeditor.Run(sheet, saveFn)
 	if err != nil {
 		return fmt.Errorf("web editor: %w", err)
 	}
@@ -90,4 +96,51 @@ func runWebEditor(cmd *cobra.Command, profile string, tmpl domain.Template, stor
 		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "saved template %q\n", tmpl.Name)
 	}
 	return nil
+}
+
+// templateToSheet builds a Sheet from a template, with rows sorted by
+// (GroupName, then Label or DisplayRef) for stable display order.
+func templateToSheet(t domain.Template) editor.Sheet {
+	rows := make([]editor.SheetRow, 0, len(t.Rows))
+	for _, r := range t.Rows {
+		rows = append(rows, editor.SheetRow{
+			ID:         r.ID,
+			Label:      r.Label,
+			GroupName:  r.Target.GroupName,
+			DisplayRef: r.Target.DisplayRef,
+			TypeName:   r.TimeType.Name,
+			Hours:      r.Hours,
+		})
+	}
+	sort.SliceStable(rows, func(i, j int) bool {
+		if rows[i].GroupName != rows[j].GroupName {
+			return rows[i].GroupName < rows[j].GroupName
+		}
+		li := rows[i].Label
+		if li == "" {
+			li = rows[i].DisplayRef
+		}
+		lj := rows[j].Label
+		if lj == "" {
+			lj = rows[j].DisplayRef
+		}
+		return li < lj
+	})
+	return editor.Sheet{Name: t.Name, Rows: rows}
+}
+
+// applySheetToTemplate copies hours from sheet rows back into t.Rows
+// (matched by row ID). Mutates t in place. Rows in t that aren't in the
+// sheet are untouched (defensive — shouldn't happen since the editor can't
+// drop rows).
+func applySheetToTemplate(sheet editor.Sheet, t *domain.Template) {
+	hoursByID := make(map[string]domain.WeekHours, len(sheet.Rows))
+	for _, r := range sheet.Rows {
+		hoursByID[r.ID] = r.Hours
+	}
+	for i := range t.Rows {
+		if h, ok := hoursByID[t.Rows[i].ID]; ok {
+			t.Rows[i].Hours = h
+		}
+	}
 }
