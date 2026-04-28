@@ -390,6 +390,22 @@ Recipe:
 	}, resetDraftHandler(svcs))
 
 	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name: "refresh_week_draft",
+		Description: `Refresh a draft against the current remote. Three-way merge between
+at-pull-time / current-local / current-remote.
+
+strategy: abort (default) - refuse to mutate if any cell-level conflict
+          ours              - on conflict, keep local
+          theirs            - on conflict, take remote
+
+On strategy=abort with conflicts, returns a successful tool result with
+aborted=true and a conflicts[] list. Agent can re-call with strategy=ours
+or strategy=theirs after surfacing the conflicts to the user.
+
+Requires confirm=true.`,
+	}, refreshDraftHandler(svcs))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
 		Name:        "archive_week_draft",
 		Description: "Hide a draft from default `list_week_drafts` output. Soft-archive via the `archived: true` flag — fully reversible via `unarchive_week_draft`. Requires confirm=true.",
 	}, archiveDraftHandler(svcs, true))
@@ -676,6 +692,14 @@ type resetDraftArgs struct {
 	Confirm   bool   `json:"confirm"`
 }
 
+type refreshDraftArgs struct {
+	Profile   string `json:"profile,omitempty"`
+	WeekStart string `json:"weekStart"`
+	Name      string `json:"name,omitempty"`
+	Strategy  string `json:"strategy,omitempty" jsonschema:"abort | ours | theirs (default abort)"`
+	Confirm   bool   `json:"confirm"`
+}
+
 type archiveDraftArgs struct {
 	Profile   string `json:"profile,omitempty"`
 	WeekStart string `json:"weekStart"`
@@ -807,6 +831,66 @@ func archiveDraftHandler(svcs Services, archive bool) func(context.Context, *sdk
 			WeekStart: weekStart.Format("2006-01-02"),
 			Name:      name,
 			Archived:  archive,
+		})
+	}
+}
+
+func refreshDraftHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, refreshDraftArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args refreshDraftArgs) (*sdkmcp.CallToolResult, any, error) {
+		if r, ok := confirmGate(args.Confirm, "Set confirm=true to refresh the draft."); !ok {
+			return r, nil, nil
+		}
+		strategy := draftsvc.Strategy(args.Strategy)
+		if strategy == "" {
+			strategy = draftsvc.StrategyAbort
+		}
+		if err := strategy.Validate(); err != nil {
+			return errorResult(err.Error()), nil, nil
+		}
+		profile := resolveProfile(svcs, args.Profile)
+		weekStart, err := parseWeekStart(args.WeekStart)
+		if err != nil {
+			return errorResult(fmt.Sprintf("invalid weekStart: %v", err)), nil, nil
+		}
+		name := args.Name
+		if name == "" {
+			name = "default"
+		}
+		res, err := svcs.Drafts.Refresh(ctx, profile, weekStart, name, strategy)
+		if err != nil {
+			return errorResult(fmt.Sprintf("refresh: %v", err)), nil, nil
+		}
+		type conflictJSON struct {
+			Row    string `json:"row"`
+			Day    string `json:"day"`
+			Local  string `json:"local"`
+			Remote string `json:"remote"`
+		}
+		conflicts := make([]conflictJSON, 0, len(res.Conflicts))
+		for _, c := range res.Conflicts {
+			conflicts = append(conflicts, conflictJSON{
+				Row: c.RowID, Day: c.Day,
+				Local: c.LocalDescription, Remote: c.RemoteDescription,
+			})
+		}
+		return jsonResult(struct {
+			Schema             string         `json:"schema"`
+			Strategy           string         `json:"strategy"`
+			Aborted            bool           `json:"aborted"`
+			Adopted            int            `json:"adopted"`
+			Preserved          int            `json:"preserved"`
+			Resolved           int            `json:"resolved"`
+			ResolvedByStrategy int            `json:"resolvedByStrategy"`
+			Conflicts          []conflictJSON `json:"conflicts"`
+		}{
+			Schema:             "tdx.v1.weekDraftRefreshResult",
+			Strategy:           string(res.Strategy),
+			Aborted:            res.Aborted,
+			Adopted:            res.Adopted,
+			Preserved:          res.Preserved,
+			Resolved:           res.Resolved,
+			ResolvedByStrategy: res.ResolvedByStrategy,
+			Conflicts:          conflicts,
 		})
 	}
 }
