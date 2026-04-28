@@ -1,6 +1,7 @@
 package week
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"time"
@@ -120,11 +121,40 @@ func writeRefreshAbortText(w io.Writer, weekStart time.Time, res draftsvc.Refres
 		weekStart.Format("2006-01-02"))
 }
 
-func writeRefreshJSON(w io.Writer, weekStart time.Time, name string, res draftsvc.RefreshResult) error {
-	// Implemented in Task 13.
-	_ = weekStart
-	_ = name
-	_ = res
-	_, _ = io.WriteString(w, "{}\n")
-	return nil
+func writeRefreshJSON(w io.Writer, _ time.Time, _ string, res draftsvc.RefreshResult) error {
+	type conflictJSON struct {
+		Row    string `json:"row"`
+		Day    string `json:"day"`
+		Local  string `json:"local"`
+		Remote string `json:"remote"`
+	}
+	conflicts := make([]conflictJSON, 0, len(res.Conflicts))
+	for _, c := range res.Conflicts {
+		conflicts = append(conflicts, conflictJSON{
+			Row: c.RowID, Day: c.Day,
+			Local: c.LocalDescription, Remote: c.RemoteDescription,
+		})
+	}
+	envelope := struct {
+		Schema             string         `json:"schema"`
+		Strategy           string         `json:"strategy"`
+		Aborted            bool           `json:"aborted"`
+		Adopted            int            `json:"adopted"`
+		Preserved          int            `json:"preserved"`
+		Resolved           int            `json:"resolved"`
+		ResolvedByStrategy int            `json:"resolvedByStrategy"`
+		Conflicts          []conflictJSON `json:"conflicts"`
+	}{
+		Schema:             "tdx.v1.weekDraftRefreshResult",
+		Strategy:           string(res.Strategy),
+		Aborted:            res.Aborted,
+		Adopted:            res.Adopted,
+		Preserved:          res.Preserved,
+		Resolved:           res.Resolved,
+		ResolvedByStrategy: res.ResolvedByStrategy,
+		Conflicts:          conflicts,
+	}
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	return enc.Encode(envelope)
 }
