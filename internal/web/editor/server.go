@@ -10,15 +10,15 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/tui/editor"
 )
 
-// SaveFn is a callback to persist the edited template.
-type SaveFn func(domain.Template) error
+// SaveFn is a callback to persist the edited sheet.
+type SaveFn func(editor.Sheet) error
 
 // server holds the state for a single edit session.
 type server struct {
-	tmpl     domain.Template
+	sheet    editor.Sheet
 	save     SaveFn
 	shutdown chan result
 }
@@ -33,9 +33,9 @@ type Result struct {
 	Saved bool
 }
 
-func newServer(tmpl domain.Template, save SaveFn) *server {
+func newServer(sheet editor.Sheet, save SaveFn) *server {
 	return &server{
-		tmpl:     tmpl,
+		sheet:    sheet,
 		save:     save,
 		shutdown: make(chan result, 1),
 	}
@@ -44,24 +44,24 @@ func newServer(tmpl domain.Template, save SaveFn) *server {
 func (s *server) handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.handleIndex)
-	mux.HandleFunc("/api/template", s.handleGetTemplate)
+	mux.HandleFunc("/api/template", s.handleGetSheet)
 	mux.HandleFunc("/api/save", s.handleSave)
 	mux.HandleFunc("/api/cancel", s.handleCancel)
 	return mux
 }
 
 func (s *server) toResponse() templateResponse {
-	resp := templateResponse{Name: s.tmpl.Name}
-	for _, r := range s.tmpl.Rows {
+	resp := templateResponse{Name: s.sheet.Name}
+	for _, r := range s.sheet.Rows {
 		label := r.Label
 		if label == "" {
-			label = r.Target.DisplayRef
+			label = r.DisplayRef
 		}
 		resp.Rows = append(resp.Rows, templateRowJSON{
 			ID:       r.ID,
 			Label:    label,
-			Group:    r.Target.GroupName,
-			TypeName: r.TimeType.Name,
+			Group:    r.GroupName,
+			TypeName: r.TypeName,
 			Hours: hoursJSON{
 				Sun: r.Hours.Sun, Mon: r.Hours.Mon, Tue: r.Hours.Tue,
 				Wed: r.Hours.Wed, Thu: r.Hours.Thu, Fri: r.Hours.Fri,
@@ -86,7 +86,7 @@ func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(html))
 }
 
-func (s *server) handleGetTemplate(w http.ResponseWriter, r *http.Request) {
+func (s *server) handleGetSheet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(s.toResponse())
 }
@@ -112,27 +112,25 @@ func (s *server) handleSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build lookup by row ID.
 	byID := make(map[string]hoursJSON, len(req.Rows))
 	for _, row := range req.Rows {
 		byID[row.ID] = row.Hours
 	}
 
-	// Apply edits to the template.
-	for i, row := range s.tmpl.Rows {
+	for i, row := range s.sheet.Rows {
 		if h, ok := byID[row.ID]; ok {
-			s.tmpl.Rows[i].Hours = domain.WeekHours{
-				Sun: h.Sun, Mon: h.Mon, Tue: h.Tue,
-				Wed: h.Wed, Thu: h.Thu, Fri: h.Fri,
-				Sat: h.Sat,
-			}
+			s.sheet.Rows[i].Hours.Sun = h.Sun
+			s.sheet.Rows[i].Hours.Mon = h.Mon
+			s.sheet.Rows[i].Hours.Tue = h.Tue
+			s.sheet.Rows[i].Hours.Wed = h.Wed
+			s.sheet.Rows[i].Hours.Thu = h.Thu
+			s.sheet.Rows[i].Hours.Fri = h.Fri
+			s.sheet.Rows[i].Hours.Sat = h.Sat
 		}
 	}
-	s.tmpl.ModifiedAt = time.Now().UTC()
 
-	// Save via callback.
 	if s.save != nil {
-		if err := s.save(s.tmpl); err != nil {
+		if err := s.save(s.sheet); err != nil {
 			http.Error(w, "save failed: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -158,9 +156,9 @@ func (s *server) handleCancel(w http.ResponseWriter, r *http.Request) {
 }
 
 // Run starts the HTTP server, opens the browser, and blocks until save
-// or cancel. Returns whether the template was saved.
-func Run(tmpl domain.Template, save SaveFn) (Result, error) {
-	srv := newServer(tmpl, save)
+// or cancel. Returns whether the sheet was saved.
+func Run(sheet editor.Sheet, save SaveFn) (Result, error) {
+	srv := newServer(sheet, save)
 
 	listener, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
@@ -173,15 +171,12 @@ func Run(tmpl domain.Template, save SaveFn) (Result, error) {
 	httpSrv := &http.Server{Handler: srv.handler()}
 	go func() { _ = httpSrv.Serve(listener) }()
 
-	// Open browser (best effort).
 	if err := openBrowser(url); err != nil {
 		_, _ = fmt.Printf("Could not open browser: %v\nOpen %s manually.\n", err, url)
 	}
 
-	// Wait for save or cancel.
 	res := <-srv.shutdown
 
-	// Graceful shutdown.
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	_ = httpSrv.Shutdown(ctx)
@@ -189,7 +184,6 @@ func Run(tmpl domain.Template, save SaveFn) (Result, error) {
 	return Result{Saved: res.saved}, res.err
 }
 
-// openBrowser opens the given URL in the default browser.
 func openBrowser(url string) error {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {

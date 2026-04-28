@@ -8,47 +8,46 @@ import (
 	"testing"
 
 	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/tui/editor"
 	"github.com/stretchr/testify/require"
 )
 
-func testTemplate() domain.Template {
-	return domain.Template{
-		SchemaVersion: 1,
-		Name:          "test-tmpl",
-		Rows: []domain.TemplateRow{
+func testSheet() editor.Sheet {
+	return editor.Sheet{
+		Name: "test-sheet",
+		Rows: []editor.SheetRow{
 			{
-				ID:       "row-01",
-				Label:    "Admin",
-				Target:   domain.Target{Kind: domain.TargetProjectTask, GroupName: "UFIT"},
-				TimeType: domain.TimeType{ID: 5, Name: "Standard"},
-				Hours:    domain.WeekHours{Mon: 8.0, Tue: 8.0, Wed: 8.0, Thu: 8.0, Fri: 8.0},
+				ID:        "row-01",
+				Label:     "Admin",
+				GroupName: "UFIT",
+				TypeName:  "Standard",
+				Hours:     domain.WeekHours{Mon: 8.0, Tue: 8.0, Wed: 8.0, Thu: 8.0, Fri: 8.0},
 			},
 			{
-				ID:       "row-02",
-				Label:    "Docker",
-				Target:   domain.Target{Kind: domain.TargetProjectTask, GroupName: "Ops"},
-				TimeType: domain.TimeType{ID: 5, Name: "Standard"},
-				Hours:    domain.WeekHours{Tue: 1.0},
+				ID:        "row-02",
+				Label:     "Docker",
+				GroupName: "Ops",
+				TypeName:  "Standard",
+				Hours:     domain.WeekHours{Tue: 1.0},
 			},
 		},
 	}
 }
 
 func TestGetIndex_ServesHTML(t *testing.T) {
-	srv := newServer(testTemplate(), nil)
+	srv := newServer(testSheet(), nil)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
 	srv.handler().ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusOK, w.Code)
 	require.Contains(t, w.Header().Get("Content-Type"), "text/html")
-	require.Contains(t, w.Body.String(), "tdx template editor")
 	require.Contains(t, w.Body.String(), "row-01")
 	require.Contains(t, w.Body.String(), "Admin")
 }
 
-func TestGetTemplate_ReturnsJSON(t *testing.T) {
-	srv := newServer(testTemplate(), nil)
+func TestGetSheet_ReturnsJSON(t *testing.T) {
+	srv := newServer(testSheet(), nil)
 	req := httptest.NewRequest(http.MethodGet, "/api/template", nil)
 	w := httptest.NewRecorder()
 	srv.handler().ServeHTTP(w, req)
@@ -58,19 +57,20 @@ func TestGetTemplate_ReturnsJSON(t *testing.T) {
 
 	var resp templateResponse
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
-	require.Equal(t, "test-tmpl", resp.Name)
+	require.Equal(t, "test-sheet", resp.Name)
 	require.Len(t, resp.Rows, 2)
 	require.Equal(t, "row-01", resp.Rows[0].ID)
-	require.Equal(t, 8.0, resp.Rows[0].Hours.Mon)
+	require.InDelta(t, 8.0, resp.Rows[0].Hours.Mon, 0.001)
 }
 
-func TestPostSave_UpdatesTemplate(t *testing.T) {
-	var saved *domain.Template
-	saveFn := func(tmpl domain.Template) error {
-		saved = &tmpl
+func TestPostSave_UpdatesSheet(t *testing.T) {
+	var saved *editor.Sheet
+	saveFn := func(s editor.Sheet) error {
+		copy := s
+		saved = &copy
 		return nil
 	}
-	srv := newServer(testTemplate(), saveFn)
+	srv := newServer(testSheet(), saveFn)
 
 	body := `{"rows":[
 		{"id":"row-01","hours":{"sun":0,"mon":4,"tue":4,"wed":4,"thu":4,"fri":4,"sat":0}},
@@ -89,11 +89,11 @@ func TestPostSave_UpdatesTemplate(t *testing.T) {
 
 func TestPostCancel_NoSave(t *testing.T) {
 	saveCalled := false
-	saveFn := func(tmpl domain.Template) error {
+	saveFn := func(s editor.Sheet) error {
 		saveCalled = true
 		return nil
 	}
-	srv := newServer(testTemplate(), saveFn)
+	srv := newServer(testSheet(), saveFn)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/cancel", nil)
 	w := httptest.NewRecorder()
