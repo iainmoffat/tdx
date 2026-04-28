@@ -549,11 +549,18 @@ ABSENT --pull--> EXISTS (clean) --edit--> EXISTS (dirty)
 
 ### Editing
 
-`tdx time week edit <date>` opens the draft YAML in `$EDITOR` (vi fallback).
-On save, the YAML is validated against the draft schema before being written
-back. Identity fields (profile, weekStart, name) are protected — changing
-them is rejected with a clear error. A future phase will add a grid-aware
-TUI editor for drafts.
+`tdx time week edit [date[/name]]` opens the draft in the same interactive
+grid editor used by `tdx time template edit`. Use `--web` to open the
+editor in your browser instead of the terminal. Date is optional; omit it
+to edit the current week's draft.
+
+The grid edits hours within existing rows. Identity fields (profile,
+weekStart, name) and per-cell metadata (SourceEntryID, PerCell) are
+preserved across edits — zeroing a pulled cell becomes a delete-on-push;
+zeroing a local-only addition drops the cell entirely.
+
+To add or remove rows, use `tdx time week new --from-template` or
+`tdx time week set`.
 
 For non-interactive cell writes, use `tdx time week set`:
 
@@ -582,7 +589,7 @@ Three layered guarantees:
 ```bash
 tdx time week pull 2026-04-27
 tdx time week edit 2026-04-27
-# fix Tuesday's hours in the YAML; clear Wednesday's bogus entry
+# fix Tuesday's hours in the grid; clear Wednesday's bogus entry (becomes a delete-on-push)
 tdx time week preview 2026-04-27
 tdx time week push 2026-04-27 --yes --allow-deletes
 ```
@@ -598,8 +605,8 @@ tdx time week diff 2026-04-27   # vs current remote
 
 **Partial-week push** (defer weekend cells):
 
-In your YAML, leave Sun/Sat cells unchanged or zeroed-but-unpulled; only
-edited cells generate actions on push.
+In the grid, leave Sun/Sat cells at their pulled value (or zero if they
+weren't pulled); only edited cells generate actions on push.
 
 ### Auto-snapshot history
 
