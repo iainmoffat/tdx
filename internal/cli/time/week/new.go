@@ -35,11 +35,15 @@ type weekDraftCreateResult struct {
 func newNewCmd() *cobra.Command {
 	var f newFlags
 	cmd := &cobra.Command{
-		Use:   "new <date>",
-		Short: "Create a blank, template-seeded, or draft-cloned week draft",
-		Args:  cobra.ExactArgs(1),
+		Use:   "new [date]",
+		Short: "Create a blank, template-seeded, or draft-cloned week draft (defaults to the current week)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runNew(cmd, f, args[0])
+			ref := ""
+			if len(args) > 0 {
+				ref = args[0]
+			}
+			return runNew(cmd, f, ref)
 		},
 	}
 	cmd.Flags().StringVar(&f.profile, "profile", "", "profile name")
@@ -52,7 +56,7 @@ func newNewCmd() *cobra.Command {
 }
 
 func runNew(cmd *cobra.Command, f newFlags, dateRef string) error {
-	weekStart, name, err := ParseDraftRef(dateRef)
+	weekStart, name, err := ResolveWeekRef(dateRef)
 	if err != nil {
 		return err
 	}

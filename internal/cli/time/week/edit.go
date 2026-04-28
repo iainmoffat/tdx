@@ -23,16 +23,20 @@ type editFlags struct {
 func newEditCmd() *cobra.Command {
 	var f editFlags
 	cmd := &cobra.Command{
-		Use:   "edit <date>[/<name>]",
-		Short: "Edit a draft as YAML in $EDITOR",
+		Use:   "edit [date[/name]]",
+		Short: "Edit a draft as YAML in $EDITOR (defaults to the current week)",
 		Long: `Open the draft's YAML file in $EDITOR (defaults to vi) for in-place editing.
 
 Phase A MVP uses YAML-text editing. A grid-aware TUI editor for drafts is
 planned for a later phase. Saved YAML is validated against the WeekDraft
 schema before being written back to disk; an invalid edit is rejected.`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runEdit(cmd, f, args[0])
+			ref := ""
+			if len(args) > 0 {
+				ref = args[0]
+			}
+			return runEdit(cmd, f, ref)
 		},
 	}
 	cmd.Flags().StringVar(&f.profile, "profile", "", "profile name")
@@ -40,7 +44,7 @@ schema before being written back to disk; an invalid edit is rejected.`,
 }
 
 func runEdit(cmd *cobra.Command, f editFlags, ref string) error {
-	weekStart, name, err := ParseDraftRef(ref)
+	weekStart, name, err := ResolveWeekRef(ref)
 	if err != nil {
 		return err
 	}

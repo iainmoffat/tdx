@@ -24,11 +24,15 @@ type noteFlags struct {
 func newNoteCmd() *cobra.Command {
 	var f noteFlags
 	cmd := &cobra.Command{
-		Use:   "note <date>[/<name>]",
-		Short: "Edit free-form notes on a draft",
-		Args:  cobra.ExactArgs(1),
+		Use:   "note [date[/name]]",
+		Short: "Edit free-form notes on a draft (defaults to the current week)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runNote(cmd, f, args[0])
+			ref := ""
+			if len(args) > 0 {
+				ref = args[0]
+			}
+			return runNote(cmd, f, ref)
 		},
 	}
 	cmd.Flags().StringVar(&f.profile, "profile", "", "profile name")
@@ -38,7 +42,7 @@ func newNoteCmd() *cobra.Command {
 }
 
 func runNote(cmd *cobra.Command, f noteFlags, ref string) error {
-	weekStart, name, err := ParseDraftRef(ref)
+	weekStart, name, err := ResolveWeekRef(ref)
 	if err != nil {
 		return err
 	}

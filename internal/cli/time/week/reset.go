@@ -19,14 +19,18 @@ type resetFlags struct {
 func newResetCmd() *cobra.Command {
 	var f resetFlags
 	cmd := &cobra.Command{
-		Use:   "reset <date>[/<name>]",
-		Short: "Discard local edits and re-pull (auto-snapshots first)",
-		Args:  cobra.ExactArgs(1),
+		Use:   "reset [date[/name]]",
+		Short: "Discard local edits and re-pull, auto-snapshots first (defaults to the current week)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !f.yes {
 				return fmt.Errorf("pass --yes to discard local edits")
 			}
-			weekStart, name, err := ParseDraftRef(args[0])
+			ref := ""
+			if len(args) > 0 {
+				ref = args[0]
+			}
+			weekStart, name, err := ResolveWeekRef(ref)
 			if err != nil {
 				return err
 			}

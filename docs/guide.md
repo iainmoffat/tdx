@@ -766,7 +766,7 @@ accessible to `show`, `diff`, `history`, and `cat`.
 
 ### Refresh & rebase
 
-`tdx time week refresh <date>[/<name>]` re-fetches the live week and merges
+`tdx time week refresh [date[/name]]` re-fetches the live week (defaults to the current week if no date is given) and merges
 remote changes into the local draft using a three-way merge between three
 views:
 

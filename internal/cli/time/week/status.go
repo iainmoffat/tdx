@@ -37,11 +37,15 @@ type weekDraftStatusResp struct {
 func newStatusCmd() *cobra.Command {
 	var f statusFlags
 	cmd := &cobra.Command{
-		Use:   "status <date>[/<name>]",
-		Short: "Show one-line draft status",
-		Args:  cobra.ExactArgs(1),
+		Use:   "status [date[/name]]",
+		Short: "Show one-line draft status (defaults to the current week)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runStatus(cmd, f, args[0])
+			ref := ""
+			if len(args) > 0 {
+				ref = args[0]
+			}
+			return runStatus(cmd, f, ref)
 		},
 	}
 	cmd.Flags().StringVar(&f.profile, "profile", "", "profile name")
@@ -51,7 +55,7 @@ func newStatusCmd() *cobra.Command {
 }
 
 func runStatus(cmd *cobra.Command, f statusFlags, ref string) error {
-	weekStart, name, err := ParseDraftRef(ref)
+	weekStart, name, err := ResolveWeekRef(ref)
 	if err != nil {
 		return err
 	}

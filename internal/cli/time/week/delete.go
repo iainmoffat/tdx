@@ -22,11 +22,15 @@ type deleteFlags struct {
 func newDeleteCmd() *cobra.Command {
 	var f deleteFlags
 	cmd := &cobra.Command{
-		Use:   "delete <date>[/<name>]",
-		Short: "Delete a local draft (auto-snapshots first)",
-		Args:  cobra.ExactArgs(1),
+		Use:   "delete [date[/name]]",
+		Short: "Delete a local draft, auto-snapshots first (defaults to the current week)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runDelete(cmd, f, args[0])
+			ref := ""
+			if len(args) > 0 {
+				ref = args[0]
+			}
+			return runDelete(cmd, f, ref)
 		},
 	}
 	cmd.Flags().StringVar(&f.profile, "profile", "", "profile name")
@@ -40,7 +44,7 @@ func runDelete(cmd *cobra.Command, f deleteFlags, ref string) error {
 		return fmt.Errorf("pass --yes to delete the draft (auto-snapshots first)")
 	}
 
-	weekStart, name, err := ParseDraftRef(ref)
+	weekStart, name, err := ResolveWeekRef(ref)
 	if err != nil {
 		return err
 	}

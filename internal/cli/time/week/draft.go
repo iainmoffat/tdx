@@ -31,3 +31,15 @@ func ParseDraftRef(s string) (time.Time, string, error) {
 	}
 	return domain.WeekRefContaining(d).StartDate, name, nil
 }
+
+// ResolveWeekRef returns the weekStart and draft name for an optional draft
+// ref string. An empty ref defaults to the current week (Sunday containing
+// time.Now() in EasternTZ) and the name "default". A non-empty ref is
+// parsed by ParseDraftRef.
+func ResolveWeekRef(ref string) (time.Time, string, error) {
+	if ref == "" {
+		weekStart := domain.WeekRefContaining(time.Now()).StartDate
+		return weekStart, "default", nil
+	}
+	return ParseDraftRef(ref)
+}

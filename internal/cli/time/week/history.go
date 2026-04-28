@@ -27,11 +27,15 @@ type weekDraftSnapshotListResp struct {
 func newHistoryCmd() *cobra.Command {
 	var f historyFlags
 	cmd := &cobra.Command{
-		Use:   "history <date>[/<name>]",
-		Short: "List snapshots of a draft",
-		Args:  cobra.ExactArgs(1),
+		Use:   "history [date[/name]]",
+		Short: "List snapshots of a draft (defaults to the current week)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runHistory(cmd, f, args[0])
+			ref := ""
+			if len(args) > 0 {
+				ref = args[0]
+			}
+			return runHistory(cmd, f, ref)
 		},
 	}
 	cmd.Flags().StringVar(&f.profile, "profile", "", "profile name")
@@ -41,7 +45,7 @@ func newHistoryCmd() *cobra.Command {
 }
 
 func runHistory(cmd *cobra.Command, f historyFlags, ref string) error {
-	weekStart, name, err := ParseDraftRef(ref)
+	weekStart, name, err := ResolveWeekRef(ref)
 	if err != nil {
 		return err
 	}

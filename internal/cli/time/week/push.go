@@ -34,11 +34,15 @@ type weekDraftPushResp struct {
 func newPushCmd() *cobra.Command {
 	var f pushFlags
 	cmd := &cobra.Command{
-		Use:   "push <date>[/<name>]",
-		Short: "Push a draft to TD",
-		Args:  cobra.ExactArgs(1),
+		Use:   "push [date[/name]]",
+		Short: "Push a draft to TD (defaults to the current week)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPush(cmd, f, args[0])
+			ref := ""
+			if len(args) > 0 {
+				ref = args[0]
+			}
+			return runPush(cmd, f, ref)
 		},
 	}
 	cmd.Flags().StringVar(&f.profile, "profile", "", "profile name")
@@ -50,7 +54,7 @@ func newPushCmd() *cobra.Command {
 }
 
 func runPush(cmd *cobra.Command, f pushFlags, ref string) error {
-	weekStart, name, err := ParseDraftRef(ref)
+	weekStart, name, err := ResolveWeekRef(ref)
 	if err != nil {
 		return err
 	}

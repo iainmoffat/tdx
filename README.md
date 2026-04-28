@@ -81,29 +81,31 @@ artifact, validate, diff, preview, and push back with safety guarantees.
 
 | Command | Description | Key Flags |
 |---|---|---|
-| `tdx time week pull <date>` | Pull live week into a local draft | `--name`, `--force`, `--json` |
+| `tdx time week pull [date]` | Pull live week into a local draft | `--name`, `--force`, `--json` |
 | `tdx time week list` | List local drafts with sync state | `--dirty`, `--conflicted`, `--date`, `--archived`, `--no-remote-check`, `--json` |
-| `tdx time week show <date> --draft [name]` | Show a draft as a grid | (flag added to existing `show`) |
-| `tdx time week status <date>[/<name>]` | One-screen draft status | `--json`, `--no-remote-check` |
-| `tdx time week edit <date>[/<name>]` | Edit a draft as YAML in $EDITOR | (vi fallback) |
-| `tdx time week diff <date>[/<name>]` | Diff a draft vs current remote | `--against remote`, `--json` |
-| `tdx time week preview <date>[/<name>]` | Preview what `push` will do | `--json` |
-| `tdx time week push <date>[/<name>] --yes` | Push a draft to TD | `--allow-deletes`, `--expected-diff-hash`, `--json` |
-| `tdx time week delete <date>[/<name>] --yes` | Delete a draft (auto-snapshots first) | `--keep-snapshots` |
+| `tdx time week show [date] --draft [name]` | Show a draft as a grid | (flag added to existing `show`) |
+| `tdx time week status [date[/name]]` | One-screen draft status | `--json`, `--no-remote-check` |
+| `tdx time week edit [date[/name]]` | Edit a draft as YAML in $EDITOR | (vi fallback) |
+| `tdx time week diff [date[/name]]` | Diff a draft vs current remote | `--against remote`, `--json` |
+| `tdx time week preview [date[/name]]` | Preview what `push` will do | `--json` |
+| `tdx time week push [date[/name]] --yes` | Push a draft to TD | `--allow-deletes`, `--expected-diff-hash`, `--json` |
+| `tdx time week delete [date[/name]] --yes` | Delete a draft (auto-snapshots first) | `--keep-snapshots` |
 | `tdx time week set <date>[/<name>] <row>:<day>=<h>` | Non-interactive cell write | (repeatable) |
-| `tdx time week note <date>[/<name>]` | Edit free-form notes | `--append`, `--clear` |
-| `tdx time week history <date>[/<name>]` | List snapshots | `--json`, `--limit N` |
-| `tdx time week new <date>` | Create blank/template-seeded/cloned draft | `--from-template`, `--from-draft`, `--shift`, `--name` |
+| `tdx time week note [date[/name]]` | Edit free-form notes | `--append`, `--clear` |
+| `tdx time week history [date[/name]]` | List snapshots | `--json`, `--limit N` |
+| `tdx time week new [date]` | Create blank/template-seeded/cloned draft | `--from-template`, `--from-draft`, `--shift`, `--name` |
 | `tdx time week copy <src> <dst>` | Clone a draft to a new ref | (positional) |
 | `tdx time week rename <date>[/<old>] <new>` | Rename a draft (preserves snapshots) | (positional) |
-| `tdx time week reset <date>[/<name>] --yes` | Discard local edits + re-pull (auto-snapshots) | `--yes` |
-| `tdx time week refresh <date>[/<name>]` | Three-way merge against current remote | `--strategy abort\|ours\|theirs`, `--json` |
-| `tdx time week rebase <date>[/<name>]` | Alias of refresh (same flags, same behavior) | `--strategy abort\|ours\|theirs`, `--json` |
-| `tdx time week archive <date>[/<name>]` | Hide draft from default `list` | (none) |
-| `tdx time week unarchive <date>[/<name>]` | Show previously archived draft | (none) |
-| `tdx time week snapshot <date>[/<name>]` | Take a manual snapshot | `--keep`, `--note` |
-| `tdx time week restore <date>[/<name>] --snapshot N --yes` | Restore from snapshot | `--snapshot`, `--yes` |
-| `tdx time week prune <date>[/<name>] --yes` | Drop unpinned snapshots | `--older-than`, `--yes` |
+| `tdx time week reset [date[/name]] --yes` | Discard local edits + re-pull (auto-snapshots) | `--yes` |
+| `tdx time week refresh [date[/name]]` | Three-way merge against current remote | `--strategy abort\|ours\|theirs`, `--json` |
+| `tdx time week rebase [date[/name]]` | Alias of refresh (same flags, same behavior) | `--strategy abort\|ours\|theirs`, `--json` |
+| `tdx time week archive [date[/name]]` | Hide draft from default `list` | (none) |
+| `tdx time week unarchive [date[/name]]` | Show previously archived draft | (none) |
+| `tdx time week snapshot [date[/name]]` | Take a manual snapshot | `--keep`, `--note` |
+| `tdx time week restore [date[/name]] --snapshot N --yes` | Restore from snapshot | `--snapshot`, `--yes` |
+| `tdx time week prune [date[/name]] --yes` | Drop unpinned snapshots | `--older-than`, `--yes` |
+
+> Commands taking `[date]` or `[date[/name]]` default to the current week if omitted. `set`, `copy`, and `rename` keep their explicit week argument.
 
 ### Time Types
 
