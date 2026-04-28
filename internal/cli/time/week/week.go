@@ -30,5 +30,6 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(newSnapshotCmd())
 	cmd.AddCommand(newRestoreCmd())
 	cmd.AddCommand(newPruneCmd())
+	cmd.AddCommand(newRefreshCmd())
 	return cmd
 }
