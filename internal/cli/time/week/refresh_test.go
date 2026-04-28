@@ -37,8 +37,8 @@ func TestNewRebaseCmd_IsAliasOfRefresh(t *testing.T) {
 func TestWriteRefreshJSON_AbortShape(t *testing.T) {
 	var buf bytes.Buffer
 	res := draftsvc.RefreshResult{
-		Strategy:  draftsvc.StrategyAbort,
-		Aborted:   true,
+		Strategy: draftsvc.StrategyAbort,
+		Aborted:  true,
 		Conflicts: []draftsvc.MergeConflict{
 			{RowID: "row-01", Day: "Monday", LocalDescription: "updated to 6.0h", RemoteDescription: "updated to 8.0h"},
 		},
@@ -55,9 +55,11 @@ func TestWriteRefreshJSON_AbortShape(t *testing.T) {
 	require.Equal(t, float64(0), got["preserved"])
 	require.Equal(t, float64(0), got["resolved"])
 	require.Equal(t, float64(0), got["resolvedByStrategy"])
-	conflicts := got["conflicts"].([]any)
+	conflicts, ok := got["conflicts"].([]any)
+	require.True(t, ok, "conflicts should be an array")
 	require.Len(t, conflicts, 1)
-	c := conflicts[0].(map[string]any)
+	c, ok := conflicts[0].(map[string]any)
+	require.True(t, ok, "conflict[0] should be an object")
 	require.Equal(t, "row-01", c["row"])
 	require.Equal(t, "Monday", c["day"])
 	require.Equal(t, "updated to 6.0h", c["local"])

@@ -449,7 +449,7 @@ func (s *Service) Refresh(ctx context.Context, profile string, weekStart time.Ti
 	// Success: assemble the merged draft, save it, refresh the watermark.
 	merged := draft
 	merged.Rows = res.rows
-	merged.Provenance = remoteDraft.Provenance // adopt the new pull-time/fingerprint/status
+	merged.Provenance = remoteDraft.Provenance     // adopt the new pull-time/fingerprint/status
 	merged.Provenance.Kind = draft.Provenance.Kind // preserve original Kind (e.g. ProvenanceFromTemplate)
 	if merged.Provenance.Kind == "" {
 		merged.Provenance.Kind = domain.ProvenancePulled

@@ -48,14 +48,14 @@ func cell(hours float64, sourceID int) domain.DraftCell {
 // classifyCellTC drives a single (rowKey, weekday) classification through
 // classifyCell and asserts on the merged cell + outcome counter.
 type classifyCellTC struct {
-	name           string
-	pulled         *domain.DraftCell // nil = absent
-	local          *domain.DraftCell
-	remote         *domain.DraftCell
-	strategy       Strategy
-	wantOutcome    cellOutcome
-	wantMergeCell  *domain.DraftCell
-	wantConflict   bool
+	name          string
+	pulled        *domain.DraftCell // nil = absent
+	local         *domain.DraftCell
+	remote        *domain.DraftCell
+	strategy      Strategy
+	wantOutcome   cellOutcome
+	wantMergeCell *domain.DraftCell
+	wantConflict  bool
 }
 
 func runClassifyCellTCs(t *testing.T, tcs []classifyCellTC) {
@@ -82,43 +82,43 @@ func TestClassifyCell_HappyPaths(t *testing.T) {
 	cAdd := cell(3, 0)
 	tcs := []classifyCellTC{
 		{
-			name:          "untouched: same on all three views",
-			pulled:        &c, local: &c, remote: &c,
+			name:   "untouched: same on all three views",
+			pulled: &c, local: &c, remote: &c,
 			strategy:      StrategyAbort,
 			wantOutcome:   outcomeUntouched,
 			wantMergeCell: &c,
 		},
 		{
-			name:          "adopt remote: local unchanged, remote changed",
-			pulled:        &c, local: &c, remote: &c2,
+			name:   "adopt remote: local unchanged, remote changed",
+			pulled: &c, local: &c, remote: &c2,
 			strategy:      StrategyAbort,
 			wantOutcome:   outcomeAdopted,
 			wantMergeCell: &c2,
 		},
 		{
-			name:          "preserve local: local changed, remote unchanged",
-			pulled:        &c, local: &c2, remote: &c,
+			name:   "preserve local: local changed, remote unchanged",
+			pulled: &c, local: &c2, remote: &c,
 			strategy:      StrategyAbort,
 			wantOutcome:   outcomePreserved,
 			wantMergeCell: &c2,
 		},
 		{
-			name:          "converged: both changed to same value",
-			pulled:        &c, local: &c2, remote: &c2,
+			name:   "converged: both changed to same value",
+			pulled: &c, local: &c2, remote: &c2,
 			strategy:      StrategyAbort,
 			wantOutcome:   outcomeResolved,
 			wantMergeCell: &c2,
 		},
 		{
-			name:          "remote-only added (didn't exist locally)",
-			pulled:        nil, local: nil, remote: &cAdd,
+			name:   "remote-only added (didn't exist locally)",
+			pulled: nil, local: nil, remote: &cAdd,
 			strategy:      StrategyAbort,
 			wantOutcome:   outcomeAdopted,
 			wantMergeCell: &cAdd,
 		},
 		{
-			name:          "local-only added (still not on remote)",
-			pulled:        nil, local: &cAdd, remote: nil,
+			name:   "local-only added (still not on remote)",
+			pulled: nil, local: &cAdd, remote: nil,
 			strategy:      StrategyAbort,
 			wantOutcome:   outcomePreserved,
 			wantMergeCell: &cAdd,
@@ -138,36 +138,36 @@ func TestClassifyCell_AbortConflicts(t *testing.T) {
 
 	tcs := []classifyCellTC{
 		{
-			name:         "both changed, different values -> conflict",
-			pulled:       &pulled, local: &localEdit, remote: &remoteEdit,
+			name:   "both changed, different values -> conflict",
+			pulled: &pulled, local: &localEdit, remote: &remoteEdit,
 			strategy:     StrategyAbort,
 			wantOutcome:  outcomeNone, // abort reports conflict, no merged cell
 			wantConflict: true,
 		},
 		{
-			name:         "local edited, remote deleted -> conflict",
-			pulled:       &pulled, local: &localEdit, remote: nil,
+			name:   "local edited, remote deleted -> conflict",
+			pulled: &pulled, local: &localEdit, remote: nil,
 			strategy:     StrategyAbort,
 			wantOutcome:  outcomeNone,
 			wantConflict: true,
 		},
 		{
-			name:         "local cleared, remote modified -> conflict",
-			pulled:       &pulled, local: &cleared, remote: &remoteEdit,
+			name:   "local cleared, remote modified -> conflict",
+			pulled: &pulled, local: &cleared, remote: &remoteEdit,
 			strategy:     StrategyAbort,
 			wantOutcome:  outcomeNone,
 			wantConflict: true,
 		},
 		{
-			name:         "both added different rows-on-same-key -> conflict",
-			pulled:       nil, local: &addLocal, remote: &addRemoteDifferent,
+			name:   "both added different rows-on-same-key -> conflict",
+			pulled: nil, local: &addLocal, remote: &addRemoteDifferent,
 			strategy:     StrategyAbort,
 			wantOutcome:  outcomeNone,
 			wantConflict: true,
 		},
 		{
-			name:          "both added same hours -> resolved (converged add)",
-			pulled:        nil, local: &addLocal, remote: &addRemoteSame,
+			name:   "both added same hours -> resolved (converged add)",
+			pulled: nil, local: &addLocal, remote: &addRemoteSame,
 			strategy:      StrategyAbort,
 			wantOutcome:   outcomeResolved,
 			wantMergeCell: &addRemoteSame, // adopt remote's sourceEntryID
@@ -281,8 +281,8 @@ func TestClassifyRow_MixedOutcomesPerRow(t *testing.T) {
 	remote := domain.DraftRow{
 		ID: "row-01",
 		Cells: []domain.DraftCell{
-			{Day: time.Monday, Hours: 4, SourceEntryID: 100},   // unchanged
-			{Day: time.Tuesday, Hours: 8, SourceEntryID: 101},  // edited remotely
+			{Day: time.Monday, Hours: 4, SourceEntryID: 100},    // unchanged
+			{Day: time.Tuesday, Hours: 8, SourceEntryID: 101},   // edited remotely
 			{Day: time.Wednesday, Hours: 3, SourceEntryID: 102}, // added remotely
 		},
 	}
@@ -424,8 +424,8 @@ func TestService_Refresh_AbortPath_NoMutation(t *testing.T) {
 			Entries: []domain.TimeEntry{
 				{
 					ID: 900, Date: time.Date(2026, 5, 4, 0, 0, 0, 0, domain.EasternTZ),
-					Minutes: 480, // 8h on remote
-					Target:  domain.Target{Kind: domain.TargetTicket, ItemID: 555},
+					Minutes:  480, // 8h on remote
+					Target:   domain.Target{Kind: domain.TargetTicket, ItemID: 555},
 					TimeType: domain.TimeType{ID: 17},
 				},
 			},
@@ -440,8 +440,8 @@ func TestService_Refresh_AbortPath_NoMutation(t *testing.T) {
 		Entries: []domain.TimeEntry{
 			{
 				ID: 900, Date: time.Date(2026, 5, 4, 0, 0, 0, 0, domain.EasternTZ),
-				Minutes: 240, // 4h originally pulled
-				Target:  domain.Target{Kind: domain.TargetTicket, ItemID: 555},
+				Minutes:  240, // 4h originally pulled
+				Target:   domain.Target{Kind: domain.TargetTicket, ItemID: 555},
 				TimeType: domain.TimeType{ID: 17},
 			},
 		},
@@ -489,10 +489,10 @@ func TestService_Refresh_SuccessPath_WritesMergedDraftAndWatermark(t *testing.T)
 		WeekRef: domain.WeekRef{StartDate: weekStart},
 		Entries: []domain.TimeEntry{
 			{ID: 900, Date: time.Date(2026, 5, 4, 0, 0, 0, 0, domain.EasternTZ), Minutes: 240,
-				Target: domain.Target{Kind: domain.TargetTicket, ItemID: 555},
+				Target:   domain.Target{Kind: domain.TargetTicket, ItemID: 555},
 				TimeType: domain.TimeType{ID: 17}},
 			{ID: 901, Date: time.Date(2026, 5, 5, 0, 0, 0, 0, domain.EasternTZ), Minutes: 240,
-				Target: domain.Target{Kind: domain.TargetTicket, ItemID: 555},
+				Target:   domain.Target{Kind: domain.TargetTicket, ItemID: 555},
 				TimeType: domain.TimeType{ID: 17}},
 		},
 	}
@@ -545,7 +545,7 @@ func TestService_Refresh_TakesPreRefreshSnapshot(t *testing.T) {
 		WeekRef: domain.WeekRef{StartDate: weekStart},
 		Entries: []domain.TimeEntry{
 			{ID: 900, Date: time.Date(2026, 5, 4, 0, 0, 0, 0, domain.EasternTZ), Minutes: 240,
-				Target: domain.Target{Kind: domain.TargetTicket, ItemID: 555},
+				Target:   domain.Target{Kind: domain.TargetTicket, ItemID: 555},
 				TimeType: domain.TimeType{ID: 17}},
 		},
 	}
@@ -583,7 +583,7 @@ func TestService_Refresh_AbortPath_NoSnapshot(t *testing.T) {
 		WeekRef: domain.WeekRef{StartDate: weekStart},
 		Entries: []domain.TimeEntry{
 			{ID: 900, Date: time.Date(2026, 5, 4, 0, 0, 0, 0, domain.EasternTZ), Minutes: 240,
-				Target: domain.Target{Kind: domain.TargetTicket, ItemID: 555},
+				Target:   domain.Target{Kind: domain.TargetTicket, ItemID: 555},
 				TimeType: domain.TimeType{ID: 17}},
 		},
 	}
