@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/iainmoffat/tdx/internal/domain"
 )
 
 var (
@@ -28,7 +27,6 @@ func (m Model) View() string {
 
 	var b strings.Builder
 
-	// Title
 	title := "Editing: " + m.name
 	if m.dirty {
 		title += " [modified]"
@@ -41,10 +39,9 @@ func (m Model) View() string {
 		return b.String()
 	}
 
-	// Build ordered groups for display (preserving row indices for cursor mapping).
 	type indexedRow struct {
 		flatIdx int
-		row     domain.TemplateRow
+		row     SheetRow
 	}
 	type group struct {
 		name string
@@ -54,7 +51,7 @@ func (m Model) View() string {
 	groupIdx := map[string]int{}
 
 	for i, r := range m.rows {
-		gn := r.Target.GroupName
+		gn := r.GroupName
 		if gn == "" {
 			groups = append(groups, group{name: "", rows: []indexedRow{{i, r}}})
 			continue
@@ -67,7 +64,6 @@ func (m Model) View() string {
 		}
 	}
 
-	// Compute label width.
 	labelWidth := len("  ROW")
 	for _, g := range groups {
 		if g.name != "" {
@@ -81,14 +77,13 @@ func (m Model) View() string {
 			if g.name != "" {
 				prefix = "    + "
 			}
-			label := prefix + m.rowLabel(ir.row)
+			label := prefix + rowLabel(ir.row)
 			if len(label) > labelWidth {
 				labelWidth = len(label)
 			}
 		}
 	}
 
-	// Header row
 	header := padRight("  ROW", labelWidth)
 	for _, d := range dayNames {
 		header += "  " + padRight(d, cellWidth-1)
@@ -96,15 +91,12 @@ func (m Model) View() string {
 	header += "  TOTAL"
 	b.WriteString(header + "\n")
 
-	// Separator
 	sepLen := labelWidth + 7*(1+cellWidth) + 2 + 5
 	b.WriteString(strings.Repeat("─", sepLen) + "\n")
 
-	// Data rows grouped hierarchically.
 	var dayTotals [7]float64
 	for _, g := range groups {
 		if g.name != "" {
-			// Group header with aggregated hours.
 			var gDays [7]float64
 			for _, ir := range g.rows {
 				for ci := 0; ci < 7; ci++ {
@@ -128,9 +120,8 @@ func (m Model) View() string {
 			}
 			b.WriteString(groupStyle.Render(strings.TrimRight(headerLine, " ")) + "\n")
 
-			// Task rows indented under group.
 			for _, ir := range g.rows {
-				label := "    + " + m.rowLabel(ir.row)
+				label := "    + " + rowLabel(ir.row)
 				line := padRight(label, labelWidth)
 				rowTotal := 0.0
 				for ci := 0; ci < 7; ci++ {
@@ -143,14 +134,13 @@ func (m Model) View() string {
 				}
 				line += "  " + padRight(fmt.Sprintf("%.1f", rowTotal), cellWidth-1)
 				b.WriteString(strings.TrimRight(line, " ") + "\n")
-				if ir.row.TimeType.Name != "" {
-					b.WriteString("        " + ir.row.TimeType.Name + "\n")
+				if ir.row.TypeName != "" {
+					b.WriteString("        " + ir.row.TypeName + "\n")
 				}
 			}
 		} else {
-			// Ungrouped row.
 			ir := g.rows[0]
-			label := "  " + m.rowLabel(ir.row)
+			label := "  " + rowLabel(ir.row)
 			line := padRight(label, labelWidth)
 			rowTotal := 0.0
 			for ci := 0; ci < 7; ci++ {
@@ -163,16 +153,14 @@ func (m Model) View() string {
 			}
 			line += "  " + padRight(fmt.Sprintf("%.1f", rowTotal), cellWidth-1)
 			b.WriteString(strings.TrimRight(line, " ") + "\n")
-			if ir.row.TimeType.Name != "" {
-				b.WriteString("    └ " + ir.row.TimeType.Name + "\n")
+			if ir.row.TypeName != "" {
+				b.WriteString("    └ " + ir.row.TypeName + "\n")
 			}
 		}
 	}
 
-	// Separator
 	b.WriteString(strings.Repeat("─", sepLen) + "\n")
 
-	// Day totals
 	totalLine := padRight("  DAY TOTAL", labelWidth)
 	grandTotal := 0.0
 	for ci := 0; ci < 7; ci++ {
@@ -186,7 +174,6 @@ func (m Model) View() string {
 	totalLine += "  " + padRight(fmt.Sprintf("%.1f", grandTotal), cellWidth-1)
 	b.WriteString(strings.TrimRight(totalLine, " ") + "\n")
 
-	// Key hints
 	b.WriteString("\n")
 	hints := "  ←→↑↓/Tab: navigate  type: set value  Backspace: clear  Ctrl-S: save  Esc: cancel"
 	b.WriteString(hintStyle.Render(hints))
@@ -194,15 +181,14 @@ func (m Model) View() string {
 	return b.String()
 }
 
-func (m Model) rowLabel(r domain.TemplateRow) string {
+// rowLabel produces the display label for a SheetRow. Falls back to
+// DisplayRef when Label is empty.
+func rowLabel(r SheetRow) string {
 	label := r.Label
 	if label == "" {
-		label = r.Target.DisplayRef
+		label = r.DisplayRef
 	}
-	if r.Target.GroupName != "" {
-		return label
-	}
-	return label + " (" + string(r.Target.Kind) + ")"
+	return label
 }
 
 func (m Model) formatCell(row, col int, hours float64) string {
