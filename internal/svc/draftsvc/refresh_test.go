@@ -172,3 +172,69 @@ func TestClassifyCell_AbortConflicts(t *testing.T) {
 	}
 	runClassifyCellTCs(t, tcs)
 }
+
+func TestClassifyCell_StrategyOursResolves(t *testing.T) {
+	pulled := cell(4, 100)
+	localEdit := cell(6, 100)
+	remoteEdit := cell(8, 100)
+
+	res := classifyCell(&pulled, &localEdit, &remoteEdit, StrategyOurs)
+	require.Equal(t, outcomeResolvedByStrategy, res.outcome)
+	require.Nil(t, res.conflict)
+	require.NotNil(t, res.merged)
+	require.Equal(t, 6.0, res.merged.Hours, "ours keeps local")
+}
+
+func TestClassifyCell_StrategyTheirsResolves(t *testing.T) {
+	pulled := cell(4, 100)
+	localEdit := cell(6, 100)
+	remoteEdit := cell(8, 100)
+
+	res := classifyCell(&pulled, &localEdit, &remoteEdit, StrategyTheirs)
+	require.Equal(t, outcomeResolvedByStrategy, res.outcome)
+	require.Nil(t, res.conflict)
+	require.NotNil(t, res.merged)
+	require.Equal(t, 8.0, res.merged.Hours, "theirs takes remote")
+}
+
+func TestClassifyCell_StrategyOursOnEditVsDelete(t *testing.T) {
+	pulled := cell(4, 100)
+	localEdit := cell(6, 100)
+
+	res := classifyCell(&pulled, &localEdit, nil, StrategyOurs)
+	require.Equal(t, outcomeResolvedByStrategy, res.outcome)
+	require.NotNil(t, res.merged)
+	require.Equal(t, 6.0, res.merged.Hours)
+}
+
+func TestClassifyCell_StrategyTheirsOnEditVsDelete(t *testing.T) {
+	pulled := cell(4, 100)
+	localEdit := cell(6, 100)
+
+	res := classifyCell(&pulled, &localEdit, nil, StrategyTheirs)
+	require.Equal(t, outcomeResolvedByStrategy, res.outcome)
+	require.Nil(t, res.merged, "theirs accepts the remote delete")
+}
+
+func TestClassifyCell_StrategyOursOnClearedVsModified(t *testing.T) {
+	pulled := cell(4, 100)
+	cleared := cell(0, 100)
+	remoteEdit := cell(8, 100)
+
+	res := classifyCell(&pulled, &cleared, &remoteEdit, StrategyOurs)
+	require.Equal(t, outcomeResolvedByStrategy, res.outcome)
+	require.NotNil(t, res.merged)
+	require.Equal(t, 0.0, res.merged.Hours)
+	require.Equal(t, 100, res.merged.SourceEntryID, "still flagged for delete")
+}
+
+func TestClassifyCell_StrategyTheirsOnClearedVsModified(t *testing.T) {
+	pulled := cell(4, 100)
+	cleared := cell(0, 100)
+	remoteEdit := cell(8, 100)
+
+	res := classifyCell(&pulled, &cleared, &remoteEdit, StrategyTheirs)
+	require.Equal(t, outcomeResolvedByStrategy, res.outcome)
+	require.NotNil(t, res.merged)
+	require.Equal(t, 8.0, res.merged.Hours, "theirs takes the remote modification")
+}

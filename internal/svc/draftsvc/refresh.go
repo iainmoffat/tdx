@@ -123,11 +123,11 @@ func classifyCell(pulled, local, remote *domain.DraftCell, strategy Strategy) ce
 			merged := *local
 			return cellClassification{outcome: outcomeResolved, merged: &merged}
 		}
-		return makeConflict(local, remote)
+		return makeConflict(local, remote, strategy)
 
 	// Local cleared (delete-on-push), remote modified.
 	case localCleared && remoteExists && !cellEqual(*pulled, *remote):
-		return makeConflict(local, remote)
+		return makeConflict(local, remote, strategy)
 
 	// Local edited (still has hours), remote deleted.
 	case pulledExistedRaw && localExists && local.Hours > 0 && !remoteExists:
@@ -135,7 +135,7 @@ func classifyCell(pulled, local, remote *domain.DraftCell, strategy Strategy) ce
 			// Local unchanged, remote deleted -> stale source. Task 5 handles this branch.
 			return cellClassification{outcome: outcomeNone}
 		}
-		return makeConflict(local, remote)
+		return makeConflict(local, remote, strategy)
 
 	// Both sides added independently (no pulled cell).
 	case !pulledExists && localExists && remoteExists:
@@ -143,7 +143,7 @@ func classifyCell(pulled, local, remote *domain.DraftCell, strategy Strategy) ce
 			merged := *remote // adopt remote: it has the real sourceEntryID
 			return cellClassification{outcome: outcomeResolved, merged: &merged}
 		}
-		return makeConflict(local, remote)
+		return makeConflict(local, remote, strategy)
 
 	// Cell exists only on remote (Task 2 already covers this).
 	case !pulledExists && !localExists && remoteExists:
@@ -162,16 +162,34 @@ func classifyCell(pulled, local, remote *domain.DraftCell, strategy Strategy) ce
 	return cellClassification{outcome: outcomeNone}
 }
 
-// makeConflict builds an abort-strategy conflict result from local + remote
-// cell pointers. Description summaries are produced by describeIntent.
-func makeConflict(local, remote *domain.DraftCell) cellClassification {
-	return cellClassification{
-		outcome: outcomeNone,
-		conflict: &MergeConflict{
-			LocalDescription:  describeIntent(local),
-			RemoteDescription: describeIntent(remote),
-			// RowID and Day are filled in by classify() (the per-row caller).
-		},
+// makeConflict resolves a conflict according to strategy. Under StrategyAbort
+// it returns a conflict struct (no merged cell). Under StrategyOurs it
+// resolves to local. Under StrategyTheirs it resolves to remote.
+func makeConflict(local, remote *domain.DraftCell, strategy Strategy) cellClassification {
+	switch strategy {
+	case StrategyOurs:
+		var merged *domain.DraftCell
+		if local != nil {
+			c := *local
+			merged = &c
+		}
+		return cellClassification{outcome: outcomeResolvedByStrategy, merged: merged}
+	case StrategyTheirs:
+		var merged *domain.DraftCell
+		if remote != nil {
+			c := *remote
+			merged = &c
+		}
+		return cellClassification{outcome: outcomeResolvedByStrategy, merged: merged}
+	default: // StrategyAbort or unset
+		return cellClassification{
+			outcome: outcomeNone,
+			conflict: &MergeConflict{
+				LocalDescription:  describeIntent(local),
+				RemoteDescription: describeIntent(remote),
+				// RowID and Day are filled in by classify() (the per-row caller).
+			},
+		}
 	}
 }
 
