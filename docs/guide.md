@@ -611,8 +611,224 @@ SEQ   OP            TAKEN                 PINNED  NOTE
 2     pre-push      2026-04-27 15:02:11
 ```
 
-Snapshot retention: last 10 unpinned per draft (`--keep` for manual pins
-will be added in Phase B).
+Snapshot retention: last 10 unpinned per draft. See "Snapshots & history"
+below for manual pinning and pruning.
+
+### Multiple drafts per week
+
+A week draft is identified by `(profile, weekStart, name)`. The `name`
+defaults to `default`. You can maintain any number of named alternates for
+the same week — useful for staging, pristine references, or parallel edits.
+
+**Creating alternates:**
+
+```bash
+# Pull into a named alternate (leaves the default draft untouched)
+tdx time week pull 2026-04-27 --name pristine
+
+# Create a blank draft for the week
+tdx time week new 2026-04-27
+
+# Seed from a template
+tdx time week new 2026-04-27 --from-template my-week
+
+# Clone from another draft (src and dst are full refs: date[/name])
+tdx time week new 2026-05-04 --from-draft 2026-04-27 --shift 7d
+
+# Clone to an explicit dst ref
+tdx time week copy 2026-04-27/default 2026-04-27/backup
+```
+
+Cells are dimensionless (no absolute dates embedded), so `--from-draft` with
+`--shift 7d` correctly advances every cell date to the target week.
+
+**Renaming:**
+
+```bash
+tdx time week rename 2026-04-27/backup 2026-04-27/pristine
+```
+
+Renaming preserves the full snapshot history of the source draft.
+
+**Listing alternates:**
+
+```bash
+tdx time week list
+```
+
+Alternates for the same date are grouped visually under the same week header:
+
+```
+2026-04-27
+  default   dirty   3 edits
+  pristine  clean
+```
+
+**Worked examples:**
+
+Snapshot live week before a risky edit:
+
+```bash
+tdx time week pull 2026-04-27 --name pristine   # reference copy
+tdx time week pull 2026-04-27                   # default draft to edit
+tdx time week edit 2026-04-27
+tdx time week diff 2026-04-27 --against 2026-04-27/pristine
+```
+
+Stage next week from this week:
+
+```bash
+tdx time week new 2026-05-04 --from-draft 2026-04-27 --shift 7d
+tdx time week edit 2026-05-04      # adjust as needed
+tdx time week preview 2026-05-04
+tdx time week push 2026-05-04 --yes
+```
+
+### Snapshots & history
+
+Snapshots are immutable point-in-time copies of a draft. tdx takes them
+automatically before destructive operations:
+
+| Trigger | Snapshot label |
+|---------|---------------|
+| `pull` overwriting a dirty draft | `pre-pull` |
+| `push` | `pre-push` |
+| `delete` | `pre-delete` |
+| `rename` | `pre-rename` |
+| `reset` | `pre-reset` |
+| `restore` | `pre-restore` |
+
+**Manual snapshots:**
+
+```bash
+# Take a snapshot (auto-prunable)
+tdx time week snapshot 2026-04-27
+
+# Pin the snapshot so it survives prune
+tdx time week snapshot 2026-04-27 --keep --note "before risky edit"
+```
+
+Pinned snapshots are exempt from all automatic and manual prune operations.
+
+**List snapshots:**
+
+```bash
+tdx time week history 2026-04-27
+```
+
+```
+SEQ   OP            TAKEN                 PINNED  NOTE
+1     pre-pull      2026-04-27 13:12:14
+2     pre-push      2026-04-27 15:02:11
+3     manual        2026-04-27 16:45:00   yes     before risky edit
+```
+
+**Restore from a snapshot:**
+
+```bash
+tdx time week restore 2026-04-27 --snapshot 2 --yes
+```
+
+tdx auto-snapshots the current draft (`pre-restore`) before overwriting it.
+
+**Prune snapshots:**
+
+```bash
+# Drop unpinned snapshots older than 30 days
+tdx time week prune 2026-04-27 --older-than 30d --yes
+
+# Drop unpinned snapshots down to the retention cap (10 by default)
+tdx time week prune 2026-04-27 --yes
+```
+
+Pinned snapshots survive both `--older-than` and bare `--yes` prunes.
+
+### Archive & unarchive
+
+Archiving is a soft hide: the draft YAML stays on disk with full git-diff and
+`cat` parity; nothing moves.
+
+```bash
+# Hide a draft from default list output
+tdx time week archive 2026-04-27/pristine
+
+# Restore it to default list visibility
+tdx time week unarchive 2026-04-27/pristine
+
+# Show all drafts, including archived
+tdx time week list --archived
+```
+
+`archive` sets `archived: true` in the draft YAML. `list` filters archived
+drafts by default; pass `--archived` to include them. Because archiving is
+just a YAML flag, there are no rename collisions and the draft remains fully
+accessible to `show`, `diff`, `history`, and `cat`.
+
+### Refresh & rebase
+
+`tdx time week refresh <date>[/<name>]` re-fetches the live week and merges
+remote changes into the local draft using a three-way merge between three
+views:
+
+- **at-pull-time** — what the live week looked like when the draft was
+  created (from the `.pulled.yaml` watermark).
+- **current-local** — what the draft contains right now.
+- **current-remote** — what the live week contains right now.
+
+Each cell is classified per the merge rules in
+`docs/specs/2026-04-28-tdx-phase-B2a-design.md` and one of three things
+happens:
+
+- **Auto-merge** — local-only and remote-only changes both apply.
+- **Conflict + strategy** — both sides changed the same cell; behavior
+  depends on `--strategy`.
+- **Reality match** — local intent (e.g. cleared) and remote state
+  (already deleted) agree; the cell drops out silently.
+
+The `rebase` command is a verbatim alias of `refresh` for git-muscle-memory
+users — same flags, same behavior.
+
+#### Strategies
+
+```
+--strategy abort    (default) refuse to mutate if any cell-level conflict
+--strategy ours     on conflict, keep local
+--strategy theirs   on conflict, take remote
+```
+
+#### Worked example
+
+You pulled the week, edited Monday from 4.0h to 6.0h. Meanwhile a coworker
+edited the same row's Monday on TD to 8.0h:
+
+```
+$ tdx time week refresh 2026-05-03
+Refresh aborted: 1 cell(s) conflict between local edits and remote changes.
+
+  row-01  Mon  conflict
+    local:   updated to 6.0h
+    remote:  updated to 8.0h
+
+Choose one:
+  --strategy ours        (keep local for all conflicts; refresh succeeds)
+  --strategy theirs      (take remote for all conflicts; refresh succeeds)
+  tdx time week reset 2026-05-03 --yes  (give up local edits entirely, re-pull fresh)
+```
+
+Decide what you want and re-run with the strategy:
+
+```
+$ tdx time week refresh 2026-05-03 --strategy ours
+Refresh complete (--strategy ours).
+  Adopted (remote -> draft):  0 cells
+  Preserved (local edits):    0 cells
+  Resolved (same on both):    0 cells
+  Resolved by --strategy:     1 cells (local won)
+```
+
+A snapshot tagged `pre-refresh` is taken before any disk mutation. To roll
+back: `tdx time week history 2026-05-03` and
+`tdx time week restore 2026-05-03 --snapshot N --yes`.
 
 ## Storage layout
 
@@ -688,9 +904,10 @@ Add tdx to your AI tool's MCP configuration:
 
 ### Available tools
 
-The MCP server exposes 20 tools:
+The MCP server exposes 37 tools (17 read-only, 20 mutating). All mutating
+tools require `confirm: true`.
 
-**Read-only (12 tools):**
+**Read-only (11 tools — core):**
 
 | Tool | Description |
 |------|-------------|
@@ -706,7 +923,17 @@ The MCP server exposes 20 tools:
 | `compare_template_to_week` | Compare template vs live week |
 | `preview_apply_time_template` | Preview apply with diffHash |
 
-**Mutating (8 tools):**
+**Read-only (5 tools — week drafts):**
+
+| Tool | Description |
+|------|-------------|
+| `list_week_drafts` | List local drafts with sync state |
+| `get_week_draft` | Load a single draft + sync state |
+| `preview_push_week_draft` | Preview push and capture diffHash |
+| `diff_week_draft` | Cell-level diff vs remote |
+| `list_week_draft_snapshots` | List snapshots for a draft |
+
+**Mutating (8 tools — core):**
 
 | Tool | Description |
 |------|-------------|
@@ -718,6 +945,25 @@ The MCP server exposes 20 tools:
 | `delete_time_template` | Delete a template |
 | `derive_time_template` | Derive template from live week |
 | `apply_time_template_to_week` | Apply template to a week |
+
+**Mutating (14 tools — week drafts):**
+
+| Tool | Description |
+|------|-------------|
+| `pull_week_draft` | Pull live week into a local draft |
+| `update_week_draft` | Apply per-cell edits |
+| `delete_week_draft` | Delete a draft (auto-snapshots) |
+| `push_week_draft` | Push to TD; requires `expectedDiffHash` |
+| `create_week_draft` | Create a draft: blank, template-seeded, or cloned |
+| `copy_week_draft` | Clone a draft to a new ref |
+| `rename_week_draft` | Rename a draft (preserves snapshot history) |
+| `reset_week_draft` | Discard local edits and re-pull |
+| `refresh_week_draft` | Three-way merge against current remote (`abort`/`ours`/`theirs`) |
+| `archive_week_draft` | Hide a draft from default list output |
+| `unarchive_week_draft` | Show a previously archived draft |
+| `snapshot_week_draft` | Take a manual snapshot; optional pin |
+| `restore_week_draft_snapshot` | Restore from a snapshot by sequence number |
+| `prune_week_draft_snapshots` | Drop unpinned snapshots |
 
 ### Safety model
 

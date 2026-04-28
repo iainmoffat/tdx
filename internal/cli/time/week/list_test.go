@@ -58,3 +58,42 @@ func TestFormatRFC3339OrEmpty(t *testing.T) {
 		t.Errorf("non-zero: got empty")
 	}
 }
+
+func TestListText_GroupsByDate(t *testing.T) {
+	items := []weekDraftListItem{
+		{WeekStart: "2026-05-04", Name: "default", SyncState: "dirty", TotalHours: 18},
+		{WeekStart: "2026-05-04", Name: "pristine", SyncState: "clean", TotalHours: 20},
+		{WeekStart: "2026-04-12", Name: "default", SyncState: "clean", TotalHours: 20},
+	}
+	var buf bytes.Buffer
+	writeListText(&buf, items)
+	out := buf.String()
+	if !strings.Contains(out, "2026-05-04") {
+		t.Errorf("first date missing: %q", out)
+	}
+	lines := strings.Split(out, "\n")
+	var pristineLine string
+	for _, l := range lines {
+		if strings.Contains(l, "pristine") {
+			pristineLine = l
+		}
+	}
+	if strings.HasPrefix(pristineLine, "2026-05-04") {
+		t.Errorf("pristine line should have blank date column, got %q", pristineLine)
+	}
+}
+
+func TestList_FilterArchived(t *testing.T) {
+	items := []weekDraftListItem{
+		{WeekStart: "2026-04-12", Name: "default", SyncState: "clean", Archived: false},
+		{WeekStart: "2026-04-05", Name: "default", SyncState: "clean", Archived: true},
+	}
+	visible := filterArchived(items, false)
+	if len(visible) != 1 || visible[0].WeekStart != "2026-04-12" {
+		t.Errorf("filterArchived(false) wrong: %+v", visible)
+	}
+	all := filterArchived(items, true)
+	if len(all) != 2 {
+		t.Errorf("filterArchived(true) wrong: %+v", all)
+	}
+}

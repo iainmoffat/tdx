@@ -116,6 +116,17 @@ func (s *Store) LoadPulledSnapshot(profile string, weekStart time.Time, name str
 	return d, nil
 }
 
+// SaveNew is like Save but refuses when a draft already exists at the same
+// (profile, weekStart, name). Used by `new`, `copy`, and `rename` flows
+// that explicitly do not want to clobber.
+func (s *Store) SaveNew(d domain.WeekDraft) error {
+	if s.Exists(d.Profile, d.WeekStart, d.Name) {
+		return fmt.Errorf("draft already exists: %s/%s/%s",
+			d.Profile, d.WeekStart.In(domain.EasternTZ).Format("2006-01-02"), d.Name)
+	}
+	return s.Save(d)
+}
+
 // List returns all drafts for the given profile, ordered by (weekStart desc, name asc).
 func (s *Store) List(profile string) ([]domain.WeekDraft, error) {
 	root := s.paths.ProfileWeeksDir(profile)

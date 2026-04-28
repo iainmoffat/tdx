@@ -82,3 +82,16 @@ func TestStore_LoadMissing(t *testing.T) {
 		t.Errorf("expected error loading non-existent draft")
 	}
 }
+
+func TestStore_SaveNew_RefusesCollision(t *testing.T) {
+	paths := config.Paths{Root: t.TempDir()}
+	s := NewStore(paths)
+	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
+	d := domain.WeekDraft{SchemaVersion: 1, Profile: "work", Name: "default", WeekStart: week}
+	if err := s.SaveNew(d); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SaveNew(d); err == nil {
+		t.Errorf("SaveNew should refuse to overwrite existing draft")
+	}
+}
