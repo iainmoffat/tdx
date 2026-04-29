@@ -28,10 +28,13 @@ func buildDraftFromReport(profile, name string, report domain.WeekReport) domain
 	var order []rowGroupKey
 
 	for _, e := range report.Entries {
-		// Skip TD's empty placeholder entries (id=0, no minutes).
-		if e.ID == 0 && e.Minutes == 0 {
-			continue
-		}
+		// TD's WeekReport includes one "placeholder" entry per available
+		// (target, type, billable) tuple even when no time is logged
+		// (id=0, minutes=0). Reserve a row for each — so the editor sees
+		// every loggable target — but don't add a cell for the placeholder
+		// itself. Real entries on the same key add their cells normally.
+		isPlaceholder := e.ID == 0 && e.Minutes == 0
+
 		k := rowGroupKey{
 			kind: e.Target.Kind, appID: e.Target.AppID, itemID: e.Target.ItemID,
 			taskID: e.Target.TaskID, typeID: e.TimeType.ID, billable: e.Billable,
@@ -49,6 +52,11 @@ func buildDraftFromReport(profile, name string, report domain.WeekReport) domain
 			groups[k] = row
 			order = append(order, k)
 		}
+
+		if isPlaceholder {
+			continue
+		}
+
 		// DST-safe calendar-day arithmetic.
 		ey, em, ed := e.Date.Date()
 		ry, rm, rd := weekStart.Date()
