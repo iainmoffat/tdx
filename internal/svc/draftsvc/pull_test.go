@@ -124,6 +124,48 @@ func TestBuildDraftFromReport_PlaceholderAndRealEntryCollapseToOneRow(t *testing
 	}
 }
 
+func TestBuildDraftFromReport_SkipsPlaceholderWithZeroTypeID(t *testing.T) {
+	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
+	report := domain.WeekReport{
+		WeekRef: domain.WeekRef{StartDate: week, EndDate: week.AddDate(0, 0, 6)},
+		Status:  domain.ReportOpen,
+		Entries: []domain.TimeEntry{
+			// Placeholder with no TimeType — should be skipped entirely.
+			{ID: 0, Minutes: 0,
+				Target:   domain.Target{Kind: domain.TargetProject, ItemID: 999},
+				TimeType: domain.TimeType{ID: 0}, Billable: false},
+		},
+	}
+	draft := buildDraftFromReport("work", "default", report)
+	if got := len(draft.Rows); got != 0 {
+		t.Errorf("rows = %d, want 0 (type-less placeholder should be skipped)", got)
+	}
+}
+
+func TestBuildDraftFromReport_KeepsPlaceholderWithValidTypeID(t *testing.T) {
+	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
+	report := domain.WeekReport{
+		WeekRef: domain.WeekRef{StartDate: week, EndDate: week.AddDate(0, 0, 6)},
+		Status:  domain.ReportOpen,
+		Entries: []domain.TimeEntry{
+			// Placeholder with a valid TimeType — should produce an empty editable row.
+			{ID: 0, Minutes: 0,
+				Target:   domain.Target{Kind: domain.TargetProject, ItemID: 555},
+				TimeType: domain.TimeType{ID: 5, Name: "Standard Activities"}, Billable: false},
+		},
+	}
+	draft := buildDraftFromReport("work", "default", report)
+	if got := len(draft.Rows); got != 1 {
+		t.Fatalf("rows = %d, want 1 (placeholder with valid TimeType.ID kept)", got)
+	}
+	if got := len(draft.Rows[0].Cells); got != 0 {
+		t.Errorf("cells = %d, want 0 (placeholder produces empty row)", got)
+	}
+	if got := draft.Rows[0].TimeType.ID; got != 5 {
+		t.Errorf("TimeType.ID = %d, want 5", got)
+	}
+}
+
 func TestComputeRemoteFingerprint_Stable(t *testing.T) {
 	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
 	a := domain.WeekReport{

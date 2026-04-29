@@ -7,6 +7,54 @@ import (
 	"github.com/iainmoffat/tdx/internal/domain"
 )
 
+func TestReconcile_RefusesCreateOnTypelessRow(t *testing.T) {
+	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
+	row := domain.DraftRow{
+		ID:       "row-09",
+		Target:   domain.Target{Kind: domain.TargetProject, ItemID: 999},
+		TimeType: domain.TimeType{ID: 0}, // type-less placeholder row
+		Cells: []domain.DraftCell{
+			{Day: time.Monday, Hours: 4.0}, // local-only addition (no SourceEntryID)
+		},
+	}
+	draft := domain.WeekDraft{
+		SchemaVersion: 1, Profile: "work", Name: "default", WeekStart: week,
+		Rows: []domain.DraftRow{row},
+		Provenance: domain.DraftProvenance{
+			Kind: domain.ProvenancePulled, RemoteFingerprint: "fp1",
+		},
+	}
+	pulled := map[string]domain.DraftCell{}
+	report := domain.WeekReport{
+		WeekRef: domain.WeekRef{StartDate: week, EndDate: week.AddDate(0, 0, 6)},
+		Status:  domain.ReportOpen,
+	}
+
+	_, err := reconcileDraft(draft, pulled, report, nil, "fp1", "user-1")
+	if err == nil {
+		t.Fatal("expected reconcile to fail for type-less row, got nil")
+	}
+	msg := err.Error()
+	if !contains(msg, "row-09") {
+		t.Errorf("error should mention row ID; got %q", msg)
+	}
+	if !contains(msg, "TimeType") {
+		t.Errorf("error should mention TimeType; got %q", msg)
+	}
+	if !contains(msg, "reset") {
+		t.Errorf("error should suggest `reset` recovery; got %q", msg)
+	}
+}
+
+func contains(s, substr string) bool {
+	for i := 0; i+len(substr) <= len(s); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
 func TestReconcile_DeleteOnClearedPulledCell(t *testing.T) {
 	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
 	pulledRow := domain.DraftRow{
