@@ -16,10 +16,13 @@ type mockTimeWriter struct {
 		ID    int
 		Patch domain.EntryUpdate
 	}
-	deletes []int
-	failOn  string // "create" | "update" | "delete"
-	weekRpt domain.WeekReport
-	locked  []domain.LockedDay
+	deletes    []int
+	failOn     string // "create" | "update" | "delete"
+	weekRpt    domain.WeekReport
+	locked     []domain.LockedDay
+	typesFor   map[string][]domain.TimeType // keyed by target identity
+	typesErr   error                        // returned by TimeTypesForTarget when set
+	typesCalls int                          // number of TimeTypesForTarget invocations
 }
 
 func (m *mockTimeWriter) AddEntry(_ context.Context, _ string, e domain.EntryInput) (domain.TimeEntry, error) {
@@ -55,6 +58,18 @@ func (m *mockTimeWriter) GetWeekReport(_ context.Context, _ string, _ time.Time)
 
 func (m *mockTimeWriter) GetLockedDays(_ context.Context, _ string, _, _ time.Time) ([]domain.LockedDay, error) {
 	return m.locked, nil
+}
+
+func (m *mockTimeWriter) TimeTypesForTarget(_ context.Context, _ string, target domain.Target) ([]domain.TimeType, error) {
+	m.typesCalls++
+	if m.typesErr != nil {
+		return nil, m.typesErr
+	}
+	if m.typesFor == nil {
+		return nil, nil
+	}
+	key := fmt.Sprintf("%s:%d:%d:%d:%d", target.Kind, target.AppID, target.ProjectID, target.ItemID, target.TaskID)
+	return m.typesFor[key], nil
 }
 
 func TestApply_AllowDeletesGate(t *testing.T) {

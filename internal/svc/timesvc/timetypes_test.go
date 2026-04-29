@@ -98,25 +98,22 @@ func TestTimeTypesForTarget_Project(t *testing.T) {
 
 func TestTimeTypesForTarget_ProjectTask(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, "/TDWebApi/api/time/types/component/project/9999/plan/3/task/5", r.URL.Path)
+		require.Equal(t, "/TDWebApi/api/time/types/component/project/259/plan/1292/task/4938", r.URL.Path)
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`[]`))
+		_, _ = w.Write([]byte(`[{"ID":1,"Name":"Project","IsActive":true}]`))
 	}))
 	defer srv.Close()
 
 	svc, profile := harness(t, srv.URL)
-	target := domain.Target{Kind: domain.TargetProjectTask, AppID: 42, ItemID: 9999, TaskID: 5}
-	// ItemID is the project ID here; TaskID is the task ID. For
-	// projectTask, the TD endpoint also requires a plan ID which we do
-	// not currently track in Target. Phase 2 treats PlanID=3 as a known
-	// limitation; the caller may stuff it into the target via a separate
-	// field in a later slice if needed.
-	_, err := svc.TimeTypesForTarget(context.Background(), profile, target)
-	if err != nil {
-		// Document the known limitation rather than pass/fail silently.
-		t.Logf("projectTask lookup currently skipped: %v", err)
-		t.SkipNow()
-	}
+	// For projectTask: Target.ProjectID is the project ID, Target.ItemID
+	// is the plan ID (set by decodeTarget for componentTaskTime), and
+	// Target.TaskID is the task ID. Verified against UFL tenant 2026-04-29.
+	target := domain.Target{Kind: domain.TargetProjectTask, ProjectID: 259, ItemID: 1292, TaskID: 4938}
+	types, err := svc.TimeTypesForTarget(context.Background(), profile, target)
+	require.NoError(t, err)
+	require.Len(t, types, 1)
+	require.Equal(t, 1, types[0].ID)
+	require.Equal(t, "Project", types[0].Name)
 }
 
 func TestTimeTypesForTarget_ProjectIssue(t *testing.T) {

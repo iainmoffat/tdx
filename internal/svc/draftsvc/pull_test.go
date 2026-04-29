@@ -124,21 +124,25 @@ func TestBuildDraftFromReport_PlaceholderAndRealEntryCollapseToOneRow(t *testing
 	}
 }
 
-func TestBuildDraftFromReport_SkipsPlaceholderWithZeroTypeID(t *testing.T) {
+func TestBuildDraftFromReport_KeepsPlaceholderWithZeroTypeID(t *testing.T) {
+	// Type-less placeholders are kept here; Service.Pull's
+	// resolveDefaultTimeTypes assigns a TimeType post-hoc.
 	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
 	report := domain.WeekReport{
 		WeekRef: domain.WeekRef{StartDate: week, EndDate: week.AddDate(0, 0, 6)},
 		Status:  domain.ReportOpen,
 		Entries: []domain.TimeEntry{
-			// Placeholder with no TimeType — should be skipped entirely.
 			{ID: 0, Minutes: 0,
 				Target:   domain.Target{Kind: domain.TargetProject, ItemID: 999},
 				TimeType: domain.TimeType{ID: 0}, Billable: false},
 		},
 	}
 	draft := buildDraftFromReport("work", "default", report)
-	if got := len(draft.Rows); got != 0 {
-		t.Errorf("rows = %d, want 0 (type-less placeholder should be skipped)", got)
+	if got := len(draft.Rows); got != 1 {
+		t.Fatalf("rows = %d, want 1 (type-less placeholder retained for resolution)", got)
+	}
+	if got := draft.Rows[0].TimeType.ID; got != 0 {
+		t.Errorf("TimeType.ID = %d, want 0 (resolution happens at the service layer)", got)
 	}
 }
 

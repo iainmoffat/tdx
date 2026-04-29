@@ -435,6 +435,8 @@ func (s *Service) Refresh(ctx context.Context, profile string, weekStart time.Ti
 		return RefreshResult{}, fmt.Errorf("refresh: fetch remote: %w", err)
 	}
 	remoteDraft := buildDraftFromReport(profile, name, report)
+	s.resolveDefaultTimeTypes(ctx, profile, &remoteDraft)
+	dedupeRowsByKey(&remoteDraft)
 
 	res := classify(pulled, draft, remoteDraft, strategy)
 
