@@ -20,6 +20,7 @@ type timeWriter interface {
 	DeleteEntry(ctx context.Context, profile string, id int) error
 	GetWeekReport(ctx context.Context, profile string, date time.Time) (domain.WeekReport, error)
 	GetLockedDays(ctx context.Context, profile string, from, to time.Time) ([]domain.LockedDay, error)
+	TimeTypesForTarget(ctx context.Context, profile string, target domain.Target) ([]domain.TimeType, error)
 }
 
 // Service is the draft-aware service layer.
@@ -79,6 +80,8 @@ func (s *Service) Pull(ctx context.Context, profile string, weekStart time.Time,
 	}
 
 	draft := buildDraftFromReport(profile, name, report)
+	s.resolveDefaultTimeTypes(ctx, profile, &draft)
+	dedupeRowsByKey(&draft)
 	if err := s.store.Save(draft); err != nil {
 		return domain.WeekDraft{}, err
 	}
@@ -86,6 +89,83 @@ func (s *Service) Pull(ctx context.Context, profile string, weekStart time.Time,
 		return domain.WeekDraft{}, fmt.Errorf("save pulled snapshot: %w", err)
 	}
 	return draft, nil
+}
+
+// resolveDefaultTimeTypes assigns a default TimeType to each row whose
+// TimeType.ID is 0 by querying TD's per-target time-type catalog and
+// picking the first valid type. Best-effort: rows whose lookup fails
+// keep TimeType.ID=0; the reconcile guard catches them at push time.
+//
+// Caches lookups by target identity within a single call so repeated
+// targets only hit the API once.
+func (s *Service) resolveDefaultTimeTypes(ctx context.Context, profile string, draft *domain.WeekDraft) {
+	type cacheEntry struct {
+		types []domain.TimeType
+		hit   bool
+	}
+	cache := map[string]cacheEntry{}
+	for i := range draft.Rows {
+		row := &draft.Rows[i]
+		if row.TimeType.ID > 0 {
+			continue
+		}
+		key := targetCacheKey(row.Target)
+		c, hit := cache[key]
+		if !hit {
+			t, err := s.tsvc.TimeTypesForTarget(ctx, profile, row.Target)
+			if err != nil {
+				cache[key] = cacheEntry{types: nil, hit: true}
+				continue
+			}
+			c = cacheEntry{types: t, hit: true}
+			cache[key] = c
+		}
+		if len(c.types) == 0 {
+			continue
+		}
+		row.TimeType = c.types[0]
+		// Refresh the row's resolver hints so the editor's TypeName label
+		// matches the just-assigned type.
+		row.ResolverHints.TimeTypeName = c.types[0].Name
+	}
+}
+
+// targetCacheKey identifies a target for caching TimeTypesForTarget calls.
+// Different target kinds use different ID fields; include them all.
+func targetCacheKey(t domain.Target) string {
+	return fmt.Sprintf("%s:%d:%d:%d:%d", t.Kind, t.AppID, t.ProjectID, t.ItemID, t.TaskID)
+}
+
+// dedupeRowsByKey collapses rows that share (Target, TimeType, Billable).
+// When two rows collide (e.g., a real-entry row and a placeholder that
+// resolution promoted to the same TimeType), the row with cells wins;
+// the empty placeholder is dropped. Stable: input order is preserved
+// among kept rows.
+func dedupeRowsByKey(draft *domain.WeekDraft) {
+	seen := map[string]int{} // key → index in draft.Rows of the kept row
+	out := make([]domain.DraftRow, 0, len(draft.Rows))
+	for _, row := range draft.Rows {
+		k := fmt.Sprintf("%s|%d|%t", targetCacheKey(row.Target), row.TimeType.ID, row.Billable)
+		idx, dup := seen[k]
+		if !dup {
+			seen[k] = len(out)
+			out = append(out, row)
+			continue
+		}
+		// Collision: keep the one with cells. If both have cells (shouldn't
+		// happen with current pull semantics), keep the first.
+		if len(out[idx].Cells) > 0 {
+			continue // existing wins
+		}
+		if len(row.Cells) > 0 {
+			out[idx] = row // incoming wins
+		}
+	}
+	// Re-assign sequential row IDs after dedup so they stay contiguous.
+	for i := range out {
+		out[i].ID = fmt.Sprintf("row-%02d", i+1)
+	}
+	draft.Rows = out
 }
 
 // PulledCellsByKey returns the at-pull-time cells map for sync-state computation.

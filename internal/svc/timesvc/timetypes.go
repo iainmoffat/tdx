@@ -75,12 +75,11 @@ func componentPathFor(target domain.Target) (string, error) {
 	case domain.TargetProject:
 		return fmt.Sprintf("/TDWebApi/api/time/types/component/project/%d", target.ItemID), nil
 	case domain.TargetProjectTask:
-		// TD requires project + plan + task for this endpoint, and Phase 2
-		// does not yet model a separate PlanID on Target. Return
-		// ErrUnsupportedTargetKind so the CLI surfaces a clear error; a
-		// future slice can add a PlanID field and light this path up.
-		return "", fmt.Errorf("%w: projectTask lookup needs a plan ID not yet modelled in Target",
-			domain.ErrUnsupportedTargetKind)
+		// PlanID lives in Target.ItemID (set by decodeTarget for
+		// componentTaskTime); TaskID in Target.TaskID; ProjectID in
+		// Target.ProjectID. Verified against UFL tenant 2026-04-29.
+		return fmt.Sprintf("/TDWebApi/api/time/types/component/project/%d/plan/%d/task/%d",
+			target.ProjectID, target.ItemID, target.TaskID), nil
 	case domain.TargetProjectIssue:
 		return fmt.Sprintf("/TDWebApi/api/time/types/component/project/%d/issue/%d",
 			target.ItemID, target.TaskID), nil

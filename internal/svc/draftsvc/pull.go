@@ -33,16 +33,9 @@ func buildDraftFromReport(profile, name string, report domain.WeekReport) domain
 		// (id=0, minutes=0). Reserve a row for each — so the editor sees
 		// every loggable target — but don't add a cell for the placeholder
 		// itself. Real entries on the same key add their cells normally.
+		// Placeholders with TimeType.ID==0 (typical for projectTask) are
+		// kept here and resolved by Service.resolveDefaultTimeTypes.
 		isPlaceholder := e.ID == 0 && e.Minutes == 0
-
-		// Some placeholders carry no TimeType (TimeType.ID == 0) — these
-		// are group headers or targets without a default type assignment.
-		// New entries created against them fail TD validation
-		// ("Time account 0 was not found"). Drop them at pull time so the
-		// editor never offers the user an unusable row.
-		if isPlaceholder && e.TimeType.ID == 0 {
-			continue
-		}
 
 		k := rowGroupKey{
 			kind: e.Target.Kind, appID: e.Target.AppID, itemID: e.Target.ItemID,
