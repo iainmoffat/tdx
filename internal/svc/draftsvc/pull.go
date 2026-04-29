@@ -35,6 +35,15 @@ func buildDraftFromReport(profile, name string, report domain.WeekReport) domain
 		// itself. Real entries on the same key add their cells normally.
 		isPlaceholder := e.ID == 0 && e.Minutes == 0
 
+		// Some placeholders carry no TimeType (TimeType.ID == 0) — these
+		// are group headers or targets without a default type assignment.
+		// New entries created against them fail TD validation
+		// ("Time account 0 was not found"). Drop them at pull time so the
+		// editor never offers the user an unusable row.
+		if isPlaceholder && e.TimeType.ID == 0 {
+			continue
+		}
+
 		k := rowGroupKey{
 			kind: e.Target.Kind, appID: e.Target.AppID, itemID: e.Target.ItemID,
 			taskID: e.Target.TaskID, typeID: e.TimeType.ID, billable: e.Billable,

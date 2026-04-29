@@ -118,6 +118,16 @@ func reconcileDraft(
 					row.ID, dateStr, cell.Hours)
 			}
 
+			// Guard: refuse to create entries on rows that lack a TimeType.
+			// TD will reject these with "Time account 0 was not found"; catch
+			// it here so the user gets an actionable error.
+			if cell.SourceEntryID == 0 && row.TimeType.ID == 0 {
+				return domain.ReconcileDiff{}, fmt.Errorf(
+					"row %s has no TimeType (TimeType.ID=0); cannot create entries — "+
+						"use `tdx time week reset %s --yes` and re-pull, or remove the row before push",
+					row.ID, draft.WeekStart.Format("2006-01-02"))
+			}
+
 			entryInput := domain.EntryInput{
 				UserUID:     userUID,
 				Date:        date,
