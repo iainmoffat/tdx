@@ -15,7 +15,7 @@ func TestWriteXLSX_HeaderAndDataRow(t *testing.T) {
 
 	f, err := excelize.OpenFile(path)
 	require.NoError(t, err)
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	const sheet = "Time Status Report"
 	rows, err := f.GetRows(sheet)
@@ -39,7 +39,7 @@ func TestWriteXLSX_HeaderIsBold(t *testing.T) {
 
 	f, err := excelize.OpenFile(path)
 	require.NoError(t, err)
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	styleID, err := f.GetCellStyle("Time Status Report", "A1")
 	require.NoError(t, err)
@@ -53,7 +53,7 @@ func TestWriteXLSX_HoursAreNumeric(t *testing.T) {
 
 	f, err := excelize.OpenFile(path)
 	require.NoError(t, err)
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// Cell I2 is the BillableHours value (4.0). After float64 SetCellValue,
 	// excelize stores it as a number; reading it back should give "4" or "4.0"

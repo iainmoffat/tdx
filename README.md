@@ -40,6 +40,9 @@ tdx time template show my-week
 
 # Apply it to next week (preview first, then confirm)
 tdx time template apply my-week --week 2026-04-14 --yes
+
+# Weekly time-status report for your direct reports
+tdx time report status --manager me --week 2026-04-12
 ```
 
 ## Commands
@@ -127,6 +130,14 @@ artifact, validate, diff, preview, and push back with safety guarantees.
 | `tdx time template apply <name>` | Apply template to a week | `--week`, `--mode`, `--days`, `--dry-run`, `--yes` |
 | `tdx time template compare <name>` | Compare template vs live week | `--week`, `--mode` |
 
+### Time Reports
+
+| Command | Description | Key Flags |
+|---|---|---|
+| `tdx time report status` | Weekly time-status report (per user, per week) | `--week`, `--from`/`--to`, `--user`, `--manager`, `--account`, `--all`, `--include-zero`, `--limit`, `--json`, `--csv`, `--xlsx` |
+
+> Selectors are mutually exclusive (exactly one of `--user`, `--manager`, `--account`, `--all` required). `--manager me` resolves to the authenticated user. Output formats are mutually exclusive; default is human table.
+
 ### MCP
 
 | Command | Description |
@@ -156,7 +167,7 @@ Add tdx as an MCP server in your AI tool's configuration:
 }
 ```
 
-The MCP server exposes 37 tools (17 read-only, 20 mutating). All mutating
+The MCP server exposes 39 tools (18 read-only, 21 mutating). All mutating
 tools require `confirm: true`. Template applies require an `expectedDiffHash`
 from a prior preview call for race protection.
 
@@ -204,6 +215,12 @@ from a prior preview call for race protection.
 |------|-------------|
 | `refresh_week_draft` | Three-way merge a draft against current remote; supports `strategy` `abort`/`ours`/`theirs` |
 
+**Time Reports (Phase C — read-only, 1 tool):**
+
+| Tool | Description |
+|------|-------------|
+| `get_time_status_report` | Generate a per-user, per-week time-status report (selectors: `userUIDs`, `manager`, `account`, `all`) |
+
 ## JSON Output
 
 All commands support `--json` for machine-readable output with stable
@@ -224,6 +241,8 @@ Schema names introduced in Phase B.1: `tdx.v1.weekDraftCreateResult`,
 `tdx.v1.weekDraftSnapshotPruneResult`.
 
 Schema names introduced in Phase B.2a: `tdx.v1.weekDraftRefreshResult`.
+
+Schema names introduced in Phase C — Reports: `tdx.v1.timeStatusReport`.
 
 ## Shell Completions
 

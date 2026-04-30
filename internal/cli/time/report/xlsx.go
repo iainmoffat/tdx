@@ -12,7 +12,7 @@ import (
 // Hours are stored as numbers (not strings) so Excel can pivot/sum.
 func writeXLSX(path string, rep domain.TimeStatusReport) error {
 	f := excelize.NewFile()
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	const sheet = "Time Status Report"
 	idx, err := f.NewSheet(sheet)

@@ -13,7 +13,7 @@ import (
 func printText(w io.Writer, rep domain.TimeStatusReport, f statusFlags) error {
 	groups := rep.RowsByWeek()
 	for _, g := range groups {
-		fmt.Fprintf(w, "WEEK %s — %s\n",
+		_, _ = fmt.Fprintf(w, "WEEK %s — %s\n",
 			g.Week.StartDate.Format("2006-01-02"),
 			g.Week.EndDate.Format("2006-01-02"))
 
@@ -40,10 +40,10 @@ func printText(w io.Writer, rep domain.TimeStatusReport, f statusFlags) error {
 			fmt.Sprintf("%.2f", float64(totalSum)/60.0),
 		}
 		render.Table(w, headers, rows, summary)
-		fmt.Fprintln(w)
+		_, _ = fmt.Fprintln(w)
 	}
 	bill, nonBill, total := rep.Totals()
-	fmt.Fprintf(w, "OVERALL: %.2f bill · %.2f non-bill · %.2f total\n",
+	_, _ = fmt.Fprintf(w, "OVERALL: %.2f bill · %.2f non-bill · %.2f total\n",
 		float64(bill)/60.0, float64(nonBill)/60.0, float64(total)/60.0)
 	return nil
 }
