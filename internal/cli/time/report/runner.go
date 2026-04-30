@@ -40,6 +40,9 @@ type runnerDeps struct {
 const (
 	maxConcurrency = 5
 	hardLimit      = 1000
+	// employeeLimit caps the people search when filtering by IsEmployee.
+	// UFL has ~1080 employees; 5000 is well under TD's 10K behavior cap.
+	employeeLimit = 5000
 )
 
 // assembleReport orchestrates the per-(user, week) fan-out and returns
@@ -214,6 +217,7 @@ func resolveWeeks(f statusFlags) ([]domain.WeekRef, error) {
 // resolveUsers maps the selector flags to a concrete user list.
 // Pre-validated: exactly one of --user/--manager/--account/--all is set.
 func resolveUsers(ctx context.Context, deps runnerDeps, f statusFlags) ([]domain.User, error) {
+	trueVal := true
 	switch {
 	case len(f.users) > 0:
 		out := make([]domain.User, 0, len(f.users))
@@ -235,7 +239,10 @@ func resolveUsers(ctx context.Context, deps runnerDeps, f statusFlags) ([]domain
 			}
 			mgrUID = me.UID
 		}
-		all, err := deps.People.SearchUsers(ctx, deps.Profile, domain.UserFilter{Limit: hardLimit})
+		all, err := deps.People.SearchUsers(ctx, deps.Profile, domain.UserFilter{
+			Employee: &trueVal,
+			Limit:    employeeLimit,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -249,12 +256,16 @@ func resolveUsers(ctx context.Context, deps runnerDeps, f statusFlags) ([]domain
 
 	case f.account != "":
 		return deps.People.SearchUsers(ctx, deps.Profile, domain.UserFilter{
+			Employee:    &trueVal,
 			AccountName: f.account,
-			Limit:       hardLimit,
+			Limit:       employeeLimit,
 		})
 
 	case f.all:
-		return deps.People.SearchUsers(ctx, deps.Profile, domain.UserFilter{Limit: hardLimit})
+		return deps.People.SearchUsers(ctx, deps.Profile, domain.UserFilter{
+			Employee: &trueVal,
+			Limit:    employeeLimit,
+		})
 	}
 	return nil, fmt.Errorf("no selector (validation should have caught this)")
 }
