@@ -11,20 +11,21 @@ import (
 )
 
 type statusFlags struct {
-	profile     string
-	week        string
-	from        string
-	to          string
-	users       []string
-	manager     string
-	account     string
-	all         bool
-	yes         bool
-	includeZero bool
-	limit       int
-	json        bool
-	csv         bool
-	xlsx        string
+	profile      string
+	week         string
+	from         string
+	to           string
+	users        []string
+	manager      string
+	account      string
+	resourcePool string
+	all          bool
+	yes          bool
+	includeZero  bool
+	limit        int
+	json         bool
+	csv          bool
+	xlsx         string
 }
 
 func newStatusCmd() *cobra.Command {
@@ -37,10 +38,11 @@ func newStatusCmd() *cobra.Command {
 For each (user, week) pair, prints submission status and billable / non-billable / total hours.
 
 Selectors (exactly one required):
-  --user UID    one or more user UIDs (repeatable / comma-separated)
-  --manager UID limit to direct reports (use "me" for the authenticated user)
-  --account NAME limit to users in this account/department by name
-  --all         every active standard user (requires --yes)
+  --user UID          one or more user UIDs (repeatable / comma-separated)
+  --manager UID       limit to direct reports (use "me" for the authenticated user)
+  --account NAME      limit to users in this account/department by name
+  --resource-pool NAME limit to users in this TD resource pool (matches TD UI's filter)
+  --all               every active employee (requires --yes)
 
 Output formats (mutually exclusive; default: human table):
   --json       JSON envelope on stdout
@@ -61,7 +63,8 @@ Output formats (mutually exclusive; default: human table):
 	cmd.Flags().StringSliceVar(&f.users, "user", nil, "user UIDs (repeatable / comma-separated)")
 	cmd.Flags().StringVar(&f.manager, "manager", "", "limit to direct reports of this UID; \"me\" = authenticated user")
 	cmd.Flags().StringVar(&f.account, "account", "", "limit to users in this account/department by name")
-	cmd.Flags().BoolVar(&f.all, "all", false, "every active standard user (requires --yes)")
+	cmd.Flags().StringVar(&f.resourcePool, "resource-pool", "", "limit to users in this TD resource pool (by exact name)")
+	cmd.Flags().BoolVar(&f.all, "all", false, "every active employee (requires --yes)")
 	cmd.Flags().BoolVar(&f.yes, "yes", false, "confirm --all")
 	cmd.Flags().BoolVar(&f.includeZero, "include-zero", true, "include user-weeks with zero total minutes (default: include)")
 	cmd.Flags().IntVar(&f.limit, "limit", 200, "cap user count (hard cap: 1000)")
@@ -85,14 +88,17 @@ func validateStatusFlags(f statusFlags) error {
 	if f.account != "" {
 		selectors++
 	}
+	if f.resourcePool != "" {
+		selectors++
+	}
 	if f.all {
 		selectors++
 	}
 	switch {
 	case selectors == 0:
-		return fmt.Errorf("a selector is required: --user, --manager, --account, or --all")
+		return fmt.Errorf("a selector is required: --user, --manager, --account, --resource-pool, or --all")
 	case selectors > 1:
-		return fmt.Errorf("exactly one of --user, --manager, --account, --all may be set")
+		return fmt.Errorf("exactly one of --user, --manager, --account, --resource-pool, --all may be set")
 	}
 
 	if f.all && !f.yes {

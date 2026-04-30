@@ -1,0 +1,3240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TeamDynamix Web API: Time</title>
+
+  <link rel="stylesheet" href="/TDPortal/Content/bootstrap/3.4.1/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" id="lnkFntAwesome" href="/TDPortal/Content/FontAwesome/css/fontawesome.min.css" />
+  <link rel="stylesheet" id="lnkFntAwesomeSolid" href="/TDPortal/Content/FontAwesome/css/solid.min.css" />
+  <link rel="stylesheet" id="lnkFntAwesomeRegular" href="/TDPortal/Content/FontAwesome/css/regular.min.css" />
+  <link rel="stylesheet" id="lnkFntAwesomeBrands" href="/TDPortal/Content/FontAwesome/css/brands.min.css" />
+  <link rel="stylesheet" id="lnkFntAwesomeV4Shim" href="/TDPortal/Content/FontAwesome/css/v4-shims.min.css" />
+
+  <script type="text/javascript" src="/TDPortal/Content/Scripts/jquery/2.2.4/jquery.min.js">
+  </script>
+
+  
+
+  <style type="text/css">
+    samp.http {
+      word-wrap: break-word;
+    }
+
+    body {
+      padding-top: 70px;
+    }
+
+    span.anchor {
+      display: block;
+      height: 70px;
+      margin-top: -70px;
+      visibility: hidden;
+    }
+
+    div.panel dl.dl-horizontal {
+      margin-bottom: 10px;
+    }
+  </style>
+
+  <script type="text/javascript">
+
+    $(document).ready(function () {
+
+      $(window).on("scroll", function () {
+
+        if (document.body.scrollTop > 20 ||
+          document.documentElement.scrollTop > 20) {
+          $("#btnBackToTop").show();
+        } else {
+          $("#btnBackToTop").hide();
+        }
+
+      });
+
+      $("#btnBackToTop").on("click", function () {
+        document.body.scrollTop = 0;
+        document.documentElement.scrollTop = 0;
+      });
+
+    });
+  </script>
+</head>
+<body>
+  <nav class="navbar navbar-default navbar-fixed-top">
+    <div class="container-fluid">
+      <div class="navbar-brand">
+        <a href="/TDWebApi/">
+          <img src="/TDWebApi/Images/TDLogoNew.png" alt="TeamDynamix Logo" style="margin-top: -5px" />
+        </a>
+      </div>
+      <h1 class="navbar-text h3">
+        TeamDynamix Web API
+          <small>Time</small>
+      </h1>
+    </div>
+  </nav>
+  <div class="container">
+
+    <div class="alert alert-info" role="alert">
+      <b>Unless explicitly stated on the documentation for a method, the accepted Web API call content types are:</b>
+      <ul>
+        <li>application/json</li>
+      </ul>
+      <b>Calls using any other content type (ex: text/plain) are not supported.</b>
+    </div>
+
+    
+
+
+
+
+
+
+<ol Class="breadcrumb">
+  <li>
+    <a href="/TDWebApi/">APIs</a>
+  </li>
+  <li class="active">
+    <strong>
+      Time
+    </strong>
+  </li>
+</ol>
+
+<h2>Contents</h2>
+<ul>
+  <li><a href="#summary">Summary</a></li>
+      <li><a href="#access-restrictions">Access Restrictions</a></li>
+    <li>
+    Methods
+    <ul>
+        <li>
+          <span class="label label-success"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            POST
+          </span>
+          <a href="#POSTapi/time">https://demotemplate.teamdynamix.com/TDWebApi/api/time</a>
+          <div style="margin-bottom: 10px;">
+            <p>
+                Adds or edits one or more time entries. Time entries will be created if their ID is zero or
+                negative and edited if they have a positive IDs. You cannot add / edit more than 50 items at
+                once. If you need to work with a larger set of records, you will need to perform multiple
+                calls.
+              </p>
+<p>
+                A collection of successes and failures will be returned. Successes will be accompanied by
+                the IDs of the new time entries. Failures will be accompanied by an error code and error
+                message. Because some operations may complete successfully while others fail, it is
+                important for the caller to inspect the results of the failures collection.
+              </p>
+<p>
+                In order to add or edit time for a user, they must be in your organization and be a standard User.
+              </p>
+<p>
+                Time entries cannot be added or edited for reports that are submitted or approved or on
+                days marked as locked days within your organization.
+              </p>
+<p>
+                Time entries using limited time accounts cannot be negative, must have a limit defined
+                for the user for the time period you're working with, and the number of hours in this limit
+                cannot be exceeded.
+              </p>
+<p>
+                Once a time entry has been created, you cannot change many properties about it, including the
+                item it is associated with and the person who entered time. If you need to do these things, we
+                recommend deleting the entry and re-adding it using the corrected values.
+              </p>
+<p>
+                This endpoint can be used to delete time entries by setting their minutes to zero. However,
+                time can only be deleted when authenticated as an Admin Service Account or as the user who the time is for.
+              </p>
+<p>
+                Add or edit operations are allowed either as the user the time is for or as an Admin Service Account. An
+                exception to this rule is if you are working with task time, have the Projects application,
+                are on the project in question, and have permission to add time for other users. An additional
+                exception is when working with ticket or ticket task time and you have the application permission
+                to add time for others within the ticketing application in question.
+              </p>
+<p>
+                Time entry will only be allowed for time accounts available on the item you're trying to
+                enter time for. Additionally, the user in question must be able to access the item that
+                the time is for which can depend on applications and permissions granted to users as well
+                as project / workspace / request / ticketing application membership.entries
+              </p>
+<p>
+                The user you are entering time for must be active and have the time and expenses application.
+              </p>
+          </div>
+        </li>
+        <li>
+          <span class="label label-danger"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            DELETE
+          </span>
+          <a href="#DELETEapi/time/{id}">https://demotemplate.teamdynamix.com/TDWebApi/api/time/{id}</a>
+          <div style="margin-bottom: 10px;">
+            <p>
+                Deletes the time entry.
+              </p>
+<p>
+                Time can only be deleted by the person the time is for or an Admin Service Account.
+              </p>
+<p>
+                You cannot delete time entries associated with time reports that have been submitted or approved.
+              </p>
+          </div>
+        </li>
+        <li>
+          <span class="label label-primary"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            GET
+          </span>
+          <a href="#GETapi/time/{id}">https://demotemplate.teamdynamix.com/TDWebApi/api/time/{id}</a>
+          <div style="margin-bottom: 10px;">
+            Gets details on a specific time entry.
+          </div>
+        </li>
+        <li>
+          <span class="label label-warning"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            PUT
+          </span>
+          <a href="#PUTapi/time/{id}">https://demotemplate.teamdynamix.com/TDWebApi/api/time/{id}</a>
+          <div style="margin-bottom: 10px;">
+            Edits a pre-existing time entry. See
+              <abbr class="xref" title="TDWebApi.Controllers.TimeController.AddOrEditTimeEntries(System.Collections.Generic.List{TeamDynamix.Api.Time.TimeEntry})">
+                documentation on the POST multiple add / edit time
+                entries
+              </abbr>
+              for more specifics.
+          </div>
+        </li>
+        <li>
+          <span class="label label-success"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            POST
+          </span>
+          <a href="#POSTapi/time/delete">https://demotemplate.teamdynamix.com/TDWebApi/api/time/delete</a>
+          <div style="margin-bottom: 10px;">
+            <p>
+                Deletes the time entries with the specified ids and returns success or failure information.
+              </p>
+<p>
+                Time can only be deleted by the person the time is for or an Admin Service Account.
+              </p>
+<p>
+                You cannot delete time entries associated with time reports that have been submitted or
+                approved.
+              </p>
+<p>
+                You can only delete up to 50 entries per call. If you need to delete more than that, you will
+                need to make multiple calls to the API.
+              </p>
+          </div>
+        </li>
+        <li>
+          <span class="label label-primary"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            GET
+          </span>
+          <a href="#GETapi/time/locked?startDate={startDate}&amp;endDate={endDate}">https://demotemplate.teamdynamix.com/TDWebApi/api/time/locked?startDate={startDate}&amp;endDate={endDate}</a>
+          <div style="margin-bottom: 10px;">
+            Gets the locked days in a specific time period. If no dates are specified, all locked days
+              in the organization will be retrieved.
+              Time entry will not be allowed for dates in this period.
+          </div>
+        </li>
+        <li>
+          <span class="label label-primary"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            GET
+          </span>
+          <a href="#GETapi/time/report/{reportDate}">https://demotemplate.teamdynamix.com/TDWebApi/api/time/report/{reportDate}</a>
+          <div style="margin-bottom: 10px;">
+            Gets details on a specific week's time report (weekly timesheet) for the executing user.
+          </div>
+        </li>
+        <li>
+          <span class="label label-primary"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            GET
+          </span>
+          <a href="#GETapi/time/report/{reportDate}/{uid}">https://demotemplate.teamdynamix.com/TDWebApi/api/time/report/{reportDate}/{uid}</a>
+          <div style="margin-bottom: 10px;">
+            <p>
+                Gets details on a specific week's time report (timesheet) for a user.
+              </p>
+<p>
+                In order to access details, you must either be logged in as a user with the Analysis application,
+                the user you are requesting the time report of, one of the organization's Admin Service Accounts, or someone who
+                is responsible for approving one or more items on the user's time report.
+              </p>
+          </div>
+        </li>
+        <li>
+          <span class="label label-success"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            POST
+          </span>
+          <a href="#POSTapi/time/search">https://demotemplate.teamdynamix.com/TDWebApi/api/time/search</a>
+          <div style="margin-bottom: 10px;">
+            <p>
+                Searches for time entries that match the specified parameters.
+              </p>
+<p>
+                You will only be able to see time for yourself unless the user you are authenticated as has the Analysis
+                application
+                or is an organization's Web Admin Service Account.
+              </p>
+<p>
+                Most search fields exist in ranges that you can specify none, both, or either the From or To properties.
+                When present, a value will exclude values outside of the specified range. These values default to null
+                by default.
+              </p>
+<p>
+                You can also specify project / workspace, plan, task, ticket task, ticket, and/or issue IDs to help with
+                the search operation. Components can also be set to filter out item types that you aren't interested in,
+                but all searches are mutually exclusive.
+              </p>
+          </div>
+        </li>
+        <li>
+          <span class="label label-primary"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            GET
+          </span>
+          <a href="#GETapi/time/types">https://demotemplate.teamdynamix.com/TDWebApi/api/time/types</a>
+          <div style="margin-bottom: 10px;">
+            Gets a list of all available active time types.
+          </div>
+        </li>
+        <li>
+          <span class="label label-primary"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            GET
+          </span>
+          <a href="#GETapi/time/types/{id}">https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/{id}</a>
+          <div style="margin-bottom: 10px;">
+            Gets details on a specific time type.
+          </div>
+        </li>
+        <li>
+          <span class="label label-primary"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            GET
+          </span>
+          <a href="#GETapi/time/types/{id}/limits/{uid}?startDate={startDate}&amp;endDate={endDate}">https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/{id}/limits/{uid}?startDate={startDate}&amp;endDate={endDate}</a>
+          <div style="margin-bottom: 10px;">
+            <p>
+                Gets the time limits for a time type for a specified user and date range.
+              </p>
+<p>
+                The user requested must be of type User and within your organization.
+              </p>
+          </div>
+        </li>
+        <li>
+          <span class="label label-danger"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            DELETE
+          </span>
+          <a href="#DELETEapi/time/types/component/app/{appID}/ticket/{ticketID}">https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/app/{appID}/ticket/{ticketID}</a>
+          <div style="margin-bottom: 10px;">
+            Unassociates a collection of time types from a ticket.
+            <p>
+            You must have the ability to edit the specified ticket to call this endpoint.
+            </p>
+          </div>
+        </li>
+        <li>
+          <span class="label label-primary"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            GET
+          </span>
+          <a href="#GETapi/time/types/component/app/{appID}/ticket/{ticketID}">https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/app/{appID}/ticket/{ticketID}</a>
+          <div style="margin-bottom: 10px;">
+            <p>
+                Gets the time type available or applied to a specific ticket.
+              </p>
+<p>
+                In order to get this information you must be one of the organization's Admin Service Accounts, be the creator
+                or contact on the ticket, have the corresponding ticketing application, or be on the same
+                account as the ticket and have permissions to view requests related to accounts the user has.
+              </p>
+          </div>
+        </li>
+        <li>
+          <span class="label label-success"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            POST
+          </span>
+          <a href="#POSTapi/time/types/component/app/{appID}/ticket/{ticketID}">https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/app/{appID}/ticket/{ticketID}</a>
+          <div style="margin-bottom: 10px;">
+            Associates a collection of time types to a ticket.
+            <p>
+            You must have the ability to edit the specified ticket to call this endpoint.
+            </p>
+          </div>
+        </li>
+        <li>
+          <span class="label label-primary"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            GET
+          </span>
+          <a href="#GETapi/time/types/component/app/{appID}/ticket/{ticketID}/task/{taskID}">https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/app/{appID}/ticket/{ticketID}/task/{taskID}</a>
+          <div style="margin-bottom: 10px;">
+            <p>
+                Gets the time type available or applied to a specific ticket.
+              </p>
+<p>
+                In order to get this information you must be one of the organization's Admin Service Accounts, be the creator
+                or contact on the ticket, have the corresponding ticketing application, or be on the same
+                account as the ticket and have permissions to view requests related to accounts the user has.
+              </p>
+          </div>
+        </li>
+        <li>
+          <span class="label label-primary"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            GET
+          </span>
+          <a href="#GETapi/time/types/component/project/{projectID}">https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/project/{projectID}</a>
+          <div style="margin-bottom: 10px;">
+            <p>
+                Gets the time type available or applied to a specific project.
+              </p>
+<p>
+                In order to get this information you must be on the project, have the Analysis application,
+                or be one of the organization's Admin Service Accounts.
+              </p>
+          </div>
+        </li>
+        <li>
+          <span class="label label-primary"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            GET
+          </span>
+          <a href="#GETapi/time/types/component/project/{projectID}/issue/{issueID}">https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/project/{projectID}/issue/{issueID}</a>
+          <div style="margin-bottom: 10px;">
+            <p>
+                Gets the time type available or applied to a specific issue.
+              </p>
+<p>
+                In order to get this information you must be on the project the issue is on,
+                have the Analysis application, or be one of the organization's Admin Service Accounts.
+              </p>
+          </div>
+        </li>
+        <li>
+          <span class="label label-primary"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            GET
+          </span>
+          <a href="#GETapi/time/types/component/project/{projectID}/plan/{planID}/task/{taskID}">https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/project/{projectID}/plan/{planID}/task/{taskID}</a>
+          <div style="margin-bottom: 10px;">
+            <p>
+                Gets the time type available or applied to a specific task.
+              </p>
+<p>
+                In order to get this information you must be on the project containing the task,
+                have the Analysis application, or be one of the organization's Admin Service Accounts.
+              </p>
+          </div>
+        </li>
+        <li>
+          <span class="label label-primary"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            GET
+          </span>
+          <a href="#GETapi/time/types/component/request/{requestID}">https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/request/{requestID}</a>
+          <div style="margin-bottom: 10px;">
+            <p>
+                Gets the time type available or applied to a specific request.
+              </p>
+<p>
+                In order to get this information you must be on the request, have the Analysis application,
+                or be one of the organization's Admin Service Accounts.
+              </p>
+          </div>
+        </li>
+        <li>
+          <span class="label label-primary"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            GET
+          </span>
+          <a href="#GETapi/time/types/component/timeoff/{projectID}">https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/timeoff/{projectID}</a>
+          <div style="margin-bottom: 10px;">
+            Gets the time types available to a specific project that can be applied as time off.
+          </div>
+        </li>
+        <li>
+          <span class="label label-primary"
+                style="display: inline-block; width: 55px; padding: .2em .6em; position: relative; bottom: 1px;">
+            GET
+          </span>
+          <a href="#GETapi/time/types/component/workspace/{workspaceID}">https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/workspace/{workspaceID}</a>
+          <div style="margin-bottom: 10px;">
+            <p>
+                Gets the time type available or applied to a specific workspace.
+              </p>
+<p>
+                In order to get this information you must be on the workspace, have the Analysis application,
+                or be one of the organization's Admin Service Accounts.
+              </p>
+          </div>
+        </li>
+    </ul>
+  </li>
+</ul>
+
+<span class="anchor" id="summary"></span>
+<h2>
+  Summary
+</h2>
+<p class="lead">
+  Contains methods for creating, reading, updating, and deleting time entries as well as methods
+              for getting information about time accounts and time reports (weekly timesheets).
+</p>
+
+
+  <span class="anchor" id="access-restrictions"></span>
+  <div class="panel panel-danger">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-lock" aria-hidden="true"></span>
+        Access Restrictions
+      </h4>
+    </div>
+    <div class="panel-body">
+      
+
+
+  <p>This section requires access to the TDTimeExpense application.</p>
+
+
+
+
+    </div>
+  </div>
+
+
+<h2>
+  API Methods
+</h2>
+
+
+
+
+
+
+<span class="anchor" id="POSTapi/time"></span>
+<h3>
+  <span class="label label-success"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    POST
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  <p>
+                Adds or edits one or more time entries. Time entries will be created if their ID is zero or
+                negative and edited if they have a positive IDs. You cannot add / edit more than 50 items at
+                once. If you need to work with a larger set of records, you will need to perform multiple
+                calls.
+              </p>
+<p>
+                A collection of successes and failures will be returned. Successes will be accompanied by
+                the IDs of the new time entries. Failures will be accompanied by an error code and error
+                message. Because some operations may complete successfully while others fail, it is
+                important for the caller to inspect the results of the failures collection.
+              </p>
+<p>
+                In order to add or edit time for a user, they must be in your organization and be a standard User.
+              </p>
+<p>
+                Time entries cannot be added or edited for reports that are submitted or approved or on
+                days marked as locked days within your organization.
+              </p>
+<p>
+                Time entries using limited time accounts cannot be negative, must have a limit defined
+                for the user for the time period you're working with, and the number of hours in this limit
+                cannot be exceeded.
+              </p>
+<p>
+                Once a time entry has been created, you cannot change many properties about it, including the
+                item it is associated with and the person who entered time. If you need to do these things, we
+                recommend deleting the entry and re-adding it using the corrected values.
+              </p>
+<p>
+                This endpoint can be used to delete time entries by setting their minutes to zero. However,
+                time can only be deleted when authenticated as an Admin Service Account or as the user who the time is for.
+              </p>
+<p>
+                Add or edit operations are allowed either as the user the time is for or as an Admin Service Account. An
+                exception to this rule is if you are working with task time, have the Projects application,
+                are on the project in question, and have permission to add time for other users. An additional
+                exception is when working with ticket or ticket task time and you have the application permission
+                to add time for others within the ticketing application in question.
+              </p>
+<p>
+                Time entry will only be allowed for time accounts available on the item you're trying to
+                enter time for. Additionally, the user in question must be able to access the item that
+                the time is for which can depend on applications and permissions granted to users as well
+                as project / workspace / request / ticketing application membership.entries
+              </p>
+<p>
+                The user you are entering time for must be active and have the time and expenses application.
+              </p>
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+                  <em>Request Body</em>
+                  <small>(Validated as &quot;entries&quot;)</small>
+              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              <a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeEntry">TeamDynamix.Api.Time.TimeEntry</a>[]
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              Request Body
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The time entries to add or edit.
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      An object indicating which operations succeeded and failed as well as any error messages
+              for failures and IDs for new additions.
+          (<a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.BulkOperationResults">TeamDynamix.Api.Time.BulkOperationResults</a>)
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="DELETEapi/time/{id}"></span>
+<h3>
+  <span class="label label-danger"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    DELETE
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/{id}
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/{id}"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  <p>
+                Deletes the time entry.
+              </p>
+<p>
+                Time can only be deleted by the person the time is for or an Admin Service Account.
+              </p>
+<p>
+                You cannot delete time entries associated with time reports that have been submitted or approved.
+              </p>
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+id              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The entry ID.
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      The response code.
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="GETapi/time/{id}"></span>
+<h3>
+  <span class="label label-primary"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    GET
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/{id}
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/{id}"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  Gets details on a specific time entry.
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+id              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The time entry ID.
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      The time entry or <code>null</code> if one could not be found.
+          (<a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeEntry">TeamDynamix.Api.Time.TimeEntry</a>)
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="PUTapi/time/{id}"></span>
+<h3>
+  <span class="label label-warning"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    PUT
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/{id}
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/{id}"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  Edits a pre-existing time entry. See
+              <abbr class="xref" title="TDWebApi.Controllers.TimeController.AddOrEditTimeEntries(System.Collections.Generic.List{TeamDynamix.Api.Time.TimeEntry})">
+                documentation on the POST multiple add / edit time
+                entries
+              </abbr>
+              for more specifics.
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+id              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The time entry identifier.
+            </dd>
+          </dl>
+        </li>
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+                  <em>Request Body</em>
+                  <small>(Validated as &quot;entryBody&quot;)</small>
+              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              <a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeEntry">TeamDynamix.Api.Time.TimeEntry</a>
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              Request Body
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The time entry values to use.
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      The modified time entry.
+          (<a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeEntry">TeamDynamix.Api.Time.TimeEntry</a>)
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="POSTapi/time/delete"></span>
+<h3>
+  <span class="label label-success"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    POST
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/delete
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/delete"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  <p>
+                Deletes the time entries with the specified ids and returns success or failure information.
+              </p>
+<p>
+                Time can only be deleted by the person the time is for or an Admin Service Account.
+              </p>
+<p>
+                You cannot delete time entries associated with time reports that have been submitted or
+                approved.
+              </p>
+<p>
+                You can only delete up to 50 entries per call. If you need to delete more than that, you will
+                need to make multiple calls to the API.
+              </p>
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+                  <em>Request Body</em>
+                  <small>(Validated as &quot;entryIDs&quot;)</small>
+              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32[]
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              Request Body
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The entry identifiers.
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      An object indicating which operations succeeded and failed as well as any error messages.
+          (<a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.BulkOperationResults">TeamDynamix.Api.Time.BulkOperationResults</a>)
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="GETapi/time/locked?startDate={startDate}&amp;endDate={endDate}"></span>
+<h3>
+  <span class="label label-primary"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    GET
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/locked?startDate={startDate}&amp;endDate={endDate}
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/locked?startDate={startDate}&endDate={endDate}"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  Gets the locked days in a specific time period. If no dates are specified, all locked days
+              in the organization will be retrieved.
+              Time entry will not be allowed for dates in this period.
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+startDate              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              <a href="/TDWebApi/Home/AboutDates">DateTime</a>
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+              <dt>
+                Default
+              </dt>
+              <dd>
+                This parameter is optional, with a default value of <code>null</code>.
+              </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The start date.
+            </dd>
+          </dl>
+        </li>
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+endDate              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              <a href="/TDWebApi/Home/AboutDates">DateTime</a>
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+              <dt>
+                Default
+              </dt>
+              <dd>
+                This parameter is optional, with a default value of <code>null</code>.
+              </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The end date.
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      A list of locked dates in the date range.
+          (<a href="/TDWebApi/Home/AboutDates">DateTime</a>[])
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="GETapi/time/report/{reportDate}"></span>
+<h3>
+  <span class="label label-primary"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    GET
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/report/{reportDate}
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/report/{reportDate}"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  Gets details on a specific week's time report (weekly timesheet) for the executing user.
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+reportDate              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              <a href="/TDWebApi/Home/AboutDates">DateTime</a>
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              A date within the desired time report week. Must use <code>yyyy-MM-dd</code> format (e.g., <code>2025-07-13</code>).
+              The date will be normalized to the Sunday of that week, so any date within the same week returns the same time report.
+              Note: ISO 8601 formats with time components (e.g., <code>2025-07-13T00:00:00Z</code>) are not supported due to URL encoding restrictions.
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      The time report or <code>null</code> if one could not be found.
+          (<a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeReport">TeamDynamix.Api.Time.TimeReport</a>)
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="GETapi/time/report/{reportDate}/{uid}"></span>
+<h3>
+  <span class="label label-primary"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    GET
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/report/{reportDate}/{uid}
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/report/{reportDate}/{uid}"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  <p>
+                Gets details on a specific week's time report (timesheet) for a user.
+              </p>
+<p>
+                In order to access details, you must either be logged in as a user with the Analysis application,
+                the user you are requesting the time report of, one of the organization's Admin Service Accounts, or someone who
+                is responsible for approving one or more items on the user's time report.
+              </p>
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+uid              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Guid
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The user's unique identifier.
+            </dd>
+          </dl>
+        </li>
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+reportDate              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              <a href="/TDWebApi/Home/AboutDates">DateTime</a>
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              A date within the desired time report week. Must use <code>yyyy-MM-dd</code> format (e.g., <code>2025-07-13</code>).
+              The date will be normalized to the Sunday of that week, so any date within the same week returns the same time report.
+              Note: ISO 8601 formats with time components (e.g., <code>2025-07-13T00:00:00Z</code>) are not supported due to URL encoding restrictions.
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      The time report or <code>null</code> if one could not be found.
+          (<a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeReport">TeamDynamix.Api.Time.TimeReport</a>)
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="POSTapi/time/search"></span>
+<h3>
+  <span class="label label-success"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    POST
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/search
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/search"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  <p>
+                Searches for time entries that match the specified parameters.
+              </p>
+<p>
+                You will only be able to see time for yourself unless the user you are authenticated as has the Analysis
+                application
+                or is an organization's Web Admin Service Account.
+              </p>
+<p>
+                Most search fields exist in ranges that you can specify none, both, or either the From or To properties.
+                When present, a value will exclude values outside of the specified range. These values default to null
+                by default.
+              </p>
+<p>
+                You can also specify project / workspace, plan, task, ticket task, ticket, and/or issue IDs to help with
+                the search operation. Components can also be set to filter out item types that you aren't interested in,
+                but all searches are mutually exclusive.
+              </p>
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+                  <em>Request Body</em>
+                  <small>(Validated as &quot;search&quot;)</small>
+              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              <a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeSearch">TeamDynamix.Api.Time.TimeSearch</a>
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              Request Body
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The search parameters. See help on TimeSearch for more details.
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      Paged results for the search operation
+          (<a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeEntry">TeamDynamix.Api.Time.TimeEntry</a>[])
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>30 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="GETapi/time/types"></span>
+<h3>
+  <span class="label label-primary"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    GET
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/types
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/types"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  Gets a list of all available active time types.
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      The time types or <code>null</code> if one could not be found.
+          (<a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeType">TeamDynamix.Api.Time.TimeType</a>[])
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="GETapi/time/types/{id}"></span>
+<h3>
+  <span class="label label-primary"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    GET
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/{id}
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/{id}"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  Gets details on a specific time type.
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+id              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The time type ID.
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      The time type or <code>null</code> if one could not be found.
+          (<a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeType">TeamDynamix.Api.Time.TimeType</a>)
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="GETapi/time/types/{id}/limits/{uid}?startDate={startDate}&amp;endDate={endDate}"></span>
+<h3>
+  <span class="label label-primary"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    GET
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/{id}/limits/{uid}?startDate={startDate}&amp;endDate={endDate}
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/{id}/limits/{uid}?startDate={startDate}&endDate={endDate}"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  <p>
+                Gets the time limits for a time type for a specified user and date range.
+              </p>
+<p>
+                The user requested must be of type User and within your organization.
+              </p>
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+id              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The time type identifier.
+            </dd>
+          </dl>
+        </li>
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+uid              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Guid
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The user's unique idnetifier.
+            </dd>
+          </dl>
+        </li>
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+startDate              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              <a href="/TDWebApi/Home/AboutDates">DateTime</a>
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+              <dt>
+                Default
+              </dt>
+              <dd>
+                This parameter is optional, with a default value of <code>null</code>.
+              </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The start date.
+            </dd>
+          </dl>
+        </li>
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+endDate              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              <a href="/TDWebApi/Home/AboutDates">DateTime</a>
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+              <dt>
+                Default
+              </dt>
+              <dd>
+                This parameter is optional, with a default value of <code>null</code>.
+              </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The end date.
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      A list of time limits for the specified user and time type between the specified dates.
+          (<a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeTypeLimit">TeamDynamix.Api.Time.TimeTypeLimit</a>[])
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="DELETEapi/time/types/component/app/{appID}/ticket/{ticketID}"></span>
+<h3>
+  <span class="label label-danger"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    DELETE
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/app/{appID}/ticket/{ticketID}
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/app/{appID}/ticket/{ticketID}"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  Unassociates a collection of time types from a ticket.
+            <p>
+            You must have the ability to edit the specified ticket to call this endpoint.
+            </p>
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+appID              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The application ID of the ticket.
+            </dd>
+          </dl>
+        </li>
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+ticketID              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The ticket ID.
+            </dd>
+          </dl>
+        </li>
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+                  <em>Request Body</em>
+                  <small>(Validated as &quot;timeTypeIDs&quot;)</small>
+              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32[]
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              Request Body
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The time type IDs to remove.
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      A response message indicating if the operation was successful or not.
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-comment" aria-hidden="true"></span>
+        Remarks
+      </h4>
+    </div>
+    <div class="panel-body">
+      Only valid time types, already associated to the ticket, will be processed.
+            Any other time types will be skipped.
+    </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="GETapi/time/types/component/app/{appID}/ticket/{ticketID}"></span>
+<h3>
+  <span class="label label-primary"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    GET
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/app/{appID}/ticket/{ticketID}
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/app/{appID}/ticket/{ticketID}"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  <p>
+                Gets the time type available or applied to a specific ticket.
+              </p>
+<p>
+                In order to get this information you must be one of the organization's Admin Service Accounts, be the creator
+                or contact on the ticket, have the corresponding ticketing application, or be on the same
+                account as the ticket and have permissions to view requests related to accounts the user has.
+              </p>
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+appID              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The ticketing application ID
+            </dd>
+          </dl>
+        </li>
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+ticketID              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The ticket ID
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      A list of time types.
+          (<a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeType">TeamDynamix.Api.Time.TimeType</a>[])
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="POSTapi/time/types/component/app/{appID}/ticket/{ticketID}"></span>
+<h3>
+  <span class="label label-success"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    POST
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/app/{appID}/ticket/{ticketID}
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/app/{appID}/ticket/{ticketID}"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  Associates a collection of time types to a ticket.
+            <p>
+            You must have the ability to edit the specified ticket to call this endpoint.
+            </p>
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+appID              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The application ID of the ticket.
+            </dd>
+          </dl>
+        </li>
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+ticketID              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The ticket ID.
+            </dd>
+          </dl>
+        </li>
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+                  <em>Request Body</em>
+                  <small>(Validated as &quot;timeTypeIDs&quot;)</small>
+              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32[]
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              Request Body
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The time type IDs to add.
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      A response message indicating if the operation was successful or not.
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-comment" aria-hidden="true"></span>
+        Remarks
+      </h4>
+    </div>
+    <div class="panel-body">
+      Only valid ticket time types, not already associated to the ticket, will be processed.
+            Any other time types will be skipped. A time type must be active, not a time off account and not
+            a limited time type to be considered valid.
+    </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="GETapi/time/types/component/app/{appID}/ticket/{ticketID}/task/{taskID}"></span>
+<h3>
+  <span class="label label-primary"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    GET
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/app/{appID}/ticket/{ticketID}/task/{taskID}
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/app/{appID}/ticket/{ticketID}/task/{taskID}"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  <p>
+                Gets the time type available or applied to a specific ticket.
+              </p>
+<p>
+                In order to get this information you must be one of the organization's Admin Service Accounts, be the creator
+                or contact on the ticket, have the corresponding ticketing application, or be on the same
+                account as the ticket and have permissions to view requests related to accounts the user has.
+              </p>
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+appID              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The ticketing application ID
+            </dd>
+          </dl>
+        </li>
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+ticketID              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The ticket ID
+            </dd>
+          </dl>
+        </li>
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+taskID              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The task ID
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      A list of time types.
+          (<a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeType">TeamDynamix.Api.Time.TimeType</a>[])
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="GETapi/time/types/component/project/{projectID}"></span>
+<h3>
+  <span class="label label-primary"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    GET
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/project/{projectID}
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/project/{projectID}"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  <p>
+                Gets the time type available or applied to a specific project.
+              </p>
+<p>
+                In order to get this information you must be on the project, have the Analysis application,
+                or be one of the organization's Admin Service Accounts.
+              </p>
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+projectID              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The project ID
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      A list of time types.
+          (<a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeType">TeamDynamix.Api.Time.TimeType</a>[])
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="GETapi/time/types/component/project/{projectID}/issue/{issueID}"></span>
+<h3>
+  <span class="label label-primary"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    GET
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/project/{projectID}/issue/{issueID}
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/project/{projectID}/issue/{issueID}"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  <p>
+                Gets the time type available or applied to a specific issue.
+              </p>
+<p>
+                In order to get this information you must be on the project the issue is on,
+                have the Analysis application, or be one of the organization's Admin Service Accounts.
+              </p>
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+projectID              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The project ID
+            </dd>
+          </dl>
+        </li>
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+issueID              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The issue ID
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      A list of time types.
+          (<a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeType">TeamDynamix.Api.Time.TimeType</a>[])
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="GETapi/time/types/component/project/{projectID}/plan/{planID}/task/{taskID}"></span>
+<h3>
+  <span class="label label-primary"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    GET
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/project/{projectID}/plan/{planID}/task/{taskID}
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/project/{projectID}/plan/{planID}/task/{taskID}"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  <p>
+                Gets the time type available or applied to a specific task.
+              </p>
+<p>
+                In order to get this information you must be on the project containing the task,
+                have the Analysis application, or be one of the organization's Admin Service Accounts.
+              </p>
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+projectID              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The project ID
+            </dd>
+          </dl>
+        </li>
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+planID              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The plan ID
+            </dd>
+          </dl>
+        </li>
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+taskID              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The task ID
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      A list of time types.
+          (<a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeType">TeamDynamix.Api.Time.TimeType</a>[])
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="GETapi/time/types/component/request/{requestID}"></span>
+<h3>
+  <span class="label label-primary"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    GET
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/request/{requestID}
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/request/{requestID}"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  <p>
+                Gets the time type available or applied to a specific request.
+              </p>
+<p>
+                In order to get this information you must be on the request, have the Analysis application,
+                or be one of the organization's Admin Service Accounts.
+              </p>
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+requestID              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The request ID
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      A list of time types.
+          (<a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeType">TeamDynamix.Api.Time.TimeType</a>[])
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="GETapi/time/types/component/timeoff/{projectID}"></span>
+<h3>
+  <span class="label label-primary"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    GET
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/timeoff/{projectID}
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/timeoff/{projectID}"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  Gets the time types available to a specific project that can be applied as time off.
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+projectID              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The project ID
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      A list of time types.
+          (<a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeType">TeamDynamix.Api.Time.TimeType</a>[])
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+
+
+
+
+<span class="anchor" id="GETapi/time/types/component/workspace/{workspaceID}"></span>
+<h3>
+  <span class="label label-primary"
+        style="display: inline-block; width: 95px; padding: .2em .6em; position: relative; bottom: 2px;">
+    GET
+  </span>
+  https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/workspace/{workspaceID}
+  <a role="button" href="javascript:;" class="js-click-to-copy-btn" data-trigger="manual"
+     data-placement="auto" data-animation="false"
+     data-clipboard-text="https://demotemplate.teamdynamix.com/TDWebApi/api/time/types/component/workspace/{workspaceID}"
+     data-original-title="Copied!"
+     style="margin-left: 5px;">
+    <span class="fa-regular fa-copy" aria-hidden="true"></span>
+    <span class="sr-only">Copy URL</span>
+  </a>
+</h3>
+<p class="lead">
+  <p>
+                Gets the time type available or applied to a specific workspace.
+              </p>
+<p>
+                In order to get this information you must be on the workspace, have the Analysis application,
+                or be one of the organization's Admin Service Accounts.
+              </p>
+</p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+        Parameters
+      </h4>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item">
+          <dl class="dl-horizontal">
+            <dt>
+              <span class="sr-only">Parameter Name</span>
+            </dt>
+            <dd>
+              <h5 class="h4">
+                
+workspaceID              </h5>
+            </dd>
+            <dt>
+              Type
+            </dt>
+            <dd>
+              Int32
+            </dd>
+            <dt>
+              Source
+            </dt>
+            <dd>
+              URI
+            </dd>
+            <dt>
+              Description
+            </dt>
+            <dd>
+              The workspace ID
+            </dd>
+          </dl>
+        </li>
+    </ul>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+        Returns
+      </h4>
+    </div>
+    <div class="panel-body">
+      A list of time types.
+          (<a href="/TDWebApi/Home/type/TeamDynamix.Api.Time.TimeType">TeamDynamix.Api.Time.TimeType</a>[])
+    </div>
+  </div>
+  <div class="panel panel-warning">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <span class="glyphicon glyphicon-dashboard" aria-hidden="true"></span>
+        Rate/Submission Limitations
+      </h4>
+    </div>
+    <div class="panel-body">
+        <p>
+          Invocations of this method are <a href="/TDWebApi/Home/AboutRateLimiting">rate-limited</a>, with a restriction of
+          <strong>60 calls</strong>
+          per <strong>IP address</strong>
+          every <strong>60 seconds</strong>.
+        </p>
+          </div>
+  </div>
+
+  </div>
+
+  
+
+  <button type="button" id="btnBackToTop" style="position: fixed; bottom: 20px; right: 20px; display: none; border-radius: 50%;" class="btn btn-primary btn-floating btn-lg"
+          title="Back to Top">
+    <span aria-label="span widget" role="region" tabindex="-1">
+      <span aria-hidden="true" class="fa-solid fa-arrow-up"></span>
+    </span>
+    
+  </button>
+
+  
+  <script type="text/javascript" src="/TDPortal/Content/Scripts/tdx/dist/TDJSFramework.compiled.min.js">
+  </script>
+  <script type="text/javascript" src="/TDPortal/Content/bootstrap/3.4.1/dist/js/bootstrap.min.js">
+  </script>
+  <script type="text/javascript" src="/TDPortal/Content/Scripts/clipboard-js/1.7.1/clipboard.min.js">
+  </script>
+
+  <script type="text/javascript">
+
+    $(document).ready(function () {
+      TeamDynamix.initClickToShow();
+    });
+
+  </script>
+
+</body>
+</html>

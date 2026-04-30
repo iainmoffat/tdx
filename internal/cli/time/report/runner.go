@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/svc/peoplesvc"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -21,6 +22,7 @@ type timesvcAPI interface {
 type peoplesvcAPI interface {
 	GetUser(ctx context.Context, profile, uid string) (domain.User, error)
 	SearchUsers(ctx context.Context, profile string, filter domain.UserFilter) ([]domain.User, error)
+	ResolvePoolByName(ctx context.Context, profile, name string) (peoplesvc.ResourcePool, error)
 }
 
 // authsvcAPI is the subset of authsvc.Service the runner needs.
@@ -134,18 +136,19 @@ func assembleReport(ctx context.Context, deps runnerDeps, f statusFlags) (domain
 // MCPInputs is the input for RunForMCP. Mirrors the CLI flags but exposed
 // as a typed Go struct for use by the MCP handler.
 type MCPInputs struct {
-	Profile     string
-	Week        string
-	From, To    string
-	Users       []string
-	Manager     string
-	Account     string
-	All         bool
-	IncludeZero bool
-	Limit       int
-	TimeSvc     timesvcAPI
-	PeopleSvc   peoplesvcAPI
-	AuthSvc     authsvcAPI
+	Profile      string
+	Week         string
+	From, To     string
+	Users        []string
+	Manager      string
+	Account      string
+	ResourcePool string
+	All          bool
+	IncludeZero  bool
+	Limit        int
+	TimeSvc      timesvcAPI
+	PeopleSvc    peoplesvcAPI
+	AuthSvc      authsvcAPI
 }
 
 // RunForMCP builds, validates, and runs a Time Status Report for MCP
@@ -154,17 +157,18 @@ type MCPInputs struct {
 // has already opted in).
 func RunForMCP(ctx context.Context, in MCPInputs) (any, error) {
 	f := statusFlags{
-		profile:     in.Profile,
-		week:        in.Week,
-		from:        in.From,
-		to:          in.To,
-		users:       in.Users,
-		manager:     in.Manager,
-		account:     in.Account,
-		all:         in.All,
-		yes:         in.All, // bypass --yes guard for MCP
-		includeZero: in.IncludeZero,
-		limit:       in.Limit,
+		profile:      in.Profile,
+		week:         in.Week,
+		from:         in.From,
+		to:           in.To,
+		users:        in.Users,
+		manager:      in.Manager,
+		account:      in.Account,
+		resourcePool: in.ResourcePool,
+		all:          in.All,
+		yes:          in.All, // bypass --yes guard for MCP
+		includeZero:  in.IncludeZero,
+		limit:        in.Limit,
 	}
 	if err := validateStatusFlags(f); err != nil {
 		return nil, err
@@ -266,6 +270,26 @@ func resolveUsers(ctx context.Context, deps runnerDeps, f statusFlags) ([]domain
 			Employee: &trueVal,
 			Limit:    employeeLimit,
 		})
+
+	case f.resourcePool != "":
+		pool, err := deps.People.ResolvePoolByName(ctx, deps.Profile, f.resourcePool)
+		if err != nil {
+			return nil, err
+		}
+		all, err := deps.People.SearchUsers(ctx, deps.Profile, domain.UserFilter{
+			Employee: &trueVal,
+			Limit:    employeeLimit,
+		})
+		if err != nil {
+			return nil, err
+		}
+		out := []domain.User{}
+		for _, u := range all {
+			if u.ResourcePoolID == pool.ID {
+				out = append(out, u)
+			}
+		}
+		return out, nil
 	}
 	return nil, fmt.Errorf("no selector (validation should have caught this)")
 }

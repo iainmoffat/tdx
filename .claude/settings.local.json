@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git checkout:*)",
+      "Bash(go mod:*)",
+      "Bash(go get:*)",
+      "Bash(go test:*)",
+      "Bash(go build:*)",
+      "Bash(/Users/ipm/code/tdx/tdx version:*)",
+      "Bash(go vet:*)",
+      "Bash(git commit:*)",
+      "Bash(./tdx version:*)",
+      "Bash(go version:*)",
+      "Bash(go list:*)",
+      "Bash(go tool:*)"
+    ]
+  }
+}

@@ -56,7 +56,26 @@ func TestStatus_AllRequiresYes(t *testing.T) {
 
 func TestStatus_FlagsRegistered(t *testing.T) {
 	cmd := newStatusCmd()
-	for _, f := range []string{"week", "from", "to", "user", "manager", "account", "all", "yes", "include-zero", "limit", "json", "csv", "xlsx", "profile"} {
+	for _, f := range []string{"week", "from", "to", "user", "manager", "account", "resource-pool", "all", "yes", "include-zero", "limit", "json", "csv", "xlsx", "profile"} {
 		require.NotNil(t, cmd.Flags().Lookup(f), "missing flag: %s", f)
 	}
+}
+
+func TestStatus_ResourcePoolIsValidSelector(t *testing.T) {
+	f := statusFlags{
+		resourcePool: "ICT - DBP - Linux Platform Services LPS",
+		week:         "2026-04-12",
+	}
+	require.NoError(t, validateStatusFlags(f))
+}
+
+func TestStatus_ResourcePoolMutuallyExclusiveWithOthers(t *testing.T) {
+	f := statusFlags{
+		resourcePool: "Some Pool",
+		manager:      "me",
+		week:         "2026-04-12",
+	}
+	err := validateStatusFlags(f)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "exactly one")
 }
