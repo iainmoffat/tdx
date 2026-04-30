@@ -145,3 +145,27 @@ func TestGetLockedDays_EmptyRange(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, days)
 }
+
+func TestGetWeekReport_PopulatesBillableTotals(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{
+			"PeriodStartDate": "2026-04-12T00:00:00Z",
+			"PeriodEndDate":   "2026-04-18T00:00:00Z",
+			"Status":          1,
+			"Times":           [],
+			"TimeReportUid":   "user-1",
+			"MinutesBillable": 300,
+			"MinutesNonBillable": 90,
+			"MinutesTotal":    390
+		}`))
+	}))
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	report, err := svc.GetWeekReport(context.Background(), profile, time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	require.NoError(t, err)
+	require.Equal(t, 300, report.MinutesBillable)
+	require.Equal(t, 90, report.MinutesNonBillable)
+	require.Equal(t, 390, report.TotalMinutes)
+}

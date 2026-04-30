@@ -51,12 +51,14 @@ func (s *Service) GetWeekReport(ctx context.Context, profileName string, date ti
 	}
 
 	return domain.WeekReport{
-		WeekRef:      ref,
-		UserUID:      wire.TimeReportUid,
-		TotalMinutes: wire.MinutesTotal,
-		Status:       decodeReportStatus(wire.Status),
-		Days:         buildDaySummaries(ref, entries),
-		Entries:      entries,
+		WeekRef:            ref,
+		UserUID:            wire.TimeReportUid,
+		TotalMinutes:       wire.MinutesTotal,
+		MinutesBillable:    wire.MinutesBillable,
+		MinutesNonBillable: wire.MinutesNonBillable,
+		Status:             decodeReportStatus(wire.Status),
+		Days:               buildDaySummaries(ref, entries),
+		Entries:            entries,
 	}, nil
 }
 
