@@ -3,6 +3,7 @@ package peoplesvc
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/iainmoffat/tdx/internal/domain"
 )
@@ -45,6 +46,9 @@ func (s *Service) SearchUsers(ctx context.Context, profileName string, filter do
 	} else {
 		req.IsActive = filter.Active
 	}
+	if filter.Employee != nil {
+		req.IsEmployee = filter.Employee
+	}
 	if filter.AccountID > 0 {
 		req.AccountIDs = []int{filter.AccountID}
 	}
@@ -74,15 +78,17 @@ func decodeUser(w wireUser) domain.User {
 		email = w.AlternateEmail
 	}
 	return domain.User{
-		ID:             w.ID,
-		UID:            w.UID,
-		FullName:       w.FullName,
-		Email:          email,
-		Active:         w.IsActive,
-		AccountName:    w.DefaultAccountName,
-		ReportsToUID:   w.ReportsToUid,
-		ReportsToID:    w.ReportsToId,
-		ReportsToName:  w.ReportsToFullName,
-		ReportsToEmail: w.ReportsToEmail,
+		ID:               w.ID,
+		UID:              w.UID,
+		FullName:         w.FullName,
+		Email:            email,
+		Active:           w.IsActive,
+		AccountName:      w.DefaultAccountName,
+		ReportsToUID:     w.ReportsToUid,
+		ReportsToID:      w.ReportsToId,
+		ReportsToName:    w.ReportsToFullName,
+		ReportsToEmail:   w.ReportsToEmail,
+		ResourcePoolID:   w.ResourcePoolID,
+		ResourcePoolName: strings.TrimSpace(w.ResourcePoolName),
 	}
 }

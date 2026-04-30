@@ -85,4 +85,49 @@ func TestSearchUsers_DefaultsApplied(t *testing.T) {
 	require.Contains(t, body, `"UserType":"User"`)
 	require.Contains(t, body, `"IsActive":true`)
 	require.Contains(t, body, `"MaxResults":100`)
+	require.NotContains(t, body, `"IsEmployee"`)
+}
+
+func TestSearchUsers_EmployeeFilterSetsWireField(t *testing.T) {
+	var receivedBody []byte
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		receivedBody = body
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	tt := true
+	_, err := svc.SearchUsers(context.Background(), profile, domain.UserFilter{
+		Employee: &tt,
+		Limit:    5000,
+	})
+	require.NoError(t, err)
+	body := string(receivedBody)
+	require.Contains(t, body, `"IsEmployee":true`)
+	require.Contains(t, body, `"MaxResults":5000`)
+}
+
+func TestSearchUsers_DecodesResourcePool(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[{
+			"UID": "u1",
+			"FullName": "User One",
+			"PrimaryEmail": "u1@x.com",
+			"IsActive": true,
+			"ResourcePoolID": 46,
+			"ResourcePoolName": "ICT - DBP - Linux Platform Services LPS\t"
+		}]`))
+	}))
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	users, err := svc.SearchUsers(context.Background(), profile, domain.UserFilter{})
+	require.NoError(t, err)
+	require.Len(t, users, 1)
+	require.Equal(t, 46, users[0].ResourcePoolID)
+	require.Equal(t, "ICT - DBP - Linux Platform Services LPS", users[0].ResourcePoolName)
 }
