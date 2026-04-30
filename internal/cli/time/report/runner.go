@@ -128,6 +128,57 @@ func assembleReport(ctx context.Context, deps runnerDeps, f statusFlags) (domain
 	return domain.TimeStatusReport{From: first, To: last, Rows: results}, nil
 }
 
+// MCPInputs is the input for RunForMCP. Mirrors the CLI flags but exposed
+// as a typed Go struct for use by the MCP handler.
+type MCPInputs struct {
+	Profile     string
+	Week        string
+	From, To    string
+	Users       []string
+	Manager     string
+	Account     string
+	All         bool
+	IncludeZero bool
+	Limit       int
+	TimeSvc     timesvcAPI
+	PeopleSvc   peoplesvcAPI
+	AuthSvc     authsvcAPI
+}
+
+// RunForMCP builds, validates, and runs a Time Status Report for MCP
+// callers. Returns the JSON-shaped envelope (same shape as printJSON's
+// output) for direct marshaling. Bypasses --yes for --all (the agent
+// has already opted in).
+func RunForMCP(ctx context.Context, in MCPInputs) (any, error) {
+	f := statusFlags{
+		profile:     in.Profile,
+		week:        in.Week,
+		from:        in.From,
+		to:          in.To,
+		users:       in.Users,
+		manager:     in.Manager,
+		account:     in.Account,
+		all:         in.All,
+		yes:         in.All, // bypass --yes guard for MCP
+		includeZero: in.IncludeZero,
+		limit:       in.Limit,
+	}
+	if err := validateStatusFlags(f); err != nil {
+		return nil, err
+	}
+	deps := runnerDeps{
+		Time:    in.TimeSvc,
+		People:  in.PeopleSvc,
+		Auth:    in.AuthSvc,
+		Profile: in.Profile,
+	}
+	rep, err := assembleReport(ctx, deps, f)
+	if err != nil {
+		return nil, err
+	}
+	return buildJSONEnvelope(rep, f), nil
+}
+
 // resolveWeeks converts statusFlags' --week / --from/--to into a list of
 // WeekRefs (Sunday→Saturday in EasternTZ).
 func resolveWeeks(f statusFlags) ([]domain.WeekRef, error) {
