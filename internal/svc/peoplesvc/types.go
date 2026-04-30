@@ -18,6 +18,16 @@ type wireUser struct {
 	ResourcePoolName   string `json:"ResourcePoolName"`
 }
 
+// wireResourcePool matches rows in POST /TDWebApi/api/resourcepools/search.
+type wireResourcePool struct {
+	ID               int    `json:"ID"`
+	Name             string `json:"Name"`
+	IsActive         bool   `json:"IsActive"`
+	RequiresApproval bool   `json:"RequiresApproval"`
+	ManagerUID       string `json:"ManagerUID"`
+	ManagerFullName  string `json:"ManagerFullName"`
+}
+
 // wireUserSearch is the request body for POST /TDWebApi/api/people/search.
 type wireUserSearch struct {
 	NameLike   string `json:"NameLike,omitempty"`
