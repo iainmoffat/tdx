@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/svc/peoplesvc"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,8 +24,12 @@ func (m *mockTimesvc) GetWeekReportForUser(_ context.Context, _ string, _ time.T
 }
 
 type mockPeoplesvc struct {
-	users  map[string]domain.User
-	search []domain.User
+	users        map[string]domain.User
+	search       []domain.User
+	lastFilter   domain.UserFilter
+	pool         peoplesvc.ResourcePool
+	poolErr      error
+	resolveCalls int
 }
 
 func (m *mockPeoplesvc) GetUser(_ context.Context, _, uid string) (domain.User, error) {
@@ -34,8 +39,17 @@ func (m *mockPeoplesvc) GetUser(_ context.Context, _, uid string) (domain.User, 
 	return domain.User{}, errors.New("not found")
 }
 
-func (m *mockPeoplesvc) SearchUsers(_ context.Context, _ string, _ domain.UserFilter) ([]domain.User, error) {
+func (m *mockPeoplesvc) SearchUsers(_ context.Context, _ string, filter domain.UserFilter) ([]domain.User, error) {
+	m.lastFilter = filter
 	return m.search, nil
+}
+
+func (m *mockPeoplesvc) ResolvePoolByName(_ context.Context, _, _ string) (peoplesvc.ResourcePool, error) {
+	m.resolveCalls++
+	if m.poolErr != nil {
+		return peoplesvc.ResourcePool{}, m.poolErr
+	}
+	return m.pool, nil
 }
 
 type mockAuthsvc struct {
@@ -101,9 +115,10 @@ func TestRunner_ManagerMeUsesAuthenticatedUID(t *testing.T) {
 	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
 	report := domain.WeekReport{WeekRef: week, UserUID: "u1", TotalMinutes: 60}
 
+	people := &mockPeoplesvc{search: []domain.User{directReport, other}}
 	deps := runnerDeps{
 		Time:   &mockTimesvc{reports: map[string]domain.WeekReport{"u1": report}},
-		People: &mockPeoplesvc{search: []domain.User{directReport, other}},
+		People: people,
 		Auth:   &mockAuthsvc{me: me},
 	}
 	out, err := assembleReport(context.Background(), deps, statusFlags{
@@ -115,6 +130,94 @@ func TestRunner_ManagerMeUsesAuthenticatedUID(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, out.Rows, 1, "only direct report's row is included")
 	require.Equal(t, "u1", out.Rows[0].User.UID)
+	require.NotNil(t, people.lastFilter.Employee, "Employee filter must be set on --manager search")
+	require.True(t, *people.lastFilter.Employee)
+	require.Equal(t, employeeLimit, people.lastFilter.Limit)
+}
+
+func TestRunner_AccountSelectorSetsEmployeeFilter(t *testing.T) {
+	people := &mockPeoplesvc{search: []domain.User{}}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{},
+		People: people,
+		Auth:   &mockAuthsvc{},
+	}
+	_, err := assembleReport(context.Background(), deps, statusFlags{
+		account:     "UFIT",
+		week:        "2026-04-14",
+		includeZero: true,
+		limit:       100,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, people.lastFilter.Employee)
+	require.True(t, *people.lastFilter.Employee)
+	require.Equal(t, "UFIT", people.lastFilter.AccountName)
+	require.Equal(t, employeeLimit, people.lastFilter.Limit)
+}
+
+func TestRunner_ResourcePoolSelectorFiltersByPoolID(t *testing.T) {
+	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	inPool := domain.User{UID: "u1", FullName: "Pool Member", ResourcePoolID: 46}
+	outOfPool := domain.User{UID: "u2", FullName: "Other", ResourcePoolID: 99}
+	report := domain.WeekReport{WeekRef: week, UserUID: "u1", TotalMinutes: 60}
+
+	people := &mockPeoplesvc{
+		search: []domain.User{inPool, outOfPool},
+		pool:   peoplesvc.ResourcePool{ID: 46, Name: "Test Pool"},
+	}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{reports: map[string]domain.WeekReport{"u1": report}},
+		People: people,
+		Auth:   &mockAuthsvc{},
+	}
+	out, err := assembleReport(context.Background(), deps, statusFlags{
+		resourcePool: "Test Pool",
+		week:         "2026-04-14",
+		includeZero:  true,
+		limit:        100,
+	})
+	require.NoError(t, err)
+	require.Equal(t, 1, people.resolveCalls)
+	require.Len(t, out.Rows, 1)
+	require.Equal(t, "u1", out.Rows[0].User.UID)
+	require.NotNil(t, people.lastFilter.Employee)
+	require.True(t, *people.lastFilter.Employee)
+}
+
+func TestRunner_ResourcePoolNotFoundPropagates(t *testing.T) {
+	people := &mockPeoplesvc{poolErr: errors.New("not found")}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{},
+		People: people,
+		Auth:   &mockAuthsvc{},
+	}
+	_, err := assembleReport(context.Background(), deps, statusFlags{
+		resourcePool: "Nope",
+		week:         "2026-04-14",
+		includeZero:  true,
+		limit:        100,
+	})
+	require.Error(t, err)
+}
+
+func TestRunner_AllSelectorSetsEmployeeFilter(t *testing.T) {
+	people := &mockPeoplesvc{search: []domain.User{}}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{},
+		People: people,
+		Auth:   &mockAuthsvc{},
+	}
+	_, err := assembleReport(context.Background(), deps, statusFlags{
+		all:         true,
+		yes:         true,
+		week:        "2026-04-14",
+		includeZero: true,
+		limit:       100,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, people.lastFilter.Employee)
+	require.True(t, *people.lastFilter.Employee)
+	require.Equal(t, employeeLimit, people.lastFilter.Limit)
 }
 
 func TestRunner_RangeProducesMultipleWeeks(t *testing.T) {

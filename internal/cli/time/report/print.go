@@ -59,12 +59,13 @@ func printJSON(w io.Writer, rep domain.TimeStatusReport, f statusFlags) error {
 // internally so MCP can re-use the envelope without re-encoding.
 func buildJSONEnvelope(rep domain.TimeStatusReport, f statusFlags) any {
 	type filterJSON struct {
-		Selector string   `json:"selector"`
-		Users    []string `json:"users,omitempty"`
-		Manager  string   `json:"manager,omitempty"`
-		Account  string   `json:"account,omitempty"`
-		From     string   `json:"from"`
-		To       string   `json:"to"`
+		Selector     string   `json:"selector"`
+		Users        []string `json:"users,omitempty"`
+		Manager      string   `json:"manager,omitempty"`
+		Account      string   `json:"account,omitempty"`
+		ResourcePool string   `json:"resourcePool,omitempty"`
+		From         string   `json:"from"`
+		To           string   `json:"to"`
 	}
 	type rowJSON struct {
 		UserUID          string  `json:"userUID"`
@@ -102,6 +103,8 @@ func buildJSONEnvelope(rep domain.TimeStatusReport, f statusFlags) any {
 		filter.Manager = f.manager
 	case "account":
 		filter.Account = f.account
+	case "resource-pool":
+		filter.ResourcePool = f.resourcePool
 	}
 
 	weeks := []weekJSON{}
@@ -154,6 +157,8 @@ func selectorOf(f statusFlags) string {
 		return "manager"
 	case f.account != "":
 		return "account"
+	case f.resourcePool != "":
+		return "resource-pool"
 	case f.all:
 		return "all"
 	}

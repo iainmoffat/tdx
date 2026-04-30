@@ -43,6 +43,9 @@ tdx time template apply my-week --week 2026-04-14 --yes
 
 # Weekly time-status report for your direct reports
 tdx time report status --manager me --week 2026-04-12
+
+# Or for a TD resource pool (matches the TD UI's filter)
+tdx time report status --resource-pool "ICT - DBP - Linux Platform Services LPS" --week 2026-04-12
 ```
 
 ## Commands
@@ -134,9 +137,9 @@ artifact, validate, diff, preview, and push back with safety guarantees.
 
 | Command | Description | Key Flags |
 |---|---|---|
-| `tdx time report status` | Weekly time-status report (per user, per week) | `--week`, `--from`/`--to`, `--user`, `--manager`, `--account`, `--all`, `--include-zero`, `--limit`, `--json`, `--csv`, `--xlsx` |
+| `tdx time report status` | Weekly time-status report (per user, per week) | `--week`, `--from`/`--to`, `--user`, `--manager`, `--account`, `--resource-pool`, `--all`, `--include-zero`, `--limit`, `--json`, `--csv`, `--xlsx` |
 
-> Selectors are mutually exclusive (exactly one of `--user`, `--manager`, `--account`, `--all` required). `--manager me` resolves to the authenticated user. Output formats are mutually exclusive; default is human table.
+> Selectors are mutually exclusive (exactly one of `--user`, `--manager`, `--account`, `--resource-pool`, `--all` required). `--manager me` resolves to the authenticated user. `--resource-pool` matches the TD UI report's filter; pass the pool name exactly as shown in TD. Output formats are mutually exclusive; default is human table.
 
 ### MCP
 
@@ -219,7 +222,7 @@ from a prior preview call for race protection.
 
 | Tool | Description |
 |------|-------------|
-| `get_time_status_report` | Generate a per-user, per-week time-status report (selectors: `userUIDs`, `manager`, `account`, `all`) |
+| `get_time_status_report` | Generate a per-user, per-week time-status report (selectors: `userUIDs`, `manager`, `account`, `resourcePool`, `all`) |
 
 ## JSON Output
 
