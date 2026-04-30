@@ -861,7 +861,12 @@ with billable / non-billable / total hours and the user's submission status.
 - `GET /TDWebApi/api/time/report/{date}/{uid}` — per-user weekly report.
 - `GET /TDWebApi/api/people/{uid}` — user profile (name, email, manager).
 - `POST /TDWebApi/api/people/search` — enumerate the user population for
-  `--manager`, `--account`, and `--all`.
+  `--manager`, `--account`, `--resource-pool`, and `--all`. Sent with
+  `IsEmployee=true` to narrow the response to time-reporting staff
+  (TD's "User" type also includes portal Clients).
+- `POST /TDWebApi/api/resourcepools/search` — list resource pools so
+  `--resource-pool NAME` can resolve a name to an ID for client-side
+  filtering on `ResourcePoolID`.
 
 #### Permissions
 
@@ -876,10 +881,11 @@ When permission is denied for a user, that row's `Status` becomes
 #### Selectors (exactly one required)
 
 ```
---user UID       one or more user UIDs (repeatable / comma-separated)
---manager UID    direct reports of UID; "me" = authenticated user
---account NAME   users in this account/department by name
---all            every active standard user (requires --yes)
+--user UID            one or more user UIDs (repeatable / comma-separated)
+--manager UID         direct reports of UID; "me" = authenticated user
+--account NAME        users in this account/department by name
+--resource-pool NAME  users in this TD resource pool (matches the TD UI's report filter)
+--all                 every active employee (requires --yes)
 ```
 
 #### Date range
@@ -909,6 +915,9 @@ tdx time report status --user $UID --from 2026-04-12 --to 2026-04-26 --json
 
 # Whole department in CSV
 tdx time report status --account "UFIT Operations" --week 2026-04-12 --csv > status.csv
+
+# A specific TD resource pool (use the exact name from the TD UI)
+tdx time report status --resource-pool "ICT - DBP - Linux Platform Services LPS" --week 2026-04-12
 
 # Whole org in XLSX (requires --yes)
 tdx time report status --all --yes --week 2026-04-12 --xlsx all.xlsx
