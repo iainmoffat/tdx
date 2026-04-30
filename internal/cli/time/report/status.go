@@ -3,6 +3,10 @@ package report
 import (
 	"fmt"
 
+	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/svc/peoplesvc"
+	"github.com/iainmoffat/tdx/internal/svc/timesvc"
 	"github.com/spf13/cobra"
 )
 
@@ -129,7 +133,38 @@ func validateStatusFlags(f statusFlags) error {
 	return nil
 }
 
-// runStatus is implemented in runner.go (Task 13). Stub here for compilation.
 func runStatus(cmd *cobra.Command, f statusFlags) error {
-	return fmt.Errorf("not yet implemented")
+	paths, err := config.ResolvePaths()
+	if err != nil {
+		return err
+	}
+	auth := authsvc.New(paths)
+	profile, err := auth.ResolveProfile(f.profile)
+	if err != nil {
+		return err
+	}
+
+	deps := runnerDeps{
+		Time:    timesvc.New(paths),
+		People:  peoplesvc.New(paths),
+		Auth:    auth,
+		Profile: profile,
+	}
+
+	rep, err := assembleReport(cmd.Context(), deps, f)
+	if err != nil {
+		return err
+	}
+
+	w := cmd.OutOrStdout()
+	switch {
+	case f.json:
+		return printJSON(w, rep, f)
+	case f.csv:
+		return writeCSV(w, rep)
+	case f.xlsx != "":
+		return writeXLSX(f.xlsx, rep)
+	default:
+		return printText(w, rep, f)
+	}
 }
