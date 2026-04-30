@@ -837,6 +837,83 @@ A snapshot tagged `pre-refresh` is taken before any disk mutation. To roll
 back: `tdx time week history 2026-05-03` and
 `tdx time week restore 2026-05-03 --snapshot N --yes`.
 
+## Time Reports
+
+### Time Status Report
+
+`tdx time report status` reproduces TeamDynamix's built-in **Work Management →
+Analysis → Standard Reports → Time Status Report**: one row per `(user, week)`
+with billable / non-billable / total hours and the user's submission status.
+
+#### Columns
+
+- **Name** / **Email** — from `/api/people/{uid}`.
+- **Reports To** / **Reports To Email** — manager pulled from the same endpoint.
+- **Status** — TD's weekly time-report status: `open`, `submitted`, `rejected`,
+  `approved`. A row whose report you can't see (no Analysis app, not the user,
+  not their approver) shows `permission-denied` and zero hours; the run
+  continues so partial reports are still useful.
+- **Bill Hrs** / **Non-Bill Hrs** / **Total Hrs** — pulled from the wire
+  response's `MinutesBillable` / `MinutesNonBillable` / `MinutesTotal`.
+
+#### TD endpoints used
+
+- `GET /TDWebApi/api/time/report/{date}/{uid}` — per-user weekly report.
+- `GET /TDWebApi/api/people/{uid}` — user profile (name, email, manager).
+- `POST /TDWebApi/api/people/search` — enumerate the user population for
+  `--manager`, `--account`, and `--all`.
+
+#### Permissions
+
+Reading another user's report requires one of:
+- The Analysis application role.
+- Being the user themselves.
+- Being an approver on their timesheet.
+
+When permission is denied for a user, that row's `Status` becomes
+`permission-denied` and the rest of the run continues.
+
+#### Selectors (exactly one required)
+
+```
+--user UID       one or more user UIDs (repeatable / comma-separated)
+--manager UID    direct reports of UID; "me" = authenticated user
+--account NAME   users in this account/department by name
+--all            every active standard user (requires --yes)
+```
+
+#### Date range
+
+```
+--week DATE      any date in the target week (Sun–Sat in EasternTZ)
+--from / --to    multi-week range; normalized to whole weeks
+```
+
+#### Output formats (mutually exclusive)
+
+```
+default          human table
+--json           JSON envelope (tdx.v1.timeStatusReport schema)
+--csv            CSV on stdout (no subtotal rows; pivot in Excel)
+--xlsx PATH      write XLSX file (single sheet, bold frozen header)
+```
+
+#### Examples
+
+```bash
+# Your direct reports' weekly status
+tdx time report status --manager me --week 2026-04-12
+
+# Multi-week range for one user, JSON
+tdx time report status --user $UID --from 2026-04-12 --to 2026-04-26 --json
+
+# Whole department in CSV
+tdx time report status --account "UFIT Operations" --week 2026-04-12 --csv > status.csv
+
+# Whole org in XLSX (requires --yes)
+tdx time report status --all --yes --week 2026-04-12 --xlsx all.xlsx
+```
+
 ## Storage layout
 
 Week drafts and templates live under per-profile directories:

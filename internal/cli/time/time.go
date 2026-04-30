@@ -6,6 +6,7 @@ package time
 
 import (
 	"github.com/iainmoffat/tdx/internal/cli/time/entry"
+	"github.com/iainmoffat/tdx/internal/cli/time/report"
 	"github.com/iainmoffat/tdx/internal/cli/time/template"
 	"github.com/iainmoffat/tdx/internal/cli/time/timetype"
 	"github.com/iainmoffat/tdx/internal/cli/time/week"
@@ -22,5 +23,6 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(week.NewCmd())
 	cmd.AddCommand(timetype.NewCmd())
 	cmd.AddCommand(template.NewCmd())
+	cmd.AddCommand(report.NewCmd())
 	return cmd
 }

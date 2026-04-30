@@ -31,4 +31,8 @@ var (
 	// ErrWeekSubmitted indicates a pre-write check found the target week has
 	// already been submitted for approval.
 	ErrWeekSubmitted = errors.New("week already submitted")
+
+	// ErrPermission indicates the API rejected the request because the
+	// caller lacks the necessary role/app/approver relationship.
+	ErrPermission = errors.New("permission denied")
 )
