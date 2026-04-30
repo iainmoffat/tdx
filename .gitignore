@@ -21,3 +21,7 @@ docs/superpowers/
 .idea/
 .vscode/
 *.swp
+
+# Local agent and reference material (untracked)
+.claude/
+ReferenceMaterial/
