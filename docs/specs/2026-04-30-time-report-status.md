@@ -16,6 +16,7 @@
 | Q3 | Use `golang.org/x/sync/errgroup` for bounded-concurrency fan-out. Adds one well-known dep; net win in clarity vs. a hand-rolled semaphore. |
 | Q4 | Permission errors (TD 401/403) map to a typed `domain.ErrPermission` returned by `timesvc.GetWeekReportForUser`. CLI surfaces them with an actionable message ("you need the Analysis app or to be the user/their approver"). |
 | Q5 | `domain.User` is extended with `ReportsToUID`, `ReportsToID`, `ReportsToName`, `ReportsToEmail`. Existing `Email` field is reused. The new fields are optional (omit-empty JSON tags) so existing callers (auth/whoami) continue to work without populating them. |
+| Q6 | Output formats: human table (default), `--json`, `--csv` (stdout), `--xlsx PATH` (file). Mutually exclusive — only one format flag at a time. CSV uses stdlib `encoding/csv`. XLSX adds `github.com/xuri/excelize/v2`. Subtotals are NOT injected as rows in either CSV or XLSX (let pivots/SUMIF handle it); they remain in the human/JSON outputs only. |
 
 ---
 
@@ -39,7 +40,7 @@ Non-goals: write paths (no "approve a timesheet" — TD doesn't expose it), per-
 - `internal/cli/time/time.go` — register the new `report` subcommand.
 - `README.md` — add Time Reports subtable, MCP tool row, JSON schema "Phase C — Reports" line.
 - `docs/guide.md` — new "Time Reports" section.
-- `go.mod` / `go.sum` — add `golang.org/x/sync`.
+- `go.mod` / `go.sum` — add `golang.org/x/sync` and `github.com/xuri/excelize/v2`.
 
 ### Create
 
@@ -55,7 +56,10 @@ Non-goals: write paths (no "approve a timesheet" — TD doesn't expose it), per-
 - `internal/cli/time/report/report.go` — parent `report` cobra command.
 - `internal/cli/time/report/status.go` — `tdx time report status` command + flag wiring.
 - `internal/cli/time/report/status_test.go` — cobra tests.
-- `internal/cli/time/report/print.go` — table renderer.
+- `internal/cli/time/report/print.go` — table + JSON renderers.
+- `internal/cli/time/report/csv.go` — CSV writer (stdlib `encoding/csv`).
+- `internal/cli/time/report/xlsx.go` — XLSX writer (excelize).
+- `internal/cli/time/report/csv_test.go`, `internal/cli/time/report/xlsx_test.go` — table-driven tests.
 - `internal/cli/time/report/runner.go` — orchestration: resolve users, fan out per-(user,week) calls with bounded concurrency, assemble `TimeStatusReport`.
 - `internal/cli/time/report/runner_test.go` — orchestration tests with a mocked `timesvc`/`peoplesvc` interface.
 - `internal/mcp/tools_report.go` — `get_time_status_report` registration + handler.
@@ -229,9 +233,13 @@ type wireUserSearch struct {
   8. Sort: by week ascending, then by user name within week.
   9. Render via `print.go`.
 
-- `internal/cli/time/report/print.go` — rendering helpers:
+- `internal/cli/time/report/print.go` — text + JSON renderers:
   - `printText(w io.Writer, report TimeStatusReport)` — for each week: header `WEEK YYYY-MM-DD — YYYY-MM-DD`, then a `render.Table` with columns `NAME | EMAIL | REPORTS TO | STATUS | BILL | NON-BILL | TOTAL`, then a per-week subtotal row. After all weeks, an overall totals block.
   - `printJSON(w io.Writer, report TimeStatusReport)` — emits the `tdx.v1.timeStatusReport` envelope.
+
+- `internal/cli/time/report/csv.go` — `writeCSV(w io.Writer, report TimeStatusReport) error`. Header row: `weekStart,weekEnd,userUID,name,email,reportsToName,reportsToEmail,status,billableHours,nonBillableHours,totalHours`. One row per `WeekStatusRow`. No subtotal rows. Hours formatted to 2 decimal places. Uses stdlib `encoding/csv`.
+
+- `internal/cli/time/report/xlsx.go` — `writeXLSX(path string, report TimeStatusReport) error`. Single sheet "Time Status Report". First row is a bold header (column names same as the CSV). One data row per `WeekStatusRow`. Frozen top row. Auto-width-ish columns (excelize doesn't auto-fit; set sensible static widths). Hours formatted as numbers (not strings) so users can sum/pivot. Uses `github.com/xuri/excelize/v2`.
 
 ### Flags
 
@@ -247,13 +255,19 @@ type wireUserSearch struct {
 --yes                    confirm --all (avoids accidental large queries)
 --include-zero           include user-weeks with zero total minutes (default: include)
 --limit int              cap user count (default: 200, hard cap: 1000)
---json                   emit JSON
+--json                   emit JSON to stdout
+--csv                    emit CSV to stdout
+--xlsx string            write XLSX to this file path
 ```
 
 ### Selector validation
 
 - Exactly one of `{--user, --manager, --account, --all}` must be provided. Zero or multiple → error.
 - `--all` requires `--yes`. Without `--yes`, error: `--all is destructively large; pass --yes to confirm`.
+
+### Format flag exclusivity
+
+- At most one of `{--json, --csv, --xlsx}` may be set. Multiple → error before any API call. None set → human table output to stdout.
 
 ### JSON envelope
 
@@ -357,7 +371,7 @@ Table-driven tests covering:
 - `SearchUsers`: POST `/api/people/search` with body containing the filter; default UserType=User, Active=true, MaxResults=100.
 - Email fallback: PrimaryEmail empty → uses AlternateEmail.
 
-### CLI (`status_test.go`, `runner_test.go`)
+### CLI (`status_test.go`, `runner_test.go`, `csv_test.go`, `xlsx_test.go`)
 
 - `runner_test.go` uses interface-based mocks for `timesvc`/`peoplesvc`/`authsvc` (define minimal interfaces in `runner.go` so tests can substitute). Cover:
   - Single user, single week.
@@ -365,8 +379,11 @@ Table-driven tests covering:
   - `--manager me` resolves authenticated UID and filters direct reports.
   - `--all` without `--yes` errors out.
   - Selector validation: zero / multiple selectors error.
+  - Format flag exclusivity: `--json --csv` errors out.
   - Permission error → row appears with `Status: "permission-denied"` and zero hours; run continues.
   - JSON output schema matches.
+- `csv_test.go`: write a small `TimeStatusReport`, parse the output back via `encoding/csv`, assert header row + per-row fields + 2-decimal hour formatting.
+- `xlsx_test.go`: write a small report to a temp `.xlsx`, re-open with excelize, assert header is bold, sheet name, row count, and that hour cells are numeric (not string).
 - `status_test.go` covers cobra flag registration only.
 
 ### MCP (`tools_report_test.go`)
@@ -380,7 +397,7 @@ Table-driven tests covering:
 
 - **README.md** Time Reports subtable:
   ```
-  | `tdx time report status` | Weekly time-status report (per user, per week) | `--week`, `--from`/`--to`, `--user`, `--manager`, `--account`, `--all`, `--include-zero`, `--limit`, `--json` |
+  | `tdx time report status` | Weekly time-status report (per user, per week) | `--week`, `--from`/`--to`, `--user`, `--manager`, `--account`, `--all`, `--include-zero`, `--limit`, `--json`, `--csv`, `--xlsx` |
   ```
 - **README.md** MCP read-only tools table: add `get_time_status_report` row. Update count: "Read-only (N tools)" → +1.
 - **README.md** JSON schema list: add new line `Schema names introduced in Phase C — Reports: tdx.v1.timeStatusReport.`
@@ -397,26 +414,28 @@ Table-driven tests covering:
 - Caching / memoization of reports between invocations.
 - Per-account aggregate roll-ups (e.g. "show totals by department"). Could be a follow-up.
 - Historical data export. The CLI prints; `--json` is the export path.
-- A `--csv` flag (mentioned implicitly by some users; defer).
+- *(Both `--csv` and `--xlsx` are now in scope; see §6.)*
 
 ---
 
 ## 12. Estimated work
 
-~13 commits across 5 themes (domain → timesvc → peoplesvc → cli → mcp + docs):
+~15 commits across 5 themes (domain → timesvc → peoplesvc → cli → mcp + docs):
 
 1. Domain: extend `User` + add `UserFilter`, `WeekStatusRow`, `TimeStatusReport`, `ErrPermission`. Add `MinutesBillable`/`MinutesNonBillable` to `WeekReport`.
 2. timesvc: extend wire decoding for billable totals; add `GetWeekReportForUser` with permission-error mapping.
 3. timesvc: retry-on-429 helper in `internal/tdx/client.go` (opt-in `DoJSONWithRetry`).
 4. peoplesvc package: types + GetUser + SearchUsers + tests.
-5. go.mod: add `golang.org/x/sync`.
+5. go.mod: add `golang.org/x/sync` and `github.com/xuri/excelize/v2`.
 6. CLI: `report.go` + `status.go` (flag wiring + cobra); register in `time.go`.
 7. CLI: `runner.go` — orchestration with errgroup fan-out.
 8. CLI: `print.go` — table + JSON output.
-9. CLI tests: `status_test.go`, `runner_test.go`.
-10. MCP: `tools_report.go` + tests.
-11. README + guide.md updates.
-12. Live verification against UFL tenant (`--manager me --week …` and `--user … --from … --to …`).
-13. Final quality gate, push branch, open PR, tag v0.9.0 (minor bump — new public CLI surface + new MCP tool).
+9. CLI: `csv.go` + `csv_test.go`.
+10. CLI: `xlsx.go` + `xlsx_test.go`.
+11. CLI tests: `status_test.go`, `runner_test.go`.
+12. MCP: `tools_report.go` + tests.
+13. README + guide.md updates (include `--csv`/`--xlsx` examples).
+14. Live verification against UFL tenant (text, JSON, CSV, XLSX).
+15. Final quality gate, push branch, open PR, tag v0.9.0 (minor bump — new public CLI surface + new MCP tool).
 
 Subagent-driven execution recommended given the surface size (multiple new packages + CLI tree).
