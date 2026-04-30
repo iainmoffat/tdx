@@ -74,3 +74,14 @@ func TestLockedDay_Empty(t *testing.T) {
 	ld := LockedDay{Date: d(2026, 4, 6)}
 	require.Empty(t, ld.Reason)
 }
+
+func TestWeekReport_BillableHourMethods(t *testing.T) {
+	r := WeekReport{
+		MinutesBillable:    300, // 5h
+		MinutesNonBillable: 90,  // 1.5h
+		TotalMinutes:       390, // 6.5h
+	}
+	require.InDelta(t, 5.0, r.BillableHours(), 0.001)
+	require.InDelta(t, 1.5, r.NonBillableHours(), 0.001)
+	require.InDelta(t, 6.5, r.TotalHours(), 0.001)
+}

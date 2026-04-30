@@ -35,16 +35,20 @@ func (d DaySummary) Hours() float64 { return float64(d.Minutes) / 60.0 }
 // breakdown (Days) is computed client-side — TD returns a flat entries
 // array and totals, not a day-by-day summary.
 type WeekReport struct {
-	WeekRef      WeekRef      `json:"weekRef"`
-	UserUID      string       `json:"userUID"`
-	TotalMinutes int          `json:"totalMinutes"`
-	Status       ReportStatus `json:"status"`
-	Days         []DaySummary `json:"days"`
-	Entries      []TimeEntry  `json:"entries"`
+	WeekRef            WeekRef      `json:"weekRef"`
+	UserUID            string       `json:"userUID"`
+	TotalMinutes       int          `json:"totalMinutes"`
+	MinutesBillable    int          `json:"minutesBillable,omitempty"`
+	MinutesNonBillable int          `json:"minutesNonBillable,omitempty"`
+	Status             ReportStatus `json:"status"`
+	Days               []DaySummary `json:"days"`
+	Entries            []TimeEntry  `json:"entries"`
 }
 
 // TotalHours is a render-convenience wrapper.
-func (w WeekReport) TotalHours() float64 { return float64(w.TotalMinutes) / 60.0 }
+func (w WeekReport) TotalHours() float64       { return float64(w.TotalMinutes) / 60.0 }
+func (w WeekReport) BillableHours() float64    { return float64(w.MinutesBillable) / 60.0 }
+func (w WeekReport) NonBillableHours() float64 { return float64(w.MinutesNonBillable) / 60.0 }
 
 // LockedDay is one entry in the response of /TDWebApi/api/time/locked.
 // TD returns a flat array of dates; Reason is always empty in Phase 2

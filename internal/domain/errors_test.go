@@ -24,3 +24,8 @@ func TestSentinelErrors_AreDistinct(t *testing.T) {
 	require.False(t, errors.Is(ErrUnsupportedTargetKind, ErrEntryNotFound))
 	require.False(t, errors.Is(ErrEntryNotFound, ErrProfileNotFound))
 }
+
+func TestErrPermission_Wrappable(t *testing.T) {
+	wrapped := fmt.Errorf("get report: %w", ErrPermission)
+	require.ErrorIs(t, wrapped, ErrPermission)
+}
