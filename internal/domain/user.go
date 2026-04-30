@@ -13,6 +13,9 @@ type User struct {
 	ReportsToID    int    `json:"reportsToID,omitempty"    yaml:"reportsToID,omitempty"`
 	ReportsToName  string `json:"reportsToName,omitempty"  yaml:"reportsToName,omitempty"`
 	ReportsToEmail string `json:"reportsToEmail,omitempty" yaml:"reportsToEmail,omitempty"`
+
+	ResourcePoolID   int    `json:"resourcePoolID,omitempty"   yaml:"resourcePoolID,omitempty"`
+	ResourcePoolName string `json:"resourcePoolName,omitempty" yaml:"resourcePoolName,omitempty"`
 }
 
 // DisplayName returns the most specific non-empty name available.
