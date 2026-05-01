@@ -32,5 +32,6 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(newPruneCmd())
 	cmd.AddCommand(newRefreshCmd())
 	cmd.AddCommand(newRebaseCmd())
+	cmd.AddCommand(newResolveCmd())
 	return cmd
 }

@@ -34,6 +34,9 @@ const (
 	OpPreRename OpTag = "pre-rename"
 	// OpPreReset tags a snapshot taken before discarding local edits.
 	OpPreReset OpTag = "pre-reset"
+	// OpPreResolve tags a snapshot taken before applying conflict picks via
+	// tdx time week resolve.
+	OpPreResolve OpTag = "pre-resolve"
 	// OpManual tags a snapshot taken by explicit user request.
 	OpManual OpTag = "manual"
 )
