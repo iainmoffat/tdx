@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/iainmoffat/tdx/internal/config"
 	"github.com/iainmoffat/tdx/internal/domain"
@@ -92,12 +93,13 @@ func (s *Service) Logout(profileName string) error {
 
 // Status describes the current state of an auth profile.
 type Status struct {
-	Profile       domain.Profile
-	Authenticated bool // a token is stored
-	TokenValid    bool // the stored token was accepted by the server (only set if Authenticated)
-	ValidationErr string
-	User          domain.User `json:"user,omitempty"`
-	UserErr       string      `json:"userErr,omitempty"`
+	Profile        domain.Profile
+	Authenticated  bool // a token is stored
+	TokenValid     bool // the stored token was accepted by the server (only set if Authenticated)
+	ValidationErr  string
+	TokenExpiresAt time.Time   // zero if the token isn't a parseable JWT or has no exp claim
+	User           domain.User `json:"user,omitempty"`
+	UserErr        string      `json:"userErr,omitempty"`
 }
 
 // Status reports the state of a profile's credentials.
@@ -118,6 +120,9 @@ func (s *Service) Status(ctx context.Context, profileName string) (Status, error
 		return status, err
 	}
 	status.Authenticated = true
+	if exp, ok := parseJWTExp(token); ok {
+		status.TokenExpiresAt = exp
+	}
 
 	client, err := tdx.NewClient(profile.TenantBaseURL, token)
 	if err != nil {
