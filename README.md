@@ -139,7 +139,13 @@ artifact, validate, diff, preview, and push back with safety guarantees.
 |---|---|---|
 | `tdx time report status` | Weekly time-status report (per user, per week) | `--week`, `--from`/`--to`, `--user`, `--manager`, `--account`, `--resource-pool`, `--all`, `--include-zero`, `--limit`, `--json`, `--csv`, `--xlsx` |
 
-> Selectors are mutually exclusive (exactly one of `--user`, `--manager`, `--account`, `--resource-pool`, `--all` required). `--manager me` resolves to the authenticated user. `--resource-pool` matches the TD UI report's filter; pass the pool name exactly as shown in TD. Output formats are mutually exclusive; default is human table.
+> Selectors are mutually exclusive (exactly one of `--user`, `--manager`, `--account`, `--resource-pool`, `--all` required). `--manager me` resolves to the authenticated user. `--account` and `--resource-pool` match by exact name (case-insensitive); use `tdx people pools list` to see available pool names. Output formats are mutually exclusive; default is human table.
+
+### People
+
+| Command | Description | Key Flags |
+|---|---|---|
+| `tdx people pools list` | List TD resource pools (id, name, manager, requires-approval, active) | `--json`, `--profile` |
 
 ### MCP
 

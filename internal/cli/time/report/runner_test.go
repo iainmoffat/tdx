@@ -24,12 +24,15 @@ func (m *mockTimesvc) GetWeekReportForUser(_ context.Context, _ string, _ time.T
 }
 
 type mockPeoplesvc struct {
-	users        map[string]domain.User
-	search       []domain.User
-	lastFilter   domain.UserFilter
-	pool         peoplesvc.ResourcePool
-	poolErr      error
-	resolveCalls int
+	users               map[string]domain.User
+	search              []domain.User
+	lastFilter          domain.UserFilter
+	pool                peoplesvc.ResourcePool
+	poolErr             error
+	resolveCalls        int
+	account             peoplesvc.Account
+	accountErr          error
+	resolveAccountCalls int
 }
 
 func (m *mockPeoplesvc) GetUser(_ context.Context, _, uid string) (domain.User, error) {
@@ -50,6 +53,14 @@ func (m *mockPeoplesvc) ResolvePoolByName(_ context.Context, _, _ string) (peopl
 		return peoplesvc.ResourcePool{}, m.poolErr
 	}
 	return m.pool, nil
+}
+
+func (m *mockPeoplesvc) ResolveAccountByName(_ context.Context, _, _ string) (peoplesvc.Account, error) {
+	m.resolveAccountCalls++
+	if m.accountErr != nil {
+		return peoplesvc.Account{}, m.accountErr
+	}
+	return m.account, nil
 }
 
 type mockAuthsvc struct {
@@ -135,24 +146,45 @@ func TestRunner_ManagerMeUsesAuthenticatedUID(t *testing.T) {
 	require.Equal(t, employeeLimit, people.lastFilter.Limit)
 }
 
-func TestRunner_AccountSelectorSetsEmployeeFilter(t *testing.T) {
-	people := &mockPeoplesvc{search: []domain.User{}}
+func TestRunner_AccountSelectorResolvesToServerSideID(t *testing.T) {
+	people := &mockPeoplesvc{
+		search:  []domain.User{},
+		account: peoplesvc.Account{ID: 866, Name: "14300000 (IT-ICT INFRA COMM TECHNOLOGY)"},
+	}
 	deps := runnerDeps{
 		Time:   &mockTimesvc{},
 		People: people,
 		Auth:   &mockAuthsvc{},
 	}
 	_, err := assembleReport(context.Background(), deps, statusFlags{
-		account:     "UFIT",
+		account:     "14300000 (IT-ICT INFRA COMM TECHNOLOGY)",
 		week:        "2026-04-14",
 		includeZero: true,
 		limit:       100,
 	})
 	require.NoError(t, err)
+	require.Equal(t, 1, people.resolveAccountCalls)
 	require.NotNil(t, people.lastFilter.Employee)
 	require.True(t, *people.lastFilter.Employee)
-	require.Equal(t, "UFIT", people.lastFilter.AccountName)
+	require.Equal(t, 866, people.lastFilter.AccountID)
 	require.Equal(t, employeeLimit, people.lastFilter.Limit)
+}
+
+func TestRunner_AccountNotFoundPropagates(t *testing.T) {
+	people := &mockPeoplesvc{accountErr: errors.New("account \"Nope\" not found among 6404 accounts")}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{},
+		People: people,
+		Auth:   &mockAuthsvc{},
+	}
+	_, err := assembleReport(context.Background(), deps, statusFlags{
+		account:     "Nope",
+		week:        "2026-04-14",
+		includeZero: true,
+		limit:       100,
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "not found")
 }
 
 func TestRunner_ResourcePoolSelectorFiltersByPoolID(t *testing.T) {

@@ -4,6 +4,7 @@ import (
 	"github.com/iainmoffat/tdx/internal/cli/auth"
 	"github.com/iainmoffat/tdx/internal/cli/config"
 	mcpcli "github.com/iainmoffat/tdx/internal/cli/mcp"
+	"github.com/iainmoffat/tdx/internal/cli/people"
 	timecli "github.com/iainmoffat/tdx/internal/cli/time"
 	"github.com/spf13/cobra"
 )
@@ -28,6 +29,7 @@ func NewRootCmd(version string) *cobra.Command {
 	root.AddCommand(config.NewCmd())
 	root.AddCommand(auth.NewCmd())
 	root.AddCommand(timecli.NewCmd())
+	root.AddCommand(people.NewCmd())
 	root.AddCommand(mcpcli.NewCmd())
 	root.AddCommand(newCompletionCmd())
 	return root
