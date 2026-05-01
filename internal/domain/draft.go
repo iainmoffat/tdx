@@ -61,10 +61,24 @@ type DraftRow struct {
 
 // DraftCell is the atomic unit of a draft: one row × one weekday.
 type DraftCell struct {
-	Day           time.Weekday `yaml:"day" json:"day"`
-	Hours         float64      `yaml:"hours" json:"hours"`
-	SourceEntryID int          `yaml:"sourceEntryID,omitempty" json:"sourceEntryID,omitempty"`
-	PerCell       *PerCell     `yaml:"perCell,omitempty" json:"perCell,omitempty"`
+	Day           time.Weekday      `yaml:"day" json:"day"`
+	Hours         float64           `yaml:"hours" json:"hours"`
+	SourceEntryID int               `yaml:"sourceEntryID,omitempty" json:"sourceEntryID,omitempty"`
+	PerCell       *PerCell          `yaml:"perCell,omitempty" json:"perCell,omitempty"`
+	Conflict      *DraftConflictAlt `yaml:"conflict,omitempty" json:"conflict,omitempty"`
+}
+
+// DraftConflictAlt is the "other side" candidate when a refresh under
+// --strategy surface couldn't auto-merge. The owning cell's main fields
+// hold the local intent; this struct holds the remote alternative.
+//
+// PulledHours is the value at last pull time, used for context in the
+// resolve status output and the show command's CONFLICTS footer; not
+// required for resolve mechanics.
+type DraftConflictAlt struct {
+	Hours         float64 `yaml:"hours" json:"hours"`
+	SourceEntryID int     `yaml:"sourceEntryID,omitempty" json:"sourceEntryID,omitempty"`
+	PulledHours   float64 `yaml:"pulledHours,omitempty" json:"pulledHours,omitempty"`
 }
 
 // PerCell holds per-cell metadata overrides (Phase C escape hatch).
@@ -140,7 +154,13 @@ type DraftSyncState struct {
 
 // ComputeCellState classifies the current cell against the cell at pull time.
 // A zero-valued pulledAtPullTime means "no entry was pulled here" (added cell).
+// A current cell with a non-nil Conflict alternate is reported as
+// CellConflict regardless of pulled-vs-current diff — the unresolved
+// merge state trumps any other classification.
 func ComputeCellState(pulledAtPullTime, current DraftCell) CellState {
+	if current.Conflict != nil {
+		return CellConflict
+	}
 	if pulledAtPullTime.SourceEntryID == 0 && current.SourceEntryID == 0 {
 		if current.Hours > 0 {
 			return CellAdded

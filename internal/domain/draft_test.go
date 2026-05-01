@@ -135,6 +135,12 @@ func TestComputeCellState(t *testing.T) {
 		{"edited (cleared = delete-on-push)", pulled,
 			DraftCell{Day: time.Monday, Hours: 0, SourceEntryID: 98731}, CellEdited},
 		{"added (no source)", DraftCell{}, DraftCell{Day: time.Monday, Hours: 4.0}, CellAdded},
+		{"conflict (Conflict alt set)", pulled,
+			DraftCell{Day: time.Monday, Hours: 8.0, SourceEntryID: 98731,
+				Conflict: &DraftConflictAlt{Hours: 10.0, SourceEntryID: 98741}}, CellConflict},
+		{"conflict trumps edited", pulled,
+			DraftCell{Day: time.Monday, Hours: 6.0, SourceEntryID: 98731,
+				Conflict: &DraftConflictAlt{Hours: 10.0}}, CellConflict},
 	}
 	for _, c := range cases {
 		got := ComputeCellState(c.pulled, c.current)
@@ -180,6 +186,52 @@ func TestComputeSyncState(t *testing.T) {
 	// Stale: fingerprint differs.
 	if state := ComputeSyncState(cleanDraft, pulledCells, "different"); !state.Stale {
 		t.Errorf("stale: got Stale=false, want true")
+	}
+
+	// Conflicted: any cell with Conflict set promotes the whole draft.
+	conflicted := cleanDraft
+	conflicted.Rows[0].Cells[0].Conflict = &DraftConflictAlt{Hours: 10.0, SourceEntryID: 98741, PulledHours: 8.0}
+	state := ComputeSyncState(conflicted, pulledCells, pulledFingerprint)
+	if state.Sync != SyncConflicted {
+		t.Errorf("conflicted: got %s, want conflicted", state.Sync)
+	}
+	if state.Conflict != 1 {
+		t.Errorf("conflicted: got Conflict=%d, want 1", state.Conflict)
+	}
+}
+
+func TestDraftConflictAlt_YAMLRoundTrip(t *testing.T) {
+	in := DraftCell{
+		Day: time.Monday, Hours: 8.0, SourceEntryID: 98731,
+		Conflict: &DraftConflictAlt{Hours: 10.0, SourceEntryID: 98741, PulledHours: 7.0},
+	}
+	data, err := yaml.Marshal(in)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if !strings.Contains(string(data), "conflict:") {
+		t.Errorf("expected 'conflict:' in YAML, got: %s", data)
+	}
+	var out DraftCell
+	if err := yaml.Unmarshal(data, &out); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if out.Conflict == nil {
+		t.Fatalf("Conflict lost in round-trip")
+	}
+	if out.Conflict.Hours != 10.0 || out.Conflict.SourceEntryID != 98741 || out.Conflict.PulledHours != 7.0 {
+		t.Errorf("Conflict fields lost: %+v", out.Conflict)
+	}
+}
+
+func TestDraftConflictAlt_OmittedWhenNil(t *testing.T) {
+	in := DraftCell{Day: time.Monday, Hours: 8.0, SourceEntryID: 98731} // Conflict nil
+	data, err := yaml.Marshal(in)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if strings.Contains(string(data), "conflict:") {
+		t.Errorf("expected no 'conflict:' key when nil; got: %s", data)
 	}
 }
 
