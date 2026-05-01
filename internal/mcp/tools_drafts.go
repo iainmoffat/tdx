@@ -397,13 +397,32 @@ at-pull-time / current-local / current-remote.
 strategy: abort (default) - refuse to mutate if any cell-level conflict
           ours              - on conflict, keep local
           theirs            - on conflict, take remote
+          surface           - save both candidates per cell; pick later via
+                              resolve_week_draft
 
-On strategy=abort with conflicts, returns a successful tool result with
-aborted=true and a conflicts[] list. Agent can re-call with strategy=ours
-or strategy=theirs after surfacing the conflicts to the user.
+On strategy=abort with conflicts, returns aborted=true and a conflicts[]
+list. On strategy=surface, the merged draft is written to disk with
+remote candidates encoded in cell.Conflict; call resolve_week_draft to
+pick winners.
 
 Requires confirm=true.`,
 	}, refreshDraftHandler(svcs))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name: "resolve_week_draft",
+		Description: `Apply conflict picks to a draft produced by refresh strategy=surface.
+
+Three forms (mutually exclusive):
+  - no pick fields → returns the conflict list (no mutation, no confirm needed)
+  - pickAllLocal=true → resolve every conflict by keeping local
+  - pickAllRemote=true → resolve every conflict by taking remote
+  - picks=[{rowID, day, choice}] → per-cell picks (choice = "local"|"remote")
+
+A pick that drops a cell (remote candidate is "delete") requires
+allowDelete=true (mirrors push's --allow-deletes / --yes).
+
+Apply paths require confirm=true. Status (no picks) does not.`,
+	}, resolveDraftHandler(svcs))
 
 	sdkmcp.AddTool(srv, &sdkmcp.Tool{
 		Name:        "archive_week_draft",
@@ -696,8 +715,25 @@ type refreshDraftArgs struct {
 	Profile   string `json:"profile,omitempty"`
 	WeekStart string `json:"weekStart"`
 	Name      string `json:"name,omitempty"`
-	Strategy  string `json:"strategy,omitempty" jsonschema:"abort | ours | theirs (default abort)"`
+	Strategy  string `json:"strategy,omitempty" jsonschema:"abort | ours | theirs | surface (default abort)"`
 	Confirm   bool   `json:"confirm"`
+}
+
+type resolveDraftPick struct {
+	RowID  string `json:"rowID"`
+	Day    string `json:"day"`
+	Choice string `json:"choice" jsonschema:"local | remote"`
+}
+
+type resolveDraftArgs struct {
+	Profile       string             `json:"profile,omitempty"`
+	WeekStart     string             `json:"weekStart"`
+	Name          string             `json:"name,omitempty"`
+	PickAllLocal  bool               `json:"pickAllLocal,omitempty"`
+	PickAllRemote bool               `json:"pickAllRemote,omitempty"`
+	Picks         []resolveDraftPick `json:"picks,omitempty"`
+	AllowDelete   bool               `json:"allowDelete,omitempty"`
+	Confirm       bool               `json:"confirm,omitempty"`
 }
 
 type archiveDraftArgs struct {
@@ -881,6 +917,7 @@ func refreshDraftHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRe
 			Preserved          int            `json:"preserved"`
 			Resolved           int            `json:"resolved"`
 			ResolvedByStrategy int            `json:"resolvedByStrategy"`
+			Surfaced           int            `json:"surfaced"`
 			Conflicts          []conflictJSON `json:"conflicts"`
 		}{
 			Schema:             "tdx.v1.weekDraftRefreshResult",
@@ -890,6 +927,7 @@ func refreshDraftHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRe
 			Preserved:          res.Preserved,
 			Resolved:           res.Resolved,
 			ResolvedByStrategy: res.ResolvedByStrategy,
+			Surfaced:           res.Surfaced,
 			Conflicts:          conflicts,
 		})
 	}
@@ -1040,5 +1078,101 @@ func pruneSnapshotsHandler(svcs Services) func(context.Context, *sdkmcp.CallTool
 			Schema string `json:"schema"`
 			Pruned int    `json:"pruned"`
 		}{Schema: "tdx.v1.weekDraftSnapshotPruneResult", Pruned: pruned})
+	}
+}
+
+func resolveDraftHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, resolveDraftArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args resolveDraftArgs) (*sdkmcp.CallToolResult, any, error) {
+		profile := resolveProfile(svcs, args.Profile)
+		weekStart, err := parseWeekStart(args.WeekStart)
+		if err != nil {
+			return errorResult(fmt.Sprintf("invalid weekStart: %v", err)), nil, nil
+		}
+		name := args.Name
+		if name == "" {
+			name = "default"
+		}
+
+		anyApply := args.PickAllLocal || args.PickAllRemote || len(args.Picks) > 0
+
+		// Status path: no apply flags. No confirm needed.
+		if !anyApply {
+			conflicts, err := svcs.Drafts.ListConflicts(profile, weekStart, name)
+			if err != nil {
+				return errorResult(fmt.Sprintf("resolve: %v", err)), nil, nil
+			}
+			type conflictJSON struct {
+				RowID         string  `json:"rowID"`
+				RowLabel      string  `json:"rowLabel,omitempty"`
+				Day           string  `json:"day"`
+				LocalHours    float64 `json:"localHours"`
+				RemoteHours   float64 `json:"remoteHours"`
+				PulledHours   float64 `json:"pulledHours"`
+				RemoteDeletes bool    `json:"remoteDeletes,omitempty"`
+			}
+			out := make([]conflictJSON, 0, len(conflicts))
+			for _, c := range conflicts {
+				out = append(out, conflictJSON{
+					RowID: c.RowID, RowLabel: c.RowLabel, Day: c.Day.String(),
+					LocalHours: c.LocalHours, RemoteHours: c.RemoteHours,
+					PulledHours: c.PulledHours, RemoteDeletes: c.RemoteDeletes,
+				})
+			}
+			return jsonResult(struct {
+				Schema    string         `json:"schema"`
+				WeekStart string         `json:"weekStart"`
+				Name      string         `json:"name"`
+				Conflicts []conflictJSON `json:"conflicts"`
+			}{
+				Schema:    "tdx.v1.weekDraftConflicts",
+				WeekStart: weekStart.Format("2006-01-02"),
+				Name:      name,
+				Conflicts: out,
+			})
+		}
+
+		// Apply path: confirm gate.
+		if r, ok := confirmGate(args.Confirm, "Set confirm=true to apply conflict picks."); !ok {
+			return r, nil, nil
+		}
+
+		picks := make([]draftsvc.Pick, 0, len(args.Picks))
+		for _, p := range args.Picks {
+			day, err := draftsvc.ParseWeekday(p.Day)
+			if err != nil {
+				return errorResult(err.Error()), nil, nil
+			}
+			choice, err := draftsvc.ParsePickChoice(p.Choice)
+			if err != nil {
+				return errorResult(err.Error()), nil, nil
+			}
+			picks = append(picks, draftsvc.Pick{RowID: p.RowID, Day: day, Choice: choice})
+		}
+
+		res, err := svcs.Drafts.Resolve(profile, weekStart, name,
+			args.PickAllLocal, args.PickAllRemote, picks, args.AllowDelete)
+		if err != nil {
+			return errorResult(fmt.Sprintf("resolve: %v", err)), nil, nil
+		}
+
+		return jsonResult(struct {
+			Schema              string `json:"schema"`
+			WeekStart           string `json:"weekStart"`
+			Name                string `json:"name"`
+			PicksApplied        int    `json:"picksApplied"`
+			PickedLocal         int    `json:"pickedLocal"`
+			PickedRemote        int    `json:"pickedRemote"`
+			DroppedDeletedCells int    `json:"droppedDeletedCells"`
+			ConflictsRemaining  int    `json:"conflictsRemaining"`
+		}{
+			Schema:              "tdx.v1.weekDraftResolveResult",
+			WeekStart:           weekStart.Format("2006-01-02"),
+			Name:                name,
+			PicksApplied:        res.PicksApplied,
+			PickedLocal:         res.PickedLocal,
+			PickedRemote:        res.PickedRemote,
+			DroppedDeletedCells: res.DroppedDeletedCells,
+			ConflictsRemaining:  res.ConflictsRemaining,
+		})
 	}
 }

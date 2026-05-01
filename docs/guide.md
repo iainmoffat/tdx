@@ -801,6 +801,8 @@ users — same flags, same behavior.
 --strategy abort    (default) refuse to mutate if any cell-level conflict
 --strategy ours     on conflict, keep local
 --strategy theirs   on conflict, take remote
+--strategy surface  on conflict, save both candidates side-by-side and let
+                    'tdx time week resolve' pick winners cell-by-cell
 ```
 
 #### Worked example
@@ -836,6 +838,53 @@ Refresh complete (--strategy ours).
 A snapshot tagged `pre-refresh` is taken before any disk mutation. To roll
 back: `tdx time week history 2026-05-03` and
 `tdx time week restore 2026-05-03 --snapshot N --yes`.
+
+#### Surface strategy + tdx time week resolve
+
+`--strategy surface` is for the case where neither "all local wins" nor
+"all remote wins" is right — e.g. some conflicts you want local for, others
+remote. The merge writes both candidates per conflicted cell into the
+draft, then `tdx time week resolve` lets you pick winners cell by cell:
+
+```
+$ tdx time week refresh 2026-05-03 --strategy surface
+Refresh complete (--strategy surface).
+  Adopted (remote -> draft):  0 cells
+  Preserved (local edits):    0 cells
+  Resolved (same on both):    0 cells
+  Surfaced (pick winners):    2 cells (tdx time week resolve)
+
+$ tdx time week resolve 2026-05-03
+WEEK 2026-05-03  conflicts: 2
+ROW       DAY      LOCAL    REMOTE   PULLED
+row-01    Monday   6.0      8.0      4.0
+row-01    Tuesday  6.0      (deleted) 4.0
+
+Pick:
+  tdx time week resolve 2026-05-03 --row row-01 --day Monday --pick remote
+  tdx time week resolve 2026-05-03 --all-local
+  tdx time week resolve 2026-05-03 --all-remote --yes
+```
+
+Apply forms:
+
+```
+--all-local            keep local for every conflict
+--all-remote           take remote for every conflict
+--row ID --day NAME    per-cell pick; require --pick local|remote
+--pick local|remote
+--yes                  required when --pick remote would drop a cell
+                       (remote candidate is "deleted")
+--json                 machine-readable output for both status and apply
+```
+
+While a draft is conflicted (`SyncConflicted`), `push` and `edit` both
+refuse — `push` would commit unresolved divergences, and the grid editor
+doesn't display the alternate candidates so editing could silently lose
+remote intent. Resolve first, then push or edit normally.
+
+A snapshot tagged `pre-resolve` is taken before each apply, so picks are
+revertible via `tdx time week history` / `restore`.
 
 ## Time Reports
 
