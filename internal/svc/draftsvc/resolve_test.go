@@ -29,8 +29,8 @@ func conflictedDraft() domain.WeekDraft {
 		Name:          "default",
 		WeekStart:     weekStart,
 		Rows: []domain.DraftRow{{
-			ID: "row-01",
-			Target: domain.Target{Kind: domain.TargetTicket, AppID: 42, ItemID: 555},
+			ID:       "row-01",
+			Target:   domain.Target{Kind: domain.TargetTicket, AppID: 42, ItemID: 555},
 			TimeType: domain.TimeType{ID: 7},
 			Billable: true,
 			Cells: []domain.DraftCell{

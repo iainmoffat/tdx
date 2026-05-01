@@ -16,14 +16,14 @@ import (
 )
 
 type resolveFlags struct {
-	profile      string
-	row          string
-	day          string
-	pick         string
-	allLocal     bool
-	allRemote    bool
-	yes          bool
-	json         bool
+	profile   string
+	row       string
+	day       string
+	pick      string
+	allLocal  bool
+	allRemote bool
+	yes       bool
+	json      bool
 }
 
 func newResolveCmd() *cobra.Command {

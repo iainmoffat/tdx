@@ -22,10 +22,10 @@ func TestNewResolveCmd_FlagsRegistered(t *testing.T) {
 
 func TestValidateResolveFlags_OK(t *testing.T) {
 	cases := []resolveFlags{
-		{},                                                 // bare → status
-		{allLocal: true},                                   // bulk
-		{allRemote: true, yes: true},                       // bulk with yes
-		{row: "r", day: "Monday", pick: "local"},           // per-cell
+		{},                                       // bare → status
+		{allLocal: true},                         // bulk
+		{allRemote: true, yes: true},             // bulk with yes
+		{row: "r", day: "Monday", pick: "local"}, // per-cell
 		{row: "r", day: "monday", pick: "REMOTE", yes: true},
 	}
 	for i, f := range cases {
@@ -88,14 +88,17 @@ func TestWriteConflictsJSON_Shape(t *testing.T) {
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
 	require.Equal(t, "tdx.v1.weekDraftConflicts", got["schema"])
 	require.Equal(t, "2026-05-03", got["weekStart"])
-	arr := got["conflicts"].([]any)
+	arr, ok := got["conflicts"].([]any)
+	require.True(t, ok)
 	require.Len(t, arr, 2)
-	first := arr[0].(map[string]any)
+	first, ok := arr[0].(map[string]any)
+	require.True(t, ok)
 	require.Equal(t, "row-01", first["rowID"])
 	require.Equal(t, "Monday", first["day"])
 	require.Equal(t, float64(6), first["localHours"])
 	require.Equal(t, float64(8), first["remoteHours"])
-	second := arr[1].(map[string]any)
+	second, ok := arr[1].(map[string]any)
+	require.True(t, ok)
 	require.Equal(t, true, second["remoteDeletes"])
 }
 
