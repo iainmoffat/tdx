@@ -22,6 +22,18 @@ type editFlags struct {
 	web     bool
 }
 
+func countDraftConflicts(d domain.WeekDraft) int {
+	n := 0
+	for _, row := range d.Rows {
+		for _, c := range row.Cells {
+			if c.Conflict != nil {
+				n++
+			}
+		}
+	}
+	return n
+}
+
 func newEditCmd() *cobra.Command {
 	var f editFlags
 	cmd := &cobra.Command{
@@ -70,6 +82,11 @@ func runEdit(cmd *cobra.Command, f editFlags, ref string) error {
 	d, err := drafts.Store().Load(profileName, weekStart, name)
 	if err != nil {
 		return err
+	}
+
+	if conflicts := countDraftConflicts(d); conflicts > 0 {
+		return fmt.Errorf("draft has %d unresolved conflicts; tdx time week resolve %s before editing",
+			conflicts, weekStart.Format("2006-01-02"))
 	}
 
 	if f.web {

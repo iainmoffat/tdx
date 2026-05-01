@@ -71,6 +71,15 @@ func runPush(cmd *cobra.Command, f pushFlags, ref string) error {
 	if err != nil {
 		return err
 	}
+
+	// Refuse to push a conflicted draft.
+	if conflicts, err := drafts.CountConflicts(profileName, weekStart, name); err != nil {
+		return err
+	} else if conflicts > 0 {
+		return fmt.Errorf("draft has %d unresolved conflicts; tdx time week resolve %s to pick winners",
+			conflicts, weekStart.Format("2006-01-02"))
+	}
+
 	user, err := auth.WhoAmI(cmd.Context(), profileName)
 	if err != nil {
 		return fmt.Errorf("resolve user: %w", err)

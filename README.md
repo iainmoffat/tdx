@@ -103,8 +103,9 @@ artifact, validate, diff, preview, and push back with safety guarantees.
 | `tdx time week copy <src> <dst>` | Clone a draft to a new ref | (positional) |
 | `tdx time week rename <date>[/<old>] <new>` | Rename a draft (preserves snapshots) | (positional) |
 | `tdx time week reset [date[/name]] --yes` | Discard local edits + re-pull (auto-snapshots) | `--yes` |
-| `tdx time week refresh [date[/name]]` | Three-way merge against current remote | `--strategy abort\|ours\|theirs`, `--json` |
-| `tdx time week rebase [date[/name]]` | Alias of refresh (same flags, same behavior) | `--strategy abort\|ours\|theirs`, `--json` |
+| `tdx time week refresh [date[/name]]` | Three-way merge against current remote | `--strategy abort\|ours\|theirs\|surface`, `--json` |
+| `tdx time week rebase [date[/name]]` | Alias of refresh (same flags, same behavior) | `--strategy abort\|ours\|theirs\|surface`, `--json` |
+| `tdx time week resolve [date[/name]]` | Pick winners for conflicts produced by `--strategy surface` | `--row`, `--day`, `--pick`, `--all-local`, `--all-remote`, `--yes`, `--json` |
 | `tdx time week archive [date[/name]]` | Hide draft from default `list` | (none) |
 | `tdx time week unarchive [date[/name]]` | Show previously archived draft | (none) |
 | `tdx time week snapshot [date[/name]]` | Take a manual snapshot | `--keep`, `--note` |
@@ -222,7 +223,8 @@ from a prior preview call for race protection.
 
 | Tool | Description |
 |------|-------------|
-| `refresh_week_draft` | Three-way merge a draft against current remote; supports `strategy` `abort`/`ours`/`theirs` |
+| `refresh_week_draft` | Three-way merge a draft against current remote; supports `strategy` `abort`/`ours`/`theirs`/`surface` |
+| `resolve_week_draft` | Pick winners for conflicts surfaced by `refresh strategy=surface` (cell-by-cell or bulk) |
 
 **Time Reports (Phase C — read-only, 1 tool):**
 
