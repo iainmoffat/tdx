@@ -162,4 +162,57 @@ func renderDraftAsWeekReport(w io.Writer, d domain.WeekDraft) {
 	}
 	_, _ = fmt.Fprintf(w, "Draft: %s/%s\n\n", weekStart.Format("2006-01-02"), d.Name)
 	render.WeekGrid(w, report)
+	renderDraftConflicts(w, d)
+}
+
+// renderDraftConflicts appends a CONFLICTS footer when any cell has its
+// Conflict alt set. Empty when the draft is unconflicted.
+func renderDraftConflicts(w io.Writer, d domain.WeekDraft) {
+	type conflictRow struct {
+		rowID  string
+		day    string
+		local  string
+		remote string
+		pulled string
+	}
+	var rows []conflictRow
+	for _, row := range d.Rows {
+		for _, c := range row.Cells {
+			if c.Conflict == nil {
+				continue
+			}
+			rows = append(rows, conflictRow{
+				rowID:  row.ID,
+				day:    c.Day.String(),
+				local:  describeCellValue(c.Hours, c.SourceEntryID),
+				remote: describeCellValue(c.Conflict.Hours, c.Conflict.SourceEntryID),
+				pulled: fmt.Sprintf("%.1f", c.Conflict.PulledHours),
+			})
+		}
+	}
+	if len(rows) == 0 {
+		return
+	}
+	_, _ = fmt.Fprintln(w)
+	headers := []string{"ROW", "DAY", "LOCAL", "REMOTE", "PULLED"}
+	tableRows := make([][]string, 0, len(rows))
+	for _, r := range rows {
+		tableRows = append(tableRows, []string{r.rowID, r.day, r.local, r.remote, r.pulled})
+	}
+	_, _ = fmt.Fprintf(w, "CONFLICTS (%d):\n", len(rows))
+	render.Table(w, headers, tableRows, nil)
+	_, _ = fmt.Fprintf(w, "\ntdx time week resolve %s to pick winners.\n", d.WeekStart.Format("2006-01-02"))
+}
+
+// describeCellValue formats a cell's hours+sourceEntryID for the conflict
+// footer. "(deleted)" when both are zero, "(cleared)" when hours=0 with
+// sourceEntryID, otherwise the hours value.
+func describeCellValue(hours float64, sourceEntryID int) string {
+	if hours == 0 && sourceEntryID == 0 {
+		return "(deleted)"
+	}
+	if hours == 0 {
+		return "(cleared)"
+	}
+	return fmt.Sprintf("%.1f", hours)
 }

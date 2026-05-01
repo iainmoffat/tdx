@@ -181,6 +181,28 @@ func (s *Service) PulledCellsByKey(profile string, weekStart time.Time, name str
 	return pulledCellsByKey(snap), nil
 }
 
+// CountConflicts returns the number of conflicted cells (cells whose
+// Conflict alt is set) in the named draft. Used by push to refuse on
+// SyncConflicted drafts and by resolve to drive its status output.
+func (s *Service) CountConflicts(profile string, weekStart time.Time, name string) (int, error) {
+	if name == "" {
+		name = "default"
+	}
+	draft, err := s.store.Load(profile, weekStart, name)
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, row := range draft.Rows {
+		for _, c := range row.Cells {
+			if c.Conflict != nil {
+				n++
+			}
+		}
+	}
+	return n, nil
+}
+
 // Reconcile loads current remote state and produces a ReconcileDiff for the
 // named draft. userUID is required: it populates EntryInput.UserUID for any
 // Create actions. Callers should resolve it via authsvc.WhoAmI.

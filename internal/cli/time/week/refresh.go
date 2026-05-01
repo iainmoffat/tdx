@@ -30,10 +30,12 @@ func newRefreshCmd() *cobra.Command {
   --strategy abort    (default) refuse to mutate if any cell-level conflict
   --strategy ours     on conflict, keep local
   --strategy theirs   on conflict, take remote
+  --strategy surface  on conflict, save both candidates side-by-side and
+                      let 'tdx time week resolve' pick winners cell-by-cell
 
 On --strategy abort with conflicts, refresh exits non-zero and prints the
-list of conflicts. The local draft is unchanged. Re-run with --strategy ours
-or --strategy theirs to proceed, or 'tdx time week reset --yes' to discard
+list of conflicts. The local draft is unchanged. Re-run with --strategy ours,
+theirs, or surface to proceed, or 'tdx time week reset --yes' to discard
 local edits and re-pull.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -45,7 +47,7 @@ local edits and re-pull.`,
 		},
 	}
 	cmd.Flags().StringVar(&f.profile, "profile", "", "profile name")
-	cmd.Flags().StringVar(&f.strategy, "strategy", "abort", "abort | ours | theirs")
+	cmd.Flags().StringVar(&f.strategy, "strategy", "abort", "abort | ours | theirs | surface")
 	cmd.Flags().BoolVar(&f.json, "json", false, "JSON output")
 	return cmd
 }
@@ -107,6 +109,10 @@ func writeRefreshSuccessText(w io.Writer, res draftsvc.RefreshResult) {
 		_, _ = fmt.Fprintf(w, "  Resolved by --strategy:     %d cells (%s)\n",
 			res.ResolvedByStrategy, who)
 	}
+	if res.Surfaced > 0 {
+		_, _ = fmt.Fprintf(w, "  Surfaced (pick winners):    %d cells (tdx time week resolve)\n",
+			res.Surfaced)
+	}
 }
 
 func writeRefreshAbortText(w io.Writer, weekStart time.Time, res draftsvc.RefreshResult) {
@@ -121,6 +127,7 @@ func writeRefreshAbortText(w io.Writer, weekStart time.Time, res draftsvc.Refres
 	_, _ = fmt.Fprintln(w, "Choose one:")
 	_, _ = fmt.Fprintln(w, "  --strategy ours        (keep local for all conflicts; refresh succeeds)")
 	_, _ = fmt.Fprintln(w, "  --strategy theirs      (take remote for all conflicts; refresh succeeds)")
+	_, _ = fmt.Fprintln(w, "  --strategy surface     (save both candidates and pick later via 'resolve')")
 	_, _ = fmt.Fprintf(w, "  tdx time week reset %s --yes  (give up local edits entirely, re-pull fresh)\n",
 		weekStart.Format("2006-01-02"))
 }
@@ -147,6 +154,7 @@ func writeRefreshJSON(w io.Writer, _ time.Time, _ string, res draftsvc.RefreshRe
 		Preserved          int            `json:"preserved"`
 		Resolved           int            `json:"resolved"`
 		ResolvedByStrategy int            `json:"resolvedByStrategy"`
+		Surfaced           int            `json:"surfaced"`
 		Conflicts          []conflictJSON `json:"conflicts"`
 	}{
 		Schema:             "tdx.v1.weekDraftRefreshResult",
@@ -156,6 +164,7 @@ func writeRefreshJSON(w io.Writer, _ time.Time, _ string, res draftsvc.RefreshRe
 		Preserved:          res.Preserved,
 		Resolved:           res.Resolved,
 		ResolvedByStrategy: res.ResolvedByStrategy,
+		Surfaced:           res.Surfaced,
 		Conflicts:          conflicts,
 	}
 	enc := json.NewEncoder(w)

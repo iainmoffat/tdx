@@ -92,7 +92,7 @@ func runStatus(cmd *cobra.Command, f statusFlags, ref string) error {
 func recommendedAction(sync domain.SyncState, stale bool) string {
 	switch {
 	case sync == domain.SyncConflicted:
-		return "edit to resolve conflicts (refresh available in Phase B)"
+		return "tdx time week resolve <date>"
 	case sync == domain.SyncDirty && stale:
 		return "remote drifted since pull; tdx time week pull --force <date> (auto-snapshots) before pushing"
 	case sync == domain.SyncDirty:

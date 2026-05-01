@@ -15,7 +15,7 @@ func TestRecommendedAction(t *testing.T) {
 		stale        bool
 		wantContains string
 	}{
-		{domain.SyncConflicted, false, "edit to resolve"},
+		{domain.SyncConflicted, false, "tdx time week resolve"},
 		{domain.SyncDirty, true, "remote drifted"},
 		{domain.SyncDirty, false, "preview"},
 		{domain.SyncClean, true, "adopt remote"},
