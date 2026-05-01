@@ -59,13 +59,7 @@ func (s *Service) SearchUsers(ctx context.Context, profileName string, filter do
 	}
 	out := make([]domain.User, 0, len(wire))
 	for _, w := range wire {
-		u := decodeUser(w)
-		// Optional client-side AccountName filter (TD's API doesn't
-		// support filtering by account name directly via this endpoint).
-		if filter.AccountName != "" && u.AccountName != filter.AccountName {
-			continue
-		}
-		out = append(out, u)
+		out = append(out, decodeUser(w))
 	}
 	return out, nil
 }

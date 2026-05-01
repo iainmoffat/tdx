@@ -23,6 +23,7 @@ type peoplesvcAPI interface {
 	GetUser(ctx context.Context, profile, uid string) (domain.User, error)
 	SearchUsers(ctx context.Context, profile string, filter domain.UserFilter) ([]domain.User, error)
 	ResolvePoolByName(ctx context.Context, profile, name string) (peoplesvc.ResourcePool, error)
+	ResolveAccountByName(ctx context.Context, profile, name string) (peoplesvc.Account, error)
 }
 
 // authsvcAPI is the subset of authsvc.Service the runner needs.
@@ -259,10 +260,14 @@ func resolveUsers(ctx context.Context, deps runnerDeps, f statusFlags) ([]domain
 		return out, nil
 
 	case f.account != "":
+		acct, err := deps.People.ResolveAccountByName(ctx, deps.Profile, f.account)
+		if err != nil {
+			return nil, err
+		}
 		return deps.People.SearchUsers(ctx, deps.Profile, domain.UserFilter{
-			Employee:    &trueVal,
-			AccountName: f.account,
-			Limit:       employeeLimit,
+			Employee:  &trueVal,
+			AccountID: acct.ID,
+			Limit:     employeeLimit,
 		})
 
 	case f.all:
