@@ -21,15 +21,19 @@ const (
 	StrategyOurs Strategy = "ours"
 	// StrategyTheirs collapses every conflict by taking the remote cell.
 	StrategyTheirs Strategy = "theirs"
+	// StrategySurface produces a partial-merge draft with conflicts encoded
+	// as cells whose Conflict field holds the remote alternative. Never
+	// aborts. User picks winners later via tdx time week resolve.
+	StrategySurface Strategy = "surface"
 )
 
-// Validate reports whether s is one of the three known strategies.
+// Validate reports whether s is one of the four known strategies.
 func (s Strategy) Validate() error {
 	switch s {
-	case StrategyAbort, StrategyOurs, StrategyTheirs:
+	case StrategyAbort, StrategyOurs, StrategyTheirs, StrategySurface:
 		return nil
 	default:
-		return fmt.Errorf("unknown refresh strategy %q (want abort|ours|theirs)", string(s))
+		return fmt.Errorf("unknown refresh strategy %q (want abort|ours|theirs|surface)", string(s))
 	}
 }
 
@@ -49,7 +53,8 @@ type RefreshResult struct {
 	Adopted            int // cells whose remote changes were taken
 	Preserved          int // cells where local edits survived
 	Resolved           int // cells where both sides converged on the same value (no conflict)
-	ResolvedByStrategy int // conflicts resolved by ours/theirs (always 0 under abort)
+	ResolvedByStrategy int // conflicts resolved by ours/theirs (always 0 under abort/surface)
+	Surfaced           int // conflicts surfaced as cells with Conflict alt (only under surface)
 	Aborted            bool
 	Conflicts          []MergeConflict
 }
@@ -64,6 +69,7 @@ const (
 	outcomePreserved                      // local-side change kept
 	outcomeResolved                       // local and remote converged on same value
 	outcomeResolvedByStrategy             // real conflict, collapsed by strategy
+	outcomeSurfaced                       // conflict surfaced as cell with Conflict alt (surface)
 	outcomeDropped                        // cell drops out of merged set entirely
 )
 
@@ -126,11 +132,11 @@ func classifyCell(pulled, local, remote *domain.DraftCell, strategy Strategy) ce
 			merged := *local
 			return cellClassification{outcome: outcomeResolved, merged: &merged}
 		}
-		return makeConflict(local, remote, strategy)
+		return makeConflict(pulled, local, remote, strategy)
 
 	// Local cleared (delete-on-push), remote modified.
 	case localCleared && remoteExists && !cellEqual(*pulled, *remote):
-		return makeConflict(local, remote, strategy)
+		return makeConflict(pulled, local, remote, strategy)
 
 	// Local cleared, remote already deleted -> reality matches local intent.
 	case pulledExistedRaw && localCleared && !remoteExists:
@@ -146,7 +152,7 @@ func classifyCell(pulled, local, remote *domain.DraftCell, strategy Strategy) ce
 
 	// Local edited (hours changed), remote deleted -> conflict.
 	case pulledExistedRaw && localExists && !remoteExists && !cellEqual(*pulled, *local):
-		return makeConflict(local, remote, strategy)
+		return makeConflict(pulled, local, remote, strategy)
 
 	// Both sides added independently (no pulled cell).
 	case !pulledExists && localExists && remoteExists:
@@ -154,7 +160,7 @@ func classifyCell(pulled, local, remote *domain.DraftCell, strategy Strategy) ce
 			merged := *remote // adopt remote: it has the real sourceEntryID
 			return cellClassification{outcome: outcomeResolved, merged: &merged}
 		}
-		return makeConflict(local, remote, strategy)
+		return makeConflict(pulled, local, remote, strategy)
 
 	// Cell exists only on remote (Task 2 already covers this).
 	case !pulledExists && !localExists && remoteExists:
@@ -174,9 +180,10 @@ func classifyCell(pulled, local, remote *domain.DraftCell, strategy Strategy) ce
 }
 
 // makeConflict resolves a conflict according to strategy. Under StrategyAbort
-// it returns a conflict struct (no merged cell). Under StrategyOurs it
-// resolves to local. Under StrategyTheirs it resolves to remote.
-func makeConflict(local, remote *domain.DraftCell, strategy Strategy) cellClassification {
+// it returns a conflict struct (no merged cell). Under StrategyOurs/Theirs it
+// collapses inline. Under StrategySurface it emits a merged cell with local's
+// value in the main fields and remote's value in the Conflict alt.
+func makeConflict(pulled, local, remote *domain.DraftCell, strategy Strategy) cellClassification {
 	switch strategy {
 	case StrategyOurs:
 		var merged *domain.DraftCell
@@ -192,6 +199,8 @@ func makeConflict(local, remote *domain.DraftCell, strategy Strategy) cellClassi
 			merged = &c
 		}
 		return cellClassification{outcome: outcomeResolvedByStrategy, merged: merged}
+	case StrategySurface:
+		return surfaceConflict(pulled, local, remote)
 	default: // StrategyAbort or unset
 		return cellClassification{
 			outcome: outcomeNone,
@@ -202,6 +211,27 @@ func makeConflict(local, remote *domain.DraftCell, strategy Strategy) cellClassi
 			},
 		}
 	}
+}
+
+// surfaceConflict builds a merged cell whose main fields hold local intent
+// and whose Conflict alt holds the remote candidate. Handles all four
+// classifyCell conflict cases: both present, local-cleared+remote-modified,
+// local-edited+remote-deleted, and both-added-with-different-hours.
+func surfaceConflict(pulled, local, remote *domain.DraftCell) cellClassification {
+	var merged domain.DraftCell
+	if local != nil {
+		merged = *local
+	}
+	alt := &domain.DraftConflictAlt{}
+	if remote != nil {
+		alt.Hours = remote.Hours
+		alt.SourceEntryID = remote.SourceEntryID
+	}
+	if pulled != nil {
+		alt.PulledHours = pulled.Hours
+	}
+	merged.Conflict = alt
+	return cellClassification{outcome: outcomeSurfaced, merged: &merged}
 }
 
 // describeIntent renders a one-line summary of a cell's role in the merge.
@@ -219,7 +249,7 @@ func describeIntent(c *domain.DraftCell) string {
 
 // rowCounts accumulates outcome counts for one classifyRow call.
 type rowCounts struct {
-	adopted, preserved, resolved, resolvedByStrategy int
+	adopted, preserved, resolved, resolvedByStrategy, surfaced int
 }
 
 // classifyRow drives classifyCell across the union of weekday keys present
@@ -253,6 +283,8 @@ func classifyRow(rowID string, pulled, local, remote *domain.DraftRow, strategy 
 			counts.resolved++
 		case outcomeResolvedByStrategy:
 			counts.resolvedByStrategy++
+		case outcomeSurfaced:
+			counts.surfaced++
 		}
 		if res.conflict != nil {
 			c := *res.conflict
@@ -349,6 +381,7 @@ func classify(pulled, local, remote domain.WeekDraft, strategy Strategy) classif
 		out.counts.preserved += counts.preserved
 		out.counts.resolved += counts.resolved
 		out.counts.resolvedByStrategy += counts.resolvedByStrategy
+		out.counts.surfaced += counts.surfaced
 		out.conflicts = append(out.conflicts, conflicts...)
 
 		if len(merged) == 0 {
@@ -474,5 +507,6 @@ func (s *Service) Refresh(ctx context.Context, profile string, weekStart time.Ti
 		Preserved:          res.counts.preserved,
 		Resolved:           res.counts.resolved,
 		ResolvedByStrategy: res.counts.resolvedByStrategy,
+		Surfaced:           res.counts.surfaced,
 	}, nil
 }

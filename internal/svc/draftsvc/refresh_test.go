@@ -394,6 +394,93 @@ func TestClassify_AbortsOnConflict(t *testing.T) {
 	require.Empty(t, res.rows, "abort means no merged rows")
 }
 
+func TestClassifyCell_StrategySurfaceProducesAlt(t *testing.T) {
+	pulled := cell(4, 100)
+	localEdit := cell(6, 100)
+	remoteEdit := cell(8, 100)
+
+	res := classifyCell(&pulled, &localEdit, &remoteEdit, StrategySurface)
+	require.Equal(t, outcomeSurfaced, res.outcome)
+	require.Nil(t, res.conflict, "surface emits cells, not abort-style conflict struct")
+	require.NotNil(t, res.merged)
+	require.Equal(t, 6.0, res.merged.Hours, "main cell holds local")
+	require.Equal(t, 100, res.merged.SourceEntryID, "main cell keeps local sourceEntryID")
+	require.NotNil(t, res.merged.Conflict)
+	require.Equal(t, 8.0, res.merged.Conflict.Hours, "alt holds remote")
+	require.Equal(t, 100, res.merged.Conflict.SourceEntryID, "alt holds remote sourceEntryID")
+	require.Equal(t, 4.0, res.merged.Conflict.PulledHours, "alt records pulled context")
+}
+
+func TestClassifyCell_StrategySurface_LocalEditedRemoteDeleted(t *testing.T) {
+	pulled := cell(4, 100)
+	localEdit := cell(6, 100)
+
+	res := classifyCell(&pulled, &localEdit, nil, StrategySurface)
+	require.Equal(t, outcomeSurfaced, res.outcome)
+	require.NotNil(t, res.merged)
+	require.Equal(t, 6.0, res.merged.Hours)
+	require.NotNil(t, res.merged.Conflict)
+	require.Equal(t, 0.0, res.merged.Conflict.Hours, "remote deleted -> alt hours = 0")
+	require.Equal(t, 0, res.merged.Conflict.SourceEntryID, "remote deleted -> alt sourceID = 0")
+	require.Equal(t, 4.0, res.merged.Conflict.PulledHours)
+}
+
+func TestClassifyCell_StrategySurface_LocalClearedRemoteModified(t *testing.T) {
+	pulled := cell(4, 100)
+	cleared := cell(0, 100) // cleared = delete-on-push
+	remoteMod := cell(8, 100)
+
+	res := classifyCell(&pulled, &cleared, &remoteMod, StrategySurface)
+	require.Equal(t, outcomeSurfaced, res.outcome)
+	require.NotNil(t, res.merged)
+	require.Equal(t, 0.0, res.merged.Hours, "main holds local-cleared (intent: delete)")
+	require.Equal(t, 100, res.merged.SourceEntryID, "main keeps sourceID for delete")
+	require.NotNil(t, res.merged.Conflict)
+	require.Equal(t, 8.0, res.merged.Conflict.Hours)
+}
+
+func TestClassifyCell_StrategySurface_BothAddedDifferent(t *testing.T) {
+	addLocal := cell(3, 0)
+	addRemote := cell(5, 555)
+
+	res := classifyCell(nil, &addLocal, &addRemote, StrategySurface)
+	require.Equal(t, outcomeSurfaced, res.outcome)
+	require.NotNil(t, res.merged)
+	require.Equal(t, 3.0, res.merged.Hours)
+	require.Equal(t, 0, res.merged.SourceEntryID, "no pulled, local has no sourceID")
+	require.NotNil(t, res.merged.Conflict)
+	require.Equal(t, 5.0, res.merged.Conflict.Hours)
+	require.Equal(t, 555, res.merged.Conflict.SourceEntryID)
+	require.Equal(t, 0.0, res.merged.Conflict.PulledHours, "no pulled cell -> 0 PulledHours")
+}
+
+func TestClassify_StrategySurfaceNeverAborts(t *testing.T) {
+	rowPulled := makeRow("row-01", domain.TargetTicket, 555, 17,
+		domain.DraftCell{Day: time.Monday, Hours: 4, SourceEntryID: 900},
+		domain.DraftCell{Day: time.Tuesday, Hours: 4, SourceEntryID: 901})
+	rowLocal := makeRow("row-01", domain.TargetTicket, 555, 17,
+		domain.DraftCell{Day: time.Monday, Hours: 6, SourceEntryID: 900},
+		domain.DraftCell{Day: time.Tuesday, Hours: 9, SourceEntryID: 901})
+	rowRemote := makeRow("row-01", domain.TargetTicket, 555, 17,
+		domain.DraftCell{Day: time.Monday, Hours: 8, SourceEntryID: 900},
+		domain.DraftCell{Day: time.Tuesday, Hours: 7, SourceEntryID: 901})
+
+	res := classify(
+		domain.WeekDraft{Rows: []domain.DraftRow{rowPulled}},
+		domain.WeekDraft{Rows: []domain.DraftRow{rowLocal}},
+		domain.WeekDraft{Rows: []domain.DraftRow{rowRemote}},
+		StrategySurface,
+	)
+	require.False(t, res.aborted)
+	require.Empty(t, res.conflicts, "surface emits cells, not abort-style conflicts")
+	require.Equal(t, 2, res.counts.surfaced)
+	require.Len(t, res.rows, 1)
+	require.Len(t, res.rows[0].Cells, 2)
+	for _, c := range res.rows[0].Cells {
+		require.NotNil(t, c.Conflict, "every surfaced cell has Conflict set")
+	}
+}
+
 func TestClassify_StrategyOursCollapsesConflict(t *testing.T) {
 	rowPulled := makeRow("row-01", domain.TargetTicket, 555, 17,
 		domain.DraftCell{Day: time.Monday, Hours: 4, SourceEntryID: 900})
