@@ -863,10 +863,13 @@ with billable / non-billable / total hours and the user's submission status.
 - `POST /TDWebApi/api/people/search` — enumerate the user population for
   `--manager`, `--account`, `--resource-pool`, and `--all`. Sent with
   `IsEmployee=true` to narrow the response to time-reporting staff
-  (TD's "User" type also includes portal Clients).
+  (TD's "User" type also includes portal Clients). For `--account`,
+  also passes `AccountIDs` so TD filters server-side.
 - `POST /TDWebApi/api/resourcepools/search` — list resource pools so
   `--resource-pool NAME` can resolve a name to an ID for client-side
-  filtering on `ResourcePoolID`.
+  filtering on `ResourcePoolID`. Also powers `tdx people pools list`.
+- `POST /TDWebApi/api/accounts/search` — list accounts so `--account NAME`
+  can resolve a name to an ID for server-side `AccountIDs` filtering.
 
 #### Permissions
 
@@ -922,6 +925,34 @@ tdx time report status --resource-pool "ICT - DBP - Linux Platform Services LPS"
 # Whole org in XLSX (requires --yes)
 tdx time report status --all --yes --week 2026-04-12 --xlsx all.xlsx
 ```
+
+## People
+
+`tdx people` exposes TD's people-adjacent surfaces (currently resource pools)
+for discovery so you can use exact names with `--account` and
+`--resource-pool` selectors above.
+
+### List resource pools
+
+```bash
+# Human-readable table sorted by name
+tdx people pools list
+
+# JSON envelope (schema: tdx.v1.resourcePoolList)
+tdx people pools list --json
+```
+
+Columns: ID, NAME, MANAGER, REQ-APPROVAL, ACTIVE. The pool name printed
+here is exactly what `--resource-pool NAME` accepts (TD's data sometimes
+includes trailing whitespace; tdx trims it on read).
+
+### How `--account` resolves names
+
+`--account NAME` resolves the name to an account ID via
+`POST /api/accounts/search` and then asks TD to filter people-search
+server-side via `AccountIDs`. The lookup is exact-match,
+case-insensitive. If no account matches (or multiple do), the command
+errors out with a candidate count.
 
 ## Storage layout
 
