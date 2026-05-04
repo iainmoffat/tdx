@@ -64,6 +64,8 @@ func buildJSONEnvelope(rep domain.TimeStatusReport, f statusFlags) any {
 		Manager      string   `json:"manager,omitempty"`
 		Account      string   `json:"account,omitempty"`
 		ResourcePool string   `json:"resourcePool,omitempty"`
+		Incomplete   bool     `json:"incomplete,omitempty"`
+		Threshold    float64  `json:"threshold,omitempty"`
 		From         string   `json:"from"`
 		To           string   `json:"to"`
 	}
@@ -105,6 +107,13 @@ func buildJSONEnvelope(rep domain.TimeStatusReport, f statusFlags) any {
 		filter.Account = f.account
 	case "resource-pool":
 		filter.ResourcePool = f.resourcePool
+	}
+	if f.incomplete {
+		filter.Incomplete = true
+		filter.Threshold = f.threshold
+		if filter.Threshold <= 0 {
+			filter.Threshold = 40
+		}
 	}
 
 	weeks := []weekJSON{}

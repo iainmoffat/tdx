@@ -947,6 +947,21 @@ When permission is denied for a user, that row's `Status` becomes
 --from / --to    multi-week range; normalized to whole weeks
 ```
 
+#### Filters
+
+```
+--include-zero        include user-weeks with zero total minutes (default true)
+--incomplete          keep only user-weeks below --threshold (drops permission-denied)
+--threshold N         hours threshold for --incomplete (default 40); requires --incomplete
+```
+
+`--incomplete` is independent of submission status — a `submitted` 38h holiday
+week still shows up if 38 < threshold. The threshold defaults to 40 (full
+US-FT week); pass `--threshold 32` for part-time staff. Permission-denied
+rows drop out under `--incomplete` (zero hours we couldn't read aren't
+informative). Subtotals and OVERALL totals reflect the filtered set,
+mirroring how `--include-zero=false` already works.
+
 #### Output formats (mutually exclusive)
 
 ```
@@ -973,6 +988,12 @@ tdx time report status --resource-pool "ICT - DBP - Linux Platform Services LPS"
 
 # Whole org in XLSX (requires --yes)
 tdx time report status --all --yes --week 2026-04-12 --xlsx all.xlsx
+
+# Direct reports who haven't logged a full week
+tdx time report status --manager me --week 2026-04-19 --incomplete
+
+# Same, but for a 32-hour PT team
+tdx time report status --manager me --week 2026-04-19 --incomplete --threshold 32
 ```
 
 ## People

@@ -122,6 +122,26 @@ func assembleReport(ctx context.Context, deps runnerDeps, f statusFlags) (domain
 		results = filtered
 	}
 
+	// Apply --incomplete filter (keeps rows below threshold; drops
+	// permission-denied since we can't classify hours we couldn't read).
+	if f.incomplete {
+		threshold := f.threshold
+		if threshold <= 0 {
+			threshold = 40
+		}
+		filtered := results[:0]
+		for _, r := range results {
+			if r.Status == domain.ReportStatus("permission-denied") {
+				continue
+			}
+			if r.TotalHours() >= threshold {
+				continue
+			}
+			filtered = append(filtered, r)
+		}
+		results = filtered
+	}
+
 	// Sort: by week ascending, then by user FullName.
 	sort.SliceStable(results, func(i, j int) bool {
 		if !results[i].WeekRef.StartDate.Equal(results[j].WeekRef.StartDate) {
@@ -146,6 +166,8 @@ type MCPInputs struct {
 	ResourcePool string
 	All          bool
 	IncludeZero  bool
+	Incomplete   bool
+	Threshold    float64
 	Limit        int
 	TimeSvc      timesvcAPI
 	PeopleSvc    peoplesvcAPI
@@ -169,6 +191,8 @@ func RunForMCP(ctx context.Context, in MCPInputs) (any, error) {
 		all:          in.All,
 		yes:          in.All, // bypass --yes guard for MCP
 		includeZero:  in.IncludeZero,
+		incomplete:   in.Incomplete,
+		threshold:    in.Threshold,
 		limit:        in.Limit,
 	}
 	if err := validateStatusFlags(f); err != nil {

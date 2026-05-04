@@ -46,6 +46,9 @@ tdx time report status --manager me --week 2026-04-12
 
 # Or for a TD resource pool (matches the TD UI's filter)
 tdx time report status --resource-pool "ICT - DBP - Linux Platform Services LPS" --week 2026-04-12
+
+# Direct reports who haven't logged a full week
+tdx time report status --manager me --week 2026-04-19 --incomplete
 ```
 
 ## Commands
@@ -138,7 +141,7 @@ artifact, validate, diff, preview, and push back with safety guarantees.
 
 | Command | Description | Key Flags |
 |---|---|---|
-| `tdx time report status` | Weekly time-status report (per user, per week) | `--week`, `--from`/`--to`, `--user`, `--manager`, `--account`, `--resource-pool`, `--all`, `--include-zero`, `--limit`, `--json`, `--csv`, `--xlsx` |
+| `tdx time report status` | Weekly time-status report (per user, per week) | `--week`, `--from`/`--to`, `--user`, `--manager`, `--account`, `--resource-pool`, `--all`, `--include-zero`, `--incomplete`, `--threshold`, `--limit`, `--json`, `--csv`, `--xlsx` |
 
 > Selectors are mutually exclusive (exactly one of `--user`, `--manager`, `--account`, `--resource-pool`, `--all` required). `--manager me` resolves to the authenticated user. `--account` and `--resource-pool` match by exact name (case-insensitive); use `tdx people pools list` to see available pool names. Output formats are mutually exclusive; default is human table.
 

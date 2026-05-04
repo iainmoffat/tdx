@@ -20,6 +20,8 @@ type getTimeStatusReportArgs struct {
 	ResourcePool string   `json:"resourcePool,omitempty"`
 	All          bool     `json:"all,omitempty"`
 	IncludeZero  bool     `json:"includeZero,omitempty"`
+	Incomplete   bool     `json:"incomplete,omitempty"`
+	Threshold    float64  `json:"threshold,omitempty"`
 	Limit        int      `json:"limit,omitempty"`
 }
 
@@ -31,6 +33,8 @@ func RegisterReportTools(srv *sdkmcp.Server, svcs Services) {
 
 Selectors (exactly one): userUIDs, manager, account, resourcePool, all.
 Date: week (single) or from/to (range).
+Filters: incomplete=true keeps only rows below threshold (default 40h);
+permission-denied rows are dropped under the filter.
 Read-only — no confirm required.`,
 	}, getTimeStatusReportHandler(svcs))
 }
@@ -50,6 +54,8 @@ func getTimeStatusReportHandler(svcs Services) func(context.Context, *sdkmcp.Cal
 			ResourcePool: args.ResourcePool,
 			All:          args.All,
 			IncludeZero:  args.IncludeZero,
+			Incomplete:   args.Incomplete,
+			Threshold:    args.Threshold,
 			Limit:        args.Limit,
 			TimeSvc:      svcs.Time,
 			PeopleSvc:    svcs.People,

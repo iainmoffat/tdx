@@ -73,3 +73,32 @@ func TestPrintJSON_FilterEcho(t *testing.T) {
 	require.True(t, strings.Contains(out, `"u1"`))
 	require.True(t, strings.Contains(out, `"u2"`))
 }
+
+func TestPrintJSON_IncompleteEchoedWhenSet(t *testing.T) {
+	var buf bytes.Buffer
+	f := statusFlags{
+		manager: "me", week: "2026-04-14",
+		incomplete: true, threshold: 32,
+	}
+	require.NoError(t, printJSON(&buf, sampleReport(), f))
+	var got map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
+	filter, ok := got["filter"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, true, filter["incomplete"])
+	require.InDelta(t, 32.0, filter["threshold"], 0.001)
+}
+
+func TestPrintJSON_IncompleteOmittedWhenUnset(t *testing.T) {
+	var buf bytes.Buffer
+	f := statusFlags{users: []string{"u1"}, week: "2026-04-14"}
+	require.NoError(t, printJSON(&buf, sampleReport(), f))
+	var got map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
+	filter, ok := got["filter"].(map[string]any)
+	require.True(t, ok)
+	_, hasIncomplete := filter["incomplete"]
+	require.False(t, hasIncomplete, "incomplete should be omitted when not set")
+	_, hasThreshold := filter["threshold"]
+	require.False(t, hasThreshold)
+}
