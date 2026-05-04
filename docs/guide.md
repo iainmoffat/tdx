@@ -210,9 +210,16 @@ Only the flags you pass are changed; everything else stays the same.
 ### Delete entries
 
 ```bash
-tdx time entry delete 98765
-tdx time entry delete 98765 98766 98767   # multiple IDs
+# Preview first
+tdx time entry delete 98765 --dry-run
+
+# Apply (--yes is required)
+tdx time entry delete 98765 --yes
+tdx time entry delete 98765 98766 98767 --yes   # multiple IDs
 ```
+
+Without `--yes` the command refuses to delete and points you at `--dry-run`,
+matching the safety pattern used by `tdx time week push --yes` and friends.
 
 ---
 

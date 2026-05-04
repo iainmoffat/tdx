@@ -74,7 +74,7 @@ tdx time report status --manager me --week 2026-04-19 --incomplete
 | `tdx time entry show <id>` | Show a single entry | `--json` |
 | `tdx time entry add` | Create an entry | `--date`, `--hours`/`--minutes`, `--type`, target flags, `--dry-run` |
 | `tdx time entry update <id>` | Update an entry | `--date`, `--hours`, `--type`, `-d`, `--dry-run` |
-| `tdx time entry delete <id> [<id>...]` | Delete entries | `--dry-run` |
+| `tdx time entry delete <id> [<id>...] --yes` | Delete entries (preview with `--dry-run`) | `--yes`, `--dry-run` |
 
 ### Time Week
 
