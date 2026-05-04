@@ -84,5 +84,7 @@ func decodeUser(w wireUser) domain.User {
 		ReportsToEmail:   w.ReportsToEmail,
 		ResourcePoolID:   w.ResourcePoolID,
 		ResourcePoolName: strings.TrimSpace(w.ResourcePoolName),
+		IsEmployee:       w.IsEmployee,
+		Title:            strings.TrimSpace(w.Title),
 	}
 }

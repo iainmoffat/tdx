@@ -16,6 +16,8 @@ type wireUser struct {
 	ReportsToEmail     string `json:"ReportsToEmail"`
 	ResourcePoolID     int    `json:"ResourcePoolID"`
 	ResourcePoolName   string `json:"ResourcePoolName"`
+	IsEmployee         bool   `json:"IsEmployee"`
+	Title              string `json:"Title"`
 }
 
 // wireAccount matches rows in POST /TDWebApi/api/accounts/search.

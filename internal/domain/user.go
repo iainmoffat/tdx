@@ -16,6 +16,9 @@ type User struct {
 
 	ResourcePoolID   int    `json:"resourcePoolID,omitempty"   yaml:"resourcePoolID,omitempty"`
 	ResourcePoolName string `json:"resourcePoolName,omitempty" yaml:"resourcePoolName,omitempty"`
+
+	IsEmployee bool   `json:"isEmployee,omitempty" yaml:"isEmployee,omitempty"`
+	Title      string `json:"title,omitempty"      yaml:"title,omitempty"`
 }
 
 // DisplayName returns the most specific non-empty name available.
