@@ -14,10 +14,14 @@ commands and flags, see the [README](../README.md).
 - [Week View](#week-view)
 - [Time Types](#time-types)
 - [Templates](#templates)
-- [Week drafts](#week-drafts)
+- [Week Drafts](#week-drafts)
+- [Time Reports](#time-reports)
+- [People](#people)
+- [Storage Layout](#storage-layout)
 - [MCP Server](#mcp-server)
 - [JSON Output](#json-output)
 - [Shell Completions](#shell-completions)
+- [Configuration](#configuration)
 
 ---
 
@@ -507,7 +511,7 @@ tdx time template apply my-week --week 2026-04-14 --round --yes
 
 ---
 
-## Week drafts
+## Week Drafts
 
 Week drafts are first-class, locally-stored, dated week documents that let
 you pull a live week from TeamDynamix, edit it offline, validate, diff,
@@ -1083,7 +1087,7 @@ server-side via `AccountIDs`. The lookup is exact-match,
 case-insensitive. If no account matches (or multiple do), the command
 errors out with a candidate count.
 
-## Storage layout
+## Storage Layout
 
 Week drafts and templates live under per-profile directories:
 
