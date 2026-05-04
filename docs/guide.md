@@ -941,10 +941,14 @@ When permission is denied for a user, that row's `Status` becomes
 
 ```
 --user UID            one or more user UIDs (repeatable / comma-separated)
---manager UID         direct reports of UID; "me" = authenticated user
---account NAME        users in this account/department by name
---resource-pool NAME  users in this TD resource pool (matches the TD UI's report filter)
+--manager UID         direct reports of one or more managers; "me" = authenticated user
+--account NAME        users in one or more accounts/departments by name
+--resource-pool NAME  users in one or more TD resource pools by name
 --all                 every active employee (requires --yes)
+
+Each selector flag is repeatable or comma-separated; values within a
+flag are unioned. Selector *types* remain mutually exclusive — you
+cannot mix `--manager X --resource-pool Y` in a single run.
 ```
 
 #### Date range
@@ -1001,6 +1005,13 @@ tdx time report status --manager me --week 2026-04-19 --incomplete
 
 # Same, but for a 32-hour PT team
 tdx time report status --manager me --week 2026-04-19 --incomplete --threshold 32
+
+# Multiple managers — union of direct reports
+tdx time report status --manager me --manager other-uid --week 2026-04-19
+
+# Multiple resource pools (or comma-separated)
+tdx time report status --resource-pool "Pool A" --resource-pool "Pool B" --week 2026-04-19
+tdx time report status --resource-pool "Pool A,Pool B" --week 2026-04-19
 ```
 
 ## People
