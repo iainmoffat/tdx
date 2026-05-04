@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -93,8 +94,16 @@ func runPush(cmd *cobra.Command, f pushFlags, ref string) error {
 	creates, updates, deletes, skips := diff.CountByKindV2()
 
 	if !f.yes {
-		// Identical to preview when --yes is not set.
-		return renderPreview(cmd.OutOrStdout(), diff, creates, updates, deletes, skips, f.json)
+		w := cmd.OutOrStdout()
+		if err := renderPreview(w, diff, creates, updates, deletes, skips, f.json); err != nil {
+			return err
+		}
+		// JSON shape (tdx.v1.weekDraftPreview) is already distinct from the
+		// push schema; no trailer needed for machine consumers.
+		if !f.json {
+			writePushPreviewTrailer(w, weekStart, creates, updates, deletes, skips, len(diff.Blockers))
+		}
+		return nil
 	}
 	if deletes > 0 && !f.allowDeletes {
 		return fmt.Errorf("draft contains %d delete actions; pass --allow-deletes to confirm", deletes)
@@ -115,6 +124,30 @@ func runPush(cmd *cobra.Command, f pushFlags, ref string) error {
 		return err
 	}
 	return renderPushResult(cmd.OutOrStdout(), res, f.json)
+}
+
+// writePushPreviewTrailer prints a clear "nothing was applied" footer after
+// the preview output on the no-yes path, with the exact next-step command.
+// Skipped when the preview has nothing actionable.
+func writePushPreviewTrailer(w io.Writer, weekStart time.Time, creates, updates, deletes, skips, blockers int) {
+	date := weekStart.Format("2006-01-02")
+	actionable := creates + updates + deletes
+	_, _ = fmt.Fprintln(w)
+	if actionable == 0 && blockers == 0 {
+		_, _ = fmt.Fprintln(w, "Preview only — nothing to push (draft matches remote).")
+		return
+	}
+	if actionable == 0 && blockers > 0 {
+		_, _ = fmt.Fprintf(w, "Preview only — no changes applied. %d blocker(s) prevent push; resolve them first.\n", blockers)
+		return
+	}
+	if deletes > 0 {
+		_, _ = fmt.Fprintf(w, "Preview only — no changes applied.\n  tdx time week push %s --yes --allow-deletes  to apply (%d delete(s))\n",
+			date, deletes)
+	} else {
+		_, _ = fmt.Fprintf(w, "Preview only — no changes applied.\n  tdx time week push %s --yes  to apply\n",
+			date)
+	}
 }
 
 func renderPushResult(w io.Writer, res draftsvc.ApplyResult, jsonOut bool) error {
