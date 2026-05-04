@@ -25,6 +25,7 @@ func (e *ErrPartialDelete) Error() string { return e.Message }
 type deleteFlags struct {
 	profile string
 	dryRun  bool
+	yes     bool
 	json    bool
 }
 
@@ -61,6 +62,7 @@ func newDeleteCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&f.profile, "profile", "", "profile name (defaults to active profile)")
 	cmd.Flags().BoolVar(&f.dryRun, "dry-run", false, "preview entries without deleting them")
+	cmd.Flags().BoolVar(&f.yes, "yes", false, "confirm deletion (required unless --dry-run)")
 	cmd.Flags().BoolVar(&f.json, "json", false, "emit JSON output")
 
 	return cmd
@@ -96,6 +98,15 @@ func runDelete(cmd *cobra.Command, ids []int, f deleteFlags) error {
 			printEntry(w, entry)
 		}
 		return nil
+	}
+
+	// ---- 2a. Confirmation gate ----
+
+	if !f.yes {
+		if len(ids) == 1 {
+			return fmt.Errorf("pass --yes to delete entry %d (or --dry-run to preview)", ids[0])
+		}
+		return fmt.Errorf("pass --yes to delete %d entries (or --dry-run to preview)", len(ids))
 	}
 
 	format := render.ResolveFormat(render.Flags{JSON: f.json})
