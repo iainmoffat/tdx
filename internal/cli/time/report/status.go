@@ -22,6 +22,8 @@ type statusFlags struct {
 	all          bool
 	yes          bool
 	includeZero  bool
+	incomplete   bool
+	threshold    float64
 	limit        int
 	json         bool
 	csv          bool
@@ -44,12 +46,19 @@ Selectors (exactly one required):
   --resource-pool NAME limit to users in this TD resource pool (matches TD UI's filter)
   --all               every active employee (requires --yes)
 
+Filters:
+  --incomplete       keep only user-weeks under --threshold (drops permission-denied)
+  --threshold N      hours threshold for --incomplete (default 40)
+
 Output formats (mutually exclusive; default: human table):
   --json       JSON envelope on stdout
   --csv        CSV on stdout (no subtotal rows; pivot in Excel)
   --xlsx PATH  write XLSX to PATH`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if cmd.Flags().Changed("threshold") && !f.incomplete {
+				return fmt.Errorf("--threshold requires --incomplete")
+			}
 			if err := validateStatusFlags(f); err != nil {
 				return err
 			}
@@ -67,6 +76,8 @@ Output formats (mutually exclusive; default: human table):
 	cmd.Flags().BoolVar(&f.all, "all", false, "every active employee (requires --yes)")
 	cmd.Flags().BoolVar(&f.yes, "yes", false, "confirm --all")
 	cmd.Flags().BoolVar(&f.includeZero, "include-zero", true, "include user-weeks with zero total minutes (default: include)")
+	cmd.Flags().BoolVar(&f.incomplete, "incomplete", false, "filter to user-weeks below --threshold (excludes permission-denied rows)")
+	cmd.Flags().Float64Var(&f.threshold, "threshold", 40, "hours threshold for --incomplete (default 40)")
 	cmd.Flags().IntVar(&f.limit, "limit", 200, "cap user count (hard cap: 1000)")
 	cmd.Flags().BoolVar(&f.json, "json", false, "emit JSON to stdout")
 	cmd.Flags().BoolVar(&f.csv, "csv", false, "emit CSV to stdout")

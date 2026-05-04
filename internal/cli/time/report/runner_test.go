@@ -252,6 +252,122 @@ func TestRunner_AllSelectorSetsEmployeeFilter(t *testing.T) {
 	require.Equal(t, employeeLimit, people.lastFilter.Limit)
 }
 
+func TestRunner_IncompleteFiltersBelowThreshold(t *testing.T) {
+	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	users := []domain.User{
+		{UID: "u1", FullName: "Alice", ReportsToUID: "mgr"},
+		{UID: "u2", FullName: "Bob", ReportsToUID: "mgr"},
+		{UID: "u3", FullName: "Carol", ReportsToUID: "mgr"},
+	}
+	reports := map[string]domain.WeekReport{
+		"u1": {WeekRef: week, UserUID: "u1", TotalMinutes: 38 * 60, Status: domain.ReportOpen},
+		"u2": {WeekRef: week, UserUID: "u2", TotalMinutes: 40 * 60, Status: domain.ReportOpen},
+		"u3": {WeekRef: week, UserUID: "u3", TotalMinutes: 42 * 60, Status: domain.ReportOpen},
+	}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{reports: reports},
+		People: &mockPeoplesvc{search: users},
+		Auth:   &mockAuthsvc{me: domain.User{UID: "mgr"}},
+	}
+	out, err := assembleReport(context.Background(), deps, statusFlags{
+		manager:     "me",
+		week:        "2026-04-14",
+		includeZero: true,
+		incomplete:  true,
+		threshold:   40,
+		limit:       100,
+	})
+	require.NoError(t, err)
+	require.Len(t, out.Rows, 1, "only Alice is below 40h")
+	require.Equal(t, "u1", out.Rows[0].User.UID)
+}
+
+func TestRunner_IncompleteWithCustomThreshold(t *testing.T) {
+	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	users := []domain.User{
+		{UID: "u1", FullName: "PT-A", ReportsToUID: "mgr"},
+		{UID: "u2", FullName: "PT-B", ReportsToUID: "mgr"},
+	}
+	reports := map[string]domain.WeekReport{
+		"u1": {WeekRef: week, UserUID: "u1", TotalMinutes: 30 * 60, Status: domain.ReportOpen},
+		"u2": {WeekRef: week, UserUID: "u2", TotalMinutes: 32 * 60, Status: domain.ReportOpen},
+	}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{reports: reports},
+		People: &mockPeoplesvc{search: users},
+		Auth:   &mockAuthsvc{me: domain.User{UID: "mgr"}},
+	}
+	out, err := assembleReport(context.Background(), deps, statusFlags{
+		manager:     "me",
+		week:        "2026-04-14",
+		includeZero: true,
+		incomplete:  true,
+		threshold:   32,
+		limit:       100,
+	})
+	require.NoError(t, err)
+	require.Len(t, out.Rows, 1, "only the 30h row is below 32h threshold")
+	require.Equal(t, "u1", out.Rows[0].User.UID)
+}
+
+func TestRunner_IncompleteDropsPermissionDenied(t *testing.T) {
+	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	users := []domain.User{
+		{UID: "u1", FullName: "Visible", ReportsToUID: "mgr"},
+		{UID: "u2", FullName: "Forbidden", ReportsToUID: "mgr"},
+	}
+	deps := runnerDeps{
+		Time: &mockTimesvc{
+			reports: map[string]domain.WeekReport{
+				"u1": {WeekRef: week, UserUID: "u1", TotalMinutes: 30 * 60, Status: domain.ReportOpen},
+			},
+			errs: map[string]error{"u2": domain.ErrPermission},
+		},
+		People: &mockPeoplesvc{search: users},
+		Auth:   &mockAuthsvc{me: domain.User{UID: "mgr"}},
+	}
+	out, err := assembleReport(context.Background(), deps, statusFlags{
+		manager:     "me",
+		week:        "2026-04-14",
+		includeZero: true,
+		incomplete:  true,
+		threshold:   40,
+		limit:       100,
+	})
+	require.NoError(t, err)
+	require.Len(t, out.Rows, 1, "permission-denied row dropped under --incomplete")
+	require.Equal(t, "u1", out.Rows[0].User.UID)
+}
+
+func TestRunner_IncompleteFiltersAffectTotals(t *testing.T) {
+	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	users := []domain.User{
+		{UID: "u1", FullName: "Under", ReportsToUID: "mgr"},
+		{UID: "u2", FullName: "Over", ReportsToUID: "mgr"},
+	}
+	reports := map[string]domain.WeekReport{
+		"u1": {WeekRef: week, UserUID: "u1", TotalMinutes: 30 * 60, Status: domain.ReportOpen, MinutesBillable: 30 * 60},
+		"u2": {WeekRef: week, UserUID: "u2", TotalMinutes: 50 * 60, Status: domain.ReportOpen, MinutesBillable: 50 * 60},
+	}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{reports: reports},
+		People: &mockPeoplesvc{search: users},
+		Auth:   &mockAuthsvc{me: domain.User{UID: "mgr"}},
+	}
+	out, err := assembleReport(context.Background(), deps, statusFlags{
+		manager:     "me",
+		week:        "2026-04-14",
+		includeZero: true,
+		incomplete:  true,
+		threshold:   40,
+		limit:       100,
+	})
+	require.NoError(t, err)
+	bill, _, total := out.Totals()
+	require.Equal(t, 30*60, bill, "totals reflect filtered (u1 only) — 30h billable")
+	require.Equal(t, 30*60, total, "filtered total = 30h")
+}
+
 func TestRunner_RangeProducesMultipleWeeks(t *testing.T) {
 	week1 := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
 	week2 := domain.WeekRefContaining(time.Date(2026, 4, 21, 0, 0, 0, 0, domain.EasternTZ))

@@ -56,9 +56,25 @@ func TestStatus_AllRequiresYes(t *testing.T) {
 
 func TestStatus_FlagsRegistered(t *testing.T) {
 	cmd := newStatusCmd()
-	for _, f := range []string{"week", "from", "to", "user", "manager", "account", "resource-pool", "all", "yes", "include-zero", "limit", "json", "csv", "xlsx", "profile"} {
+	for _, f := range []string{"week", "from", "to", "user", "manager", "account", "resource-pool", "all", "yes", "include-zero", "incomplete", "threshold", "limit", "json", "csv", "xlsx", "profile"} {
 		require.NotNil(t, cmd.Flags().Lookup(f), "missing flag: %s", f)
 	}
+}
+
+func TestStatus_ThresholdRequiresIncomplete(t *testing.T) {
+	_, err := runStatusCmd(t, "--week", "2026-04-12", "--user", "u1", "--threshold", "32")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "--threshold requires --incomplete")
+}
+
+func TestStatus_IncompleteWithDefaultThresholdAccepted(t *testing.T) {
+	// Validation should accept --incomplete without --threshold. (Run path
+	// errors later because no real config exists, but flag validation must
+	// pass before that.)
+	out, err := runStatusCmd(t, "--week", "2026-04-12", "--user", "u1", "--incomplete")
+	require.Error(t, err, "expected error from execution (no profile), not validation")
+	require.NotContains(t, err.Error(), "--threshold requires --incomplete")
+	_ = out
 }
 
 func TestStatus_ResourcePoolIsValidSelector(t *testing.T) {
