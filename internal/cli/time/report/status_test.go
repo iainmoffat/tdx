@@ -79,17 +79,17 @@ func TestStatus_IncompleteWithDefaultThresholdAccepted(t *testing.T) {
 
 func TestStatus_ResourcePoolIsValidSelector(t *testing.T) {
 	f := statusFlags{
-		resourcePool: "ICT - DBP - Linux Platform Services LPS",
-		week:         "2026-04-12",
+		resourcePools: []string{"ICT - DBP - Linux Platform Services LPS"},
+		week:          "2026-04-12",
 	}
 	require.NoError(t, validateStatusFlags(f))
 }
 
 func TestStatus_ResourcePoolMutuallyExclusiveWithOthers(t *testing.T) {
 	f := statusFlags{
-		resourcePool: "Some Pool",
-		manager:      "me",
-		week:         "2026-04-12",
+		resourcePools: []string{"Some Pool"},
+		managers:      []string{"me"},
+		week:          "2026-04-12",
 	}
 	err := validateStatusFlags(f)
 	require.Error(t, err)

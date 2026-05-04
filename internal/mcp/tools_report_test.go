@@ -42,7 +42,7 @@ func TestGetTimeStatusReport_RejectsBothFormats(t *testing.T) {
 	res, _, err := handler(context.Background(), &sdkmcp.CallToolRequest{}, getTimeStatusReportArgs{
 		Week:     "2026-04-14",
 		UserUIDs: []string{"u1"},
-		Manager:  "me",
+		Managers: []string{"me"},
 	})
 	if err != nil {
 		t.Fatal(err)

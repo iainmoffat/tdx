@@ -59,15 +59,15 @@ func printJSON(w io.Writer, rep domain.TimeStatusReport, f statusFlags) error {
 // internally so MCP can re-use the envelope without re-encoding.
 func buildJSONEnvelope(rep domain.TimeStatusReport, f statusFlags) any {
 	type filterJSON struct {
-		Selector     string   `json:"selector"`
-		Users        []string `json:"users,omitempty"`
-		Manager      string   `json:"manager,omitempty"`
-		Account      string   `json:"account,omitempty"`
-		ResourcePool string   `json:"resourcePool,omitempty"`
-		Incomplete   bool     `json:"incomplete,omitempty"`
-		Threshold    float64  `json:"threshold,omitempty"`
-		From         string   `json:"from"`
-		To           string   `json:"to"`
+		Selector      string   `json:"selector"`
+		Users         []string `json:"users,omitempty"`
+		Managers      []string `json:"managers,omitempty"`
+		Accounts      []string `json:"accounts,omitempty"`
+		ResourcePools []string `json:"resourcePools,omitempty"`
+		Incomplete    bool     `json:"incomplete,omitempty"`
+		Threshold     float64  `json:"threshold,omitempty"`
+		From          string   `json:"from"`
+		To            string   `json:"to"`
 	}
 	type rowJSON struct {
 		UserUID          string  `json:"userUID"`
@@ -102,11 +102,11 @@ func buildJSONEnvelope(rep domain.TimeStatusReport, f statusFlags) any {
 	case "user":
 		filter.Users = f.users
 	case "manager":
-		filter.Manager = f.manager
+		filter.Managers = f.managers
 	case "account":
-		filter.Account = f.account
+		filter.Accounts = f.accounts
 	case "resource-pool":
-		filter.ResourcePool = f.resourcePool
+		filter.ResourcePools = f.resourcePools
 	}
 	if f.incomplete {
 		filter.Incomplete = true
@@ -162,11 +162,11 @@ func selectorOf(f statusFlags) string {
 	switch {
 	case len(f.users) > 0:
 		return "user"
-	case f.manager != "":
+	case len(f.managers) > 0:
 		return "manager"
-	case f.account != "":
+	case len(f.accounts) > 0:
 		return "account"
-	case f.resourcePool != "":
+	case len(f.resourcePools) > 0:
 		return "resource-pool"
 	case f.all:
 		return "all"

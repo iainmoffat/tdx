@@ -133,7 +133,7 @@ func TestRunner_ManagerMeUsesAuthenticatedUID(t *testing.T) {
 		Auth:   &mockAuthsvc{me: me},
 	}
 	out, err := assembleReport(context.Background(), deps, statusFlags{
-		manager:     "me",
+		managers:    []string{"me"},
 		week:        "2026-04-14",
 		includeZero: true,
 		limit:       100,
@@ -157,7 +157,7 @@ func TestRunner_AccountSelectorResolvesToServerSideID(t *testing.T) {
 		Auth:   &mockAuthsvc{},
 	}
 	_, err := assembleReport(context.Background(), deps, statusFlags{
-		account:     "14300000 (IT-ICT INFRA COMM TECHNOLOGY)",
+		accounts:    []string{"14300000 (IT-ICT INFRA COMM TECHNOLOGY)"},
 		week:        "2026-04-14",
 		includeZero: true,
 		limit:       100,
@@ -166,7 +166,7 @@ func TestRunner_AccountSelectorResolvesToServerSideID(t *testing.T) {
 	require.Equal(t, 1, people.resolveAccountCalls)
 	require.NotNil(t, people.lastFilter.Employee)
 	require.True(t, *people.lastFilter.Employee)
-	require.Equal(t, 866, people.lastFilter.AccountID)
+	require.Equal(t, []int{866}, people.lastFilter.AccountIDs)
 	require.Equal(t, employeeLimit, people.lastFilter.Limit)
 }
 
@@ -178,7 +178,7 @@ func TestRunner_AccountNotFoundPropagates(t *testing.T) {
 		Auth:   &mockAuthsvc{},
 	}
 	_, err := assembleReport(context.Background(), deps, statusFlags{
-		account:     "Nope",
+		accounts:    []string{"Nope"},
 		week:        "2026-04-14",
 		includeZero: true,
 		limit:       100,
@@ -203,10 +203,10 @@ func TestRunner_ResourcePoolSelectorFiltersByPoolID(t *testing.T) {
 		Auth:   &mockAuthsvc{},
 	}
 	out, err := assembleReport(context.Background(), deps, statusFlags{
-		resourcePool: "Test Pool",
-		week:         "2026-04-14",
-		includeZero:  true,
-		limit:        100,
+		resourcePools: []string{"Test Pool"},
+		week:          "2026-04-14",
+		includeZero:   true,
+		limit:         100,
 	})
 	require.NoError(t, err)
 	require.Equal(t, 1, people.resolveCalls)
@@ -224,10 +224,10 @@ func TestRunner_ResourcePoolNotFoundPropagates(t *testing.T) {
 		Auth:   &mockAuthsvc{},
 	}
 	_, err := assembleReport(context.Background(), deps, statusFlags{
-		resourcePool: "Nope",
-		week:         "2026-04-14",
-		includeZero:  true,
-		limit:        100,
+		resourcePools: []string{"Nope"},
+		week:          "2026-04-14",
+		includeZero:   true,
+		limit:         100,
 	})
 	require.Error(t, err)
 }
@@ -270,7 +270,7 @@ func TestRunner_IncompleteFiltersBelowThreshold(t *testing.T) {
 		Auth:   &mockAuthsvc{me: domain.User{UID: "mgr"}},
 	}
 	out, err := assembleReport(context.Background(), deps, statusFlags{
-		manager:     "me",
+		managers:    []string{"me"},
 		week:        "2026-04-14",
 		includeZero: true,
 		incomplete:  true,
@@ -298,7 +298,7 @@ func TestRunner_IncompleteWithCustomThreshold(t *testing.T) {
 		Auth:   &mockAuthsvc{me: domain.User{UID: "mgr"}},
 	}
 	out, err := assembleReport(context.Background(), deps, statusFlags{
-		manager:     "me",
+		managers:    []string{"me"},
 		week:        "2026-04-14",
 		includeZero: true,
 		incomplete:  true,
@@ -327,7 +327,7 @@ func TestRunner_IncompleteDropsPermissionDenied(t *testing.T) {
 		Auth:   &mockAuthsvc{me: domain.User{UID: "mgr"}},
 	}
 	out, err := assembleReport(context.Background(), deps, statusFlags{
-		manager:     "me",
+		managers:    []string{"me"},
 		week:        "2026-04-14",
 		includeZero: true,
 		incomplete:  true,
@@ -355,7 +355,7 @@ func TestRunner_IncompleteFiltersAffectTotals(t *testing.T) {
 		Auth:   &mockAuthsvc{me: domain.User{UID: "mgr"}},
 	}
 	out, err := assembleReport(context.Background(), deps, statusFlags{
-		manager:     "me",
+		managers:    []string{"me"},
 		week:        "2026-04-14",
 		includeZero: true,
 		incomplete:  true,
@@ -366,6 +366,131 @@ func TestRunner_IncompleteFiltersAffectTotals(t *testing.T) {
 	bill, _, total := out.Totals()
 	require.Equal(t, 30*60, bill, "totals reflect filtered (u1 only) — 30h billable")
 	require.Equal(t, 30*60, total, "filtered total = 30h")
+}
+
+func TestRunner_MultiManagerUnion(t *testing.T) {
+	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	users := []domain.User{
+		{UID: "u1", FullName: "A's report", ReportsToUID: "mgr-A"},
+		{UID: "u2", FullName: "B's report", ReportsToUID: "mgr-B"},
+		{UID: "u3", FullName: "C's report", ReportsToUID: "mgr-C"},
+	}
+	deps := runnerDeps{
+		Time: &mockTimesvc{reports: map[string]domain.WeekReport{
+			"u1": {WeekRef: week, UserUID: "u1", TotalMinutes: 60},
+			"u2": {WeekRef: week, UserUID: "u2", TotalMinutes: 60},
+		}},
+		People: &mockPeoplesvc{search: users},
+		Auth:   &mockAuthsvc{},
+	}
+	out, err := assembleReport(context.Background(), deps, statusFlags{
+		managers:    []string{"mgr-A", "mgr-B"},
+		week:        "2026-04-14",
+		includeZero: true,
+		limit:       100,
+	})
+	require.NoError(t, err)
+	require.Len(t, out.Rows, 2, "union of two managers' reports")
+	uids := []string{out.Rows[0].User.UID, out.Rows[1].User.UID}
+	require.ElementsMatch(t, []string{"u1", "u2"}, uids)
+}
+
+func TestRunner_MultiManagerWithMe(t *testing.T) {
+	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	users := []domain.User{
+		{UID: "u1", FullName: "Me's report", ReportsToUID: "mgr-me"},
+		{UID: "u2", FullName: "Other's report", ReportsToUID: "mgr-X"},
+	}
+	deps := runnerDeps{
+		Time: &mockTimesvc{reports: map[string]domain.WeekReport{
+			"u1": {WeekRef: week, UserUID: "u1", TotalMinutes: 60},
+			"u2": {WeekRef: week, UserUID: "u2", TotalMinutes: 60},
+		}},
+		People: &mockPeoplesvc{search: users},
+		Auth:   &mockAuthsvc{me: domain.User{UID: "mgr-me"}},
+	}
+	out, err := assembleReport(context.Background(), deps, statusFlags{
+		managers:    []string{"me", "mgr-X"},
+		week:        "2026-04-14",
+		includeZero: true,
+		limit:       100,
+	})
+	require.NoError(t, err)
+	require.Len(t, out.Rows, 2, `"me" resolves to mgr-me; union with mgr-X`)
+}
+
+func TestRunner_MultiAccountServerSide(t *testing.T) {
+	people := &mockPeoplesvc{
+		search:  []domain.User{},
+		account: peoplesvc.Account{ID: 866, Name: "Acct A"},
+	}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{},
+		People: people,
+		Auth:   &mockAuthsvc{},
+	}
+	_, err := assembleReport(context.Background(), deps, statusFlags{
+		accounts:    []string{"Acct A", "Acct B"},
+		week:        "2026-04-14",
+		includeZero: true,
+		limit:       100,
+	})
+	require.NoError(t, err)
+	// Mock returns the same Account for every name; both names resolve to ID 866 → dedup → single ID.
+	require.Equal(t, []int{866}, people.lastFilter.AccountIDs)
+	require.Equal(t, 2, people.resolveAccountCalls, "both names get resolved (dedup happens after resolution)")
+}
+
+func TestRunner_MultiResourcePoolUnion(t *testing.T) {
+	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	users := []domain.User{
+		{UID: "u1", FullName: "Pool A", ResourcePoolID: 46},
+		{UID: "u2", FullName: "Pool B", ResourcePoolID: 47},
+		{UID: "u3", FullName: "Pool C", ResourcePoolID: 99},
+	}
+	people := &mockPeoplesvc{
+		search: users,
+		// stubPool returns the same pool ID for every call; we want different IDs
+		// per call. Use a counter — but the mock returns one pool. Simplification:
+		// inject IDs by mutating the mock between calls is awkward. Easier: use
+		// a single pool for both names (both resolve to ID 46), filter ends up
+		// matching just users in pool 46.
+		pool: peoplesvc.ResourcePool{ID: 46, Name: "Pool A"},
+	}
+	deps := runnerDeps{
+		Time: &mockTimesvc{reports: map[string]domain.WeekReport{
+			"u1": {WeekRef: week, UserUID: "u1", TotalMinutes: 60},
+		}},
+		People: people,
+		Auth:   &mockAuthsvc{},
+	}
+	out, err := assembleReport(context.Background(), deps, statusFlags{
+		resourcePools: []string{"Pool A", "Pool B"},
+		week:          "2026-04-14",
+		includeZero:   true,
+		limit:         100,
+	})
+	require.NoError(t, err)
+	require.Equal(t, 2, people.resolveCalls, "each pool name gets resolved")
+	require.Len(t, out.Rows, 1, "u1 (pool 46) matches; u2/u3 don't")
+}
+
+func TestRunner_DuplicateUserDeduped(t *testing.T) {
+	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	user := domain.User{UID: "u1", FullName: "Alice"}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{reports: map[string]domain.WeekReport{"u1": {WeekRef: week, UserUID: "u1", TotalMinutes: 60}}},
+		People: &mockPeoplesvc{users: map[string]domain.User{"u1": user}},
+		Auth:   &mockAuthsvc{},
+	}
+	out, err := assembleReport(context.Background(), deps, statusFlags{
+		users:       []string{"u1", "u1"},
+		week:        "2026-04-14",
+		includeZero: true,
+		limit:       100,
+	})
+	require.NoError(t, err)
+	require.Len(t, out.Rows, 1, "duplicate UID deduped")
 }
 
 func TestRunner_RangeProducesMultipleWeeks(t *testing.T) {

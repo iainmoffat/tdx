@@ -49,8 +49,8 @@ func (s *Service) SearchUsers(ctx context.Context, profileName string, filter do
 	if filter.Employee != nil {
 		req.IsEmployee = filter.Employee
 	}
-	if filter.AccountID > 0 {
-		req.AccountIDs = []int{filter.AccountID}
+	if len(filter.AccountIDs) > 0 {
+		req.AccountIDs = filter.AccountIDs
 	}
 
 	var wire []wireUser
