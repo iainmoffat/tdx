@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -86,15 +87,47 @@ func toPersonJSON(u domain.User) personJSON {
 func searchPeopleHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, searchPeopleArgs) (*sdkmcp.CallToolResult, any, error) {
 	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, args searchPeopleArgs) (*sdkmcp.CallToolResult, any, error) {
 		profile := resolveProfile(svcs, args.Profile)
-		users, err := svcs.People.LookupPeople(ctx, profile, args.SearchText, args.MaxResults)
-		if err != nil {
-			return errorResult(fmt.Sprintf("search_people: %v", err)), nil, nil
+		limit := args.MaxResults
+		if limit <= 0 {
+			limit = 25
 		}
-		out := make([]personJSON, 0, len(users))
-		for _, u := range users {
-			if !args.IncludeClients && !u.IsEmployee {
-				continue
+
+		var matches []domain.User
+		if args.IncludeClients {
+			// /api/people/lookup is the only endpoint that surfaces portal
+			// clients. It returns degraded records (IsEmployee always false,
+			// ReportsTo/Title null) but is fine for "find this person."
+			hits, err := svcs.People.LookupPeople(ctx, profile, args.SearchText, limit)
+			if err != nil {
+				return errorResult(fmt.Sprintf("search_people: %v", err)), nil, nil
 			}
+			matches = hits
+		} else {
+			// Default staff-only path: /api/people/search with IsEmployee=true
+			// returns full per-user records; substring-match client-side.
+			trueVal := true
+			all, err := svcs.People.SearchUsers(ctx, profile, domain.UserFilter{
+				Employee: &trueVal,
+				Limit:    5000,
+			})
+			if err != nil {
+				return errorResult(fmt.Sprintf("search_people: %v", err)), nil, nil
+			}
+			q := strings.ToLower(strings.TrimSpace(args.SearchText))
+			for _, u := range all {
+				if !strings.Contains(strings.ToLower(u.FullName), q) &&
+					!strings.Contains(strings.ToLower(u.Email), q) {
+					continue
+				}
+				matches = append(matches, u)
+				if len(matches) >= limit {
+					break
+				}
+			}
+		}
+
+		out := make([]personJSON, 0, len(matches))
+		for _, u := range matches {
 			out = append(out, toPersonJSON(u))
 		}
 		return jsonResult(struct {

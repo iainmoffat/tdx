@@ -15,17 +15,20 @@ import (
 )
 
 type stubPeoplesvc struct {
-	pools       []peoplesvc.ResourcePool
-	accounts    []peoplesvc.Account
-	lookupHits  []domain.User
-	users       map[string]domain.User
-	err         error
-	accountsErr error
-	lookupErr   error
-	getErr      error
+	pools          []peoplesvc.ResourcePool
+	accounts       []peoplesvc.Account
+	lookupHits     []domain.User
+	searchUsers    []domain.User
+	users          map[string]domain.User
+	err            error
+	accountsErr    error
+	lookupErr      error
+	searchUsersErr error
+	getErr         error
 
-	lastLookupQuery string
-	lastLookupMax   int
+	lastLookupQuery  string
+	lastLookupMax    int
+	lastSearchFilter domain.UserFilter
 }
 
 func (s *stubPeoplesvc) SearchPools(_ context.Context, _ string) ([]peoplesvc.ResourcePool, error) {
@@ -59,6 +62,14 @@ func (s *stubPeoplesvc) GetUser(_ context.Context, _, uid string) (domain.User, 
 		return u, nil
 	}
 	return domain.User{}, errors.New("not found")
+}
+
+func (s *stubPeoplesvc) SearchUsers(_ context.Context, _ string, filter domain.UserFilter) ([]domain.User, error) {
+	s.lastSearchFilter = filter
+	if s.searchUsersErr != nil {
+		return nil, s.searchUsersErr
+	}
+	return s.searchUsers, nil
 }
 
 func TestPoolsList_TextOutput(t *testing.T) {

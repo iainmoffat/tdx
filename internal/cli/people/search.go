@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -58,18 +59,35 @@ Pass --include-clients to add them back.`,
 
 // runPeopleSearch is the pure implementation. Tests call this directly
 // to bypass config.ResolvePaths.
+//
+// Default (staff-only): /api/people/search with IsEmployee=true returns
+// full per-user records (including the right Title/ReportsTo data); we
+// substring-match on the query client-side.
+//
+// --include-clients: switches to /api/people/lookup, which is the only
+// way to reach portal users via the people API. Lookup returns degraded
+// records (IsEmployee always false, ReportsTo/Title null), so we mark
+// unknown employee status accordingly. Best for "I just want to find
+// this person" rather than rich detail.
 func runPeopleSearch(ctx context.Context, w io.Writer, svc peoplesvcAPI,
 	profile, query string, limit int, includeClients, jsonOut bool) error {
-	results, err := svc.LookupPeople(ctx, profile, query, limit)
-	if err != nil {
-		return err
-	}
-	filtered := make([]domain.User, 0, len(results))
-	for _, u := range results {
-		if !includeClients && !u.IsEmployee {
-			continue
+	var filtered []domain.User
+	if includeClients {
+		hits, err := svc.LookupPeople(ctx, profile, query, limit)
+		if err != nil {
+			return err
 		}
-		filtered = append(filtered, u)
+		filtered = hits
+	} else {
+		trueVal := true
+		all, err := svc.SearchUsers(ctx, profile, domain.UserFilter{
+			Employee: &trueVal,
+			Limit:    5000,
+		})
+		if err != nil {
+			return err
+		}
+		filtered = matchUsersByQuery(all, query, limit)
 	}
 
 	if jsonOut {
@@ -103,7 +121,7 @@ func runPeopleSearch(ctx context.Context, w io.Writer, svc peoplesvcAPI,
 	}
 
 	if len(filtered) == 0 {
-		if !includeClients && len(results) > 0 {
+		if !includeClients {
 			_, _ = fmt.Fprintf(w, "no staff match %q (use --include-clients to broaden)\n", query)
 		} else {
 			_, _ = fmt.Fprintf(w, "no people match %q\n", query)
@@ -134,4 +152,27 @@ func shortUID(uid string) string {
 		return uid[:8]
 	}
 	return uid
+}
+
+// matchUsersByQuery is a case-insensitive substring match against FullName
+// and Email. Used by the staff-only path of `tdx people search` to scope
+// the bulk SearchUsers result down to what the user typed. Caps to limit
+// results.
+func matchUsersByQuery(users []domain.User, query string, limit int) []domain.User {
+	q := strings.ToLower(strings.TrimSpace(query))
+	if q == "" {
+		return nil
+	}
+	out := make([]domain.User, 0, limit)
+	for _, u := range users {
+		if !strings.Contains(strings.ToLower(u.FullName), q) &&
+			!strings.Contains(strings.ToLower(u.Email), q) {
+			continue
+		}
+		out = append(out, u)
+		if limit > 0 && len(out) >= limit {
+			break
+		}
+	}
+	return out
 }

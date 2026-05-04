@@ -14,6 +14,7 @@ import (
 type peoplesvcAPI interface {
 	SearchPools(ctx context.Context, profile string) ([]peoplesvc.ResourcePool, error)
 	SearchAccounts(ctx context.Context, profile string) ([]peoplesvc.Account, error)
+	SearchUsers(ctx context.Context, profile string, filter domain.UserFilter) ([]domain.User, error)
 	LookupPeople(ctx context.Context, profile, searchText string, maxResults int) ([]domain.User, error)
 	GetUser(ctx context.Context, profile, uid string) (domain.User, error)
 }

@@ -11,17 +11,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSearchPeople_FiltersClientsByDefault(t *testing.T) {
+func TestSearchPeople_DefaultUsesSearchEndpointAndMatchesClientSide(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"UID":"u","FullName":"T","PrimaryEmail":"t@x"}`))
-		case "/TDWebApi/api/people/lookup":
+		case "/TDWebApi/api/people/search":
+			// Default path uses /search with IsEmployee=true; returns full
+			// staff records. Client-side substring match scopes to "Smith".
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`[
-				{"UID":"u1","FullName":"Staff","IsEmployee":true,"IsActive":true},
-				{"UID":"u2","FullName":"Client","IsEmployee":false,"IsActive":true}
+				{"UID":"u1","FullName":"John Smith","IsEmployee":true,"IsActive":true,"PrimaryEmail":"js@x"},
+				{"UID":"u2","FullName":"Jane Doe","IsEmployee":true,"IsActive":true,"PrimaryEmail":"jd@x"}
 			]`))
 		default:
 			t.Errorf("unexpected: %s", r.URL.Path)
@@ -32,7 +34,7 @@ func TestSearchPeople_FiltersClientsByDefault(t *testing.T) {
 
 	svcs := mcpHarness(t, srv.URL)
 	res, _, err := searchPeopleHandler(svcs)(context.Background(), &sdkmcp.CallToolRequest{}, searchPeopleArgs{
-		SearchText: "x",
+		SearchText: "Smith",
 	})
 	require.NoError(t, err)
 	require.False(t, res.IsError)
@@ -42,7 +44,10 @@ func TestSearchPeople_FiltersClientsByDefault(t *testing.T) {
 	require.Equal(t, "tdx.v1.peopleSearchResult", got["schema"])
 	people, ok := got["people"].([]any)
 	require.True(t, ok)
-	require.Len(t, people, 1, "client filtered out by default")
+	require.Len(t, people, 1, "substring match keeps only John Smith")
+	first, ok := people[0].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "John Smith", first["fullName"])
 }
 
 func TestSearchPeople_IncludeClients(t *testing.T) {
