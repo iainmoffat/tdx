@@ -166,6 +166,8 @@ type MCPInputs struct {
 	ResourcePool string
 	All          bool
 	IncludeZero  bool
+	Incomplete   bool
+	Threshold    float64
 	Limit        int
 	TimeSvc      timesvcAPI
 	PeopleSvc    peoplesvcAPI
@@ -189,6 +191,8 @@ func RunForMCP(ctx context.Context, in MCPInputs) (any, error) {
 		all:          in.All,
 		yes:          in.All, // bypass --yes guard for MCP
 		includeZero:  in.IncludeZero,
+		incomplete:   in.Incomplete,
+		threshold:    in.Threshold,
 		limit:        in.Limit,
 	}
 	if err := validateStatusFlags(f); err != nil {
