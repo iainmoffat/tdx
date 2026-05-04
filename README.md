@@ -49,6 +49,12 @@ tdx time report status --resource-pool "ICT - DBP - Linux Platform Services LPS"
 
 # Direct reports who haven't logged a full week
 tdx time report status --manager me --week 2026-04-19 --incomplete
+
+# Multiple managers (union of direct reports)
+tdx time report status --manager me --manager other-uid --week 2026-04-19
+
+# Multiple resource pools
+tdx time report status --resource-pool "Pool A" --resource-pool "Pool B" --week 2026-04-19
 ```
 
 ## Commands
@@ -143,7 +149,7 @@ artifact, validate, diff, preview, and push back with safety guarantees.
 |---|---|---|
 | `tdx time report status` | Weekly time-status report (per user, per week) | `--week`, `--from`/`--to`, `--user`, `--manager`, `--account`, `--resource-pool`, `--all`, `--include-zero`, `--incomplete`, `--threshold`, `--limit`, `--json`, `--csv`, `--xlsx` |
 
-> Selectors are mutually exclusive (exactly one of `--user`, `--manager`, `--account`, `--resource-pool`, `--all` required). `--manager me` resolves to the authenticated user. `--account` and `--resource-pool` match by exact name (case-insensitive); use `tdx people pools list` to see available pool names. Output formats are mutually exclusive; default is human table.
+> Selector **types** are mutually exclusive (exactly one of `--user`, `--manager`, `--account`, `--resource-pool`, `--all` required) but each accepts multiple values via repeated flags or comma-separated lists. Multi-value semantics are union: `--manager me --manager other-uid` reports on direct reports of either. `--manager me` resolves to the authenticated user. `--account` and `--resource-pool` match by exact name (case-insensitive); use `tdx people pools list` to see available pool names. Output formats are mutually exclusive; default is human table.
 
 ### People
 

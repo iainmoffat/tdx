@@ -11,23 +11,23 @@ import (
 )
 
 type statusFlags struct {
-	profile      string
-	week         string
-	from         string
-	to           string
-	users        []string
-	manager      string
-	account      string
-	resourcePool string
-	all          bool
-	yes          bool
-	includeZero  bool
-	incomplete   bool
-	threshold    float64
-	limit        int
-	json         bool
-	csv          bool
-	xlsx         string
+	profile       string
+	week          string
+	from          string
+	to            string
+	users         []string
+	managers      []string
+	accounts      []string
+	resourcePools []string
+	all           bool
+	yes           bool
+	includeZero   bool
+	incomplete    bool
+	threshold     float64
+	limit         int
+	json          bool
+	csv           bool
+	xlsx          string
 }
 
 func newStatusCmd() *cobra.Command {
@@ -39,11 +39,12 @@ func newStatusCmd() *cobra.Command {
 
 For each (user, week) pair, prints submission status and billable / non-billable / total hours.
 
-Selectors (exactly one required):
-  --user UID          one or more user UIDs (repeatable / comma-separated)
-  --manager UID       limit to direct reports (use "me" for the authenticated user)
-  --account NAME      limit to users in this account/department by name
-  --resource-pool NAME limit to users in this TD resource pool (matches TD UI's filter)
+Selectors (exactly one selector type required; each accepts repeated /
+comma-separated values, treated as a union):
+  --user UID          one or more user UIDs
+  --manager UID       direct reports of one or more manager UIDs (use "me" for the authenticated user)
+  --account NAME      users in one or more accounts/departments by name
+  --resource-pool NAME users in one or more TD resource pools by name
   --all               every active employee (requires --yes)
 
 Filters:
@@ -70,9 +71,9 @@ Output formats (mutually exclusive; default: human table):
 	cmd.Flags().StringVar(&f.from, "from", "", "range start (YYYY-MM-DD); requires --to")
 	cmd.Flags().StringVar(&f.to, "to", "", "range end (YYYY-MM-DD); requires --from")
 	cmd.Flags().StringSliceVar(&f.users, "user", nil, "user UIDs (repeatable / comma-separated)")
-	cmd.Flags().StringVar(&f.manager, "manager", "", "limit to direct reports of this UID; \"me\" = authenticated user")
-	cmd.Flags().StringVar(&f.account, "account", "", "limit to users in this account/department by name")
-	cmd.Flags().StringVar(&f.resourcePool, "resource-pool", "", "limit to users in this TD resource pool (by exact name)")
+	cmd.Flags().StringSliceVar(&f.managers, "manager", nil, "manager UIDs (repeatable / comma-separated; \"me\" = authenticated user)")
+	cmd.Flags().StringSliceVar(&f.accounts, "account", nil, "account/department names (repeatable / comma-separated)")
+	cmd.Flags().StringSliceVar(&f.resourcePools, "resource-pool", nil, "TD resource pool names (repeatable / comma-separated)")
 	cmd.Flags().BoolVar(&f.all, "all", false, "every active employee (requires --yes)")
 	cmd.Flags().BoolVar(&f.yes, "yes", false, "confirm --all")
 	cmd.Flags().BoolVar(&f.includeZero, "include-zero", true, "include user-weeks with zero total minutes (default: include)")
@@ -88,18 +89,18 @@ Output formats (mutually exclusive; default: human table):
 // validateStatusFlags enforces selector + format exclusivity rules
 // before any API calls happen.
 func validateStatusFlags(f statusFlags) error {
-	// Selectors
+	// Selectors — count distinct selector *types* in use, not individual values.
 	selectors := 0
 	if len(f.users) > 0 {
 		selectors++
 	}
-	if f.manager != "" {
+	if len(f.managers) > 0 {
 		selectors++
 	}
-	if f.account != "" {
+	if len(f.accounts) > 0 {
 		selectors++
 	}
-	if f.resourcePool != "" {
+	if len(f.resourcePools) > 0 {
 		selectors++
 	}
 	if f.all {

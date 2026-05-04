@@ -77,7 +77,7 @@ func TestPrintJSON_FilterEcho(t *testing.T) {
 func TestPrintJSON_IncompleteEchoedWhenSet(t *testing.T) {
 	var buf bytes.Buffer
 	f := statusFlags{
-		manager: "me", week: "2026-04-14",
+		managers: []string{"me"}, week: "2026-04-14",
 		incomplete: true, threshold: 32,
 	}
 	require.NoError(t, printJSON(&buf, sampleReport(), f))

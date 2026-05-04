@@ -157,21 +157,21 @@ func assembleReport(ctx context.Context, deps runnerDeps, f statusFlags) (domain
 // MCPInputs is the input for RunForMCP. Mirrors the CLI flags but exposed
 // as a typed Go struct for use by the MCP handler.
 type MCPInputs struct {
-	Profile      string
-	Week         string
-	From, To     string
-	Users        []string
-	Manager      string
-	Account      string
-	ResourcePool string
-	All          bool
-	IncludeZero  bool
-	Incomplete   bool
-	Threshold    float64
-	Limit        int
-	TimeSvc      timesvcAPI
-	PeopleSvc    peoplesvcAPI
-	AuthSvc      authsvcAPI
+	Profile       string
+	Week          string
+	From, To      string
+	Users         []string
+	Managers      []string
+	Accounts      []string
+	ResourcePools []string
+	All           bool
+	IncludeZero   bool
+	Incomplete    bool
+	Threshold     float64
+	Limit         int
+	TimeSvc       timesvcAPI
+	PeopleSvc     peoplesvcAPI
+	AuthSvc       authsvcAPI
 }
 
 // RunForMCP builds, validates, and runs a Time Status Report for MCP
@@ -180,20 +180,20 @@ type MCPInputs struct {
 // has already opted in).
 func RunForMCP(ctx context.Context, in MCPInputs) (any, error) {
 	f := statusFlags{
-		profile:      in.Profile,
-		week:         in.Week,
-		from:         in.From,
-		to:           in.To,
-		users:        in.Users,
-		manager:      in.Manager,
-		account:      in.Account,
-		resourcePool: in.ResourcePool,
-		all:          in.All,
-		yes:          in.All, // bypass --yes guard for MCP
-		includeZero:  in.IncludeZero,
-		incomplete:   in.Incomplete,
-		threshold:    in.Threshold,
-		limit:        in.Limit,
+		profile:       in.Profile,
+		week:          in.Week,
+		from:          in.From,
+		to:            in.To,
+		users:         in.Users,
+		managers:      in.Managers,
+		accounts:      in.Accounts,
+		resourcePools: in.ResourcePools,
+		all:           in.All,
+		yes:           in.All, // bypass --yes guard for MCP
+		includeZero:   in.IncludeZero,
+		incomplete:    in.Incomplete,
+		threshold:     in.Threshold,
+		limit:         in.Limit,
 	}
 	if err := validateStatusFlags(f); err != nil {
 		return nil, err
@@ -244,13 +244,19 @@ func resolveWeeks(f statusFlags) ([]domain.WeekRef, error) {
 }
 
 // resolveUsers maps the selector flags to a concrete user list.
-// Pre-validated: exactly one of --user/--manager/--account/--all is set.
+// Pre-validated: exactly one selector type is in use; each type may carry
+// multiple values that are unioned.
 func resolveUsers(ctx context.Context, deps runnerDeps, f statusFlags) ([]domain.User, error) {
 	trueVal := true
 	switch {
 	case len(f.users) > 0:
+		seen := map[string]struct{}{}
 		out := make([]domain.User, 0, len(f.users))
 		for _, uid := range f.users {
+			if _, dup := seen[uid]; dup {
+				continue
+			}
+			seen[uid] = struct{}{}
 			u, err := deps.People.GetUser(ctx, deps.Profile, uid)
 			if err != nil {
 				return nil, fmt.Errorf("get user %s: %w", uid, err)
@@ -259,14 +265,18 @@ func resolveUsers(ctx context.Context, deps runnerDeps, f statusFlags) ([]domain
 		}
 		return out, nil
 
-	case f.manager != "":
-		mgrUID := f.manager
-		if mgrUID == "me" {
-			me, err := deps.Auth.WhoAmI(ctx, deps.Profile)
-			if err != nil {
-				return nil, fmt.Errorf("whoami: %w", err)
+	case len(f.managers) > 0:
+		mgrUIDs := map[string]struct{}{}
+		for _, raw := range f.managers {
+			uid := raw
+			if uid == "me" {
+				me, err := deps.Auth.WhoAmI(ctx, deps.Profile)
+				if err != nil {
+					return nil, fmt.Errorf("whoami: %w", err)
+				}
+				uid = me.UID
 			}
-			mgrUID = me.UID
+			mgrUIDs[uid] = struct{}{}
 		}
 		all, err := deps.People.SearchUsers(ctx, deps.Profile, domain.UserFilter{
 			Employee: &trueVal,
@@ -277,21 +287,30 @@ func resolveUsers(ctx context.Context, deps runnerDeps, f statusFlags) ([]domain
 		}
 		out := []domain.User{}
 		for _, u := range all {
-			if u.ReportsToUID == mgrUID {
+			if _, ok := mgrUIDs[u.ReportsToUID]; ok {
 				out = append(out, u)
 			}
 		}
 		return out, nil
 
-	case f.account != "":
-		acct, err := deps.People.ResolveAccountByName(ctx, deps.Profile, f.account)
-		if err != nil {
-			return nil, err
+	case len(f.accounts) > 0:
+		ids := make([]int, 0, len(f.accounts))
+		seen := map[int]struct{}{}
+		for _, name := range f.accounts {
+			acct, err := deps.People.ResolveAccountByName(ctx, deps.Profile, name)
+			if err != nil {
+				return nil, err
+			}
+			if _, dup := seen[acct.ID]; dup {
+				continue
+			}
+			seen[acct.ID] = struct{}{}
+			ids = append(ids, acct.ID)
 		}
 		return deps.People.SearchUsers(ctx, deps.Profile, domain.UserFilter{
-			Employee:  &trueVal,
-			AccountID: acct.ID,
-			Limit:     employeeLimit,
+			Employee:   &trueVal,
+			AccountIDs: ids,
+			Limit:      employeeLimit,
 		})
 
 	case f.all:
@@ -300,10 +319,14 @@ func resolveUsers(ctx context.Context, deps runnerDeps, f statusFlags) ([]domain
 			Limit:    employeeLimit,
 		})
 
-	case f.resourcePool != "":
-		pool, err := deps.People.ResolvePoolByName(ctx, deps.Profile, f.resourcePool)
-		if err != nil {
-			return nil, err
+	case len(f.resourcePools) > 0:
+		poolIDs := map[int]struct{}{}
+		for _, name := range f.resourcePools {
+			pool, err := deps.People.ResolvePoolByName(ctx, deps.Profile, name)
+			if err != nil {
+				return nil, err
+			}
+			poolIDs[pool.ID] = struct{}{}
 		}
 		all, err := deps.People.SearchUsers(ctx, deps.Profile, domain.UserFilter{
 			Employee: &trueVal,
@@ -314,7 +337,7 @@ func resolveUsers(ctx context.Context, deps runnerDeps, f statusFlags) ([]domain
 		}
 		out := []domain.User{}
 		for _, u := range all {
-			if u.ResourcePoolID == pool.ID {
+			if _, ok := poolIDs[u.ResourcePoolID]; ok {
 				out = append(out, u)
 			}
 		}
