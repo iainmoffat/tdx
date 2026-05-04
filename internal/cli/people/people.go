@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/iainmoffat/tdx/internal/svc/peoplesvc"
 )
 
@@ -12,6 +13,10 @@ import (
 // can inject a stub without spinning up an HTTP client.
 type peoplesvcAPI interface {
 	SearchPools(ctx context.Context, profile string) ([]peoplesvc.ResourcePool, error)
+	SearchAccounts(ctx context.Context, profile string) ([]peoplesvc.Account, error)
+	SearchUsers(ctx context.Context, profile string, filter domain.UserFilter) ([]domain.User, error)
+	LookupPeople(ctx context.Context, profile, searchText string, maxResults int) ([]domain.User, error)
+	GetUser(ctx context.Context, profile, uid string) (domain.User, error)
 }
 
 // NewCmd returns the `tdx people` command tree wired against the
@@ -27,5 +32,8 @@ func newCmdWith(svc peoplesvcAPI) *cobra.Command {
 		Short: "Browse TD users, accounts, and resource pools",
 	}
 	cmd.AddCommand(newPoolsCmd(svc))
+	cmd.AddCommand(newAccountsCmd(svc))
+	cmd.AddCommand(newSearchCmd(svc))
+	cmd.AddCommand(newShowCmd(svc))
 	return cmd
 }

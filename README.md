@@ -155,7 +155,10 @@ artifact, validate, diff, preview, and push back with safety guarantees.
 
 | Command | Description | Key Flags |
 |---|---|---|
-| `tdx people pools list` | List TD resource pools (id, name, manager, requires-approval, active) | `--json`, `--profile` |
+| `tdx people search QUERY` | Find people by partial name/email/ID (defaults to staff only) | `--limit`, `--include-clients`, `--json` |
+| `tdx people show <UID>` | Full details for one user | `--json` |
+| `tdx people accounts list` | List TD accounts/departments | `--json` |
+| `tdx people pools list` | List TD resource pools | `--json` |
 
 ### MCP
 
@@ -186,7 +189,7 @@ Add tdx as an MCP server in your AI tool's configuration:
 }
 ```
 
-The MCP server exposes 39 tools (18 read-only, 21 mutating). All mutating
+The MCP server exposes 44 tools (22 read-only, 22 mutating). All mutating
 tools require `confirm: true`. Template applies require an `expectedDiffHash`
 from a prior preview call for race protection.
 
@@ -239,7 +242,16 @@ from a prior preview call for race protection.
 
 | Tool | Description |
 |------|-------------|
-| `get_time_status_report` | Generate a per-user, per-week time-status report (selectors: `userUIDs`, `manager`, `account`, `resourcePool`, `all`) |
+| `get_time_status_report` | Generate a per-user, per-week time-status report (selectors: `userUIDs`, `managers`, `accounts`, `resourcePools`, `all`) |
+
+**People (read-only, 4 tools):**
+
+| Tool | Description |
+|------|-------------|
+| `search_people` | Find people by partial name/email/ID; defaults to staff only (`includeClients: true` to add portal users) |
+| `get_person` | Fetch full record for a single user by UID |
+| `list_accounts` | List TD accounts/departments, sorted by name |
+| `list_resource_pools` | List TD resource pools, sorted by name |
 
 ## JSON Output
 

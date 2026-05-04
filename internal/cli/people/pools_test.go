@@ -10,12 +10,25 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/iainmoffat/tdx/internal/svc/peoplesvc"
 )
 
 type stubPeoplesvc struct {
-	pools []peoplesvc.ResourcePool
-	err   error
+	pools          []peoplesvc.ResourcePool
+	accounts       []peoplesvc.Account
+	lookupHits     []domain.User
+	searchUsers    []domain.User
+	users          map[string]domain.User
+	err            error
+	accountsErr    error
+	lookupErr      error
+	searchUsersErr error
+	getErr         error
+
+	lastLookupQuery  string
+	lastLookupMax    int
+	lastSearchFilter domain.UserFilter
 }
 
 func (s *stubPeoplesvc) SearchPools(_ context.Context, _ string) ([]peoplesvc.ResourcePool, error) {
@@ -23,6 +36,40 @@ func (s *stubPeoplesvc) SearchPools(_ context.Context, _ string) ([]peoplesvc.Re
 		return nil, s.err
 	}
 	return s.pools, nil
+}
+
+func (s *stubPeoplesvc) SearchAccounts(_ context.Context, _ string) ([]peoplesvc.Account, error) {
+	if s.accountsErr != nil {
+		return nil, s.accountsErr
+	}
+	return s.accounts, nil
+}
+
+func (s *stubPeoplesvc) LookupPeople(_ context.Context, _, query string, max int) ([]domain.User, error) {
+	s.lastLookupQuery = query
+	s.lastLookupMax = max
+	if s.lookupErr != nil {
+		return nil, s.lookupErr
+	}
+	return s.lookupHits, nil
+}
+
+func (s *stubPeoplesvc) GetUser(_ context.Context, _, uid string) (domain.User, error) {
+	if s.getErr != nil {
+		return domain.User{}, s.getErr
+	}
+	if u, ok := s.users[uid]; ok {
+		return u, nil
+	}
+	return domain.User{}, errors.New("not found")
+}
+
+func (s *stubPeoplesvc) SearchUsers(_ context.Context, _ string, filter domain.UserFilter) ([]domain.User, error) {
+	s.lastSearchFilter = filter
+	if s.searchUsersErr != nil {
+		return nil, s.searchUsersErr
+	}
+	return s.searchUsers, nil
 }
 
 func TestPoolsList_TextOutput(t *testing.T) {
