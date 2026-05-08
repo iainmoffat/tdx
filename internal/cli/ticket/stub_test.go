@@ -25,6 +25,8 @@ type stubTicketsvc struct {
 	savedSearches  []domain.TicketSavedSearch
 	resolvedSaved  domain.TicketSavedSearch
 	savedResults   []domain.Ticket
+	groups         []domain.TicketGroup
+	resolvedGroup  domain.TicketGroup
 
 	// Capture last-call arguments for assertion in tests.
 	lastFilter      domain.TicketSearchFilter
@@ -77,4 +79,10 @@ func (s *stubTicketsvc) RunSavedSearch(_ context.Context, _ string, _ int, _ int
 }
 func (s *stubTicketsvc) ResolveSavedSearchByName(_ context.Context, _ string, _ int, _ string) (domain.TicketSavedSearch, error) {
 	return s.resolvedSaved, s.err
+}
+func (s *stubTicketsvc) ListGroups(_ context.Context, _ string) ([]domain.TicketGroup, error) {
+	return s.groups, s.err
+}
+func (s *stubTicketsvc) ResolveGroupByName(_ context.Context, _ string, _ string) (domain.TicketGroup, error) {
+	return s.resolvedGroup, s.err
 }
