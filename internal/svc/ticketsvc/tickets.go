@@ -43,12 +43,13 @@ func (s *Service) SearchTickets(ctx context.Context, profileName string, filter 
 		return nil, err
 	}
 	req := wireTicketSearch{
-		StatusIDs:          filter.StatusIDs,
-		ResponsibilityUids: filter.AssigneeUIDs,
-		RequestorUids:      filter.RequestorUIDs,
-		AccountIDs:         filter.AccountIDs,
-		SearchText:         filter.Text,
-		MaxResults:         filter.Limit,
+		StatusIDs:              filter.StatusIDs,
+		ResponsibilityUids:     filter.AssigneeUIDs,
+		ResponsibilityGroupIDs: filter.ResponsibilityGroupIDs,
+		RequestorUids:          filter.RequestorUIDs,
+		AccountIDs:             filter.AccountIDs,
+		SearchText:             filter.Text,
+		MaxResults:             filter.Limit,
 	}
 	if req.MaxResults == 0 {
 		req.MaxResults = 50
