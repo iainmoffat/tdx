@@ -28,6 +28,10 @@ type ticketsvcAPI interface {
 	ResolveSavedSearchByName(ctx context.Context, profile string, appID int, name string) (domain.TicketSavedSearch, error)
 	ListGroups(ctx context.Context, profile string) ([]domain.TicketGroup, error)
 	ResolveGroupByName(ctx context.Context, profile string, name string) (domain.TicketGroup, error)
+	ListTasks(ctx context.Context, profile string, appID, ticketID int) ([]domain.TicketTask, error)
+	GetTask(ctx context.Context, profile string, appID, ticketID, taskID int) (domain.TicketTask, error)
+	GetTaskFeed(ctx context.Context, profile string, appID, ticketID, taskID int) ([]domain.TicketFeedEntry, error)
+	UpdateTaskFeed(ctx context.Context, profile string, appID, ticketID, taskID int, body string, percentComplete *int, hoursWorked float64, isPrivate bool, notify []string) (int, error)
 }
 
 // New returns the top-level `tdx ticket` command. Subcommands are registered
