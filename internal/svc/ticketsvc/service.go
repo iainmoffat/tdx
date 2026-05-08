@@ -44,8 +44,6 @@ func (s *Service) clientFor(profileName string) (*tdx.Client, error) {
 
 // resolveAppID returns the appID to use: explicit > 0 wins; otherwise
 // fall back to profile.TicketAppID; if both zero, error.
-//
-//nolint:unused // scaffolded for upcoming ticket-command tasks
 func (s *Service) resolveAppID(profileName string, explicit int) (int, error) {
 	if explicit > 0 {
 		return explicit, nil

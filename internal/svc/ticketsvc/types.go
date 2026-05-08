@@ -12,3 +12,21 @@ type wireApp struct {
 	Type        string `json:"Type"`
 	AppClass    string `json:"AppClass"`
 }
+
+// wireTicketStatus matches GET /TDWebApi/api/{appId}/tickets/statuses rows.
+type wireTicketStatus struct {
+	ID          int     `json:"ID"`
+	Name        string  `json:"Name"`
+	IsActive    bool    `json:"IsActive"`
+	Order       float64 `json:"Order"`
+	IsDefault   bool    `json:"IsDefault"`
+	StatusClass int     `json:"StatusClass"` // TD enum; 6 = Closed (verify live in Task 19)
+}
+
+// wireTicketType matches GET /TDWebApi/api/{appId}/tickets/types rows.
+type wireTicketType struct {
+	ID          int    `json:"ID"`
+	Name        string `json:"Name"`
+	Description string `json:"Description"`
+	IsActive    bool   `json:"IsActive"`
+}
