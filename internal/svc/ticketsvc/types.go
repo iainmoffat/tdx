@@ -79,3 +79,22 @@ type PatchOp struct {
 	Path  string      `json:"path"` // "/StatusID", "/ResponsibleUid", etc.
 	Value interface{} `json:"value"`
 }
+
+// wireFeedEntry matches a row in GET /tickets/{id}/feed and the response
+// from POST /tickets/{id}/feed.
+type wireFeedEntry struct {
+	ID              int    `json:"ID"`
+	CreatedUid      string `json:"CreatedUid"`
+	CreatedFullName string `json:"CreatedFullName"`
+	CreatedDate     string `json:"CreatedDate"`
+	Body            string `json:"Body"`
+	IsPrivate       bool   `json:"IsPrivate"`
+	UpdateType      int    `json:"UpdateType"` // TD enum; verify live in Task 19
+}
+
+// wireFeedAdd is the request body for POST /tickets/{id}/feed.
+type wireFeedAdd struct {
+	Comments  string   `json:"Comments"`
+	Notify    []string `json:"Notify,omitempty"`
+	IsPrivate bool     `json:"IsPrivate"`
+}
