@@ -33,7 +33,7 @@ tdx
 │   ├── search           → saved
 │   ├── show / feed
 │   ├── comment / status / assign / log
-│   └── types / statuses → list
+│   └── types / statuses / groups → list
 ├── time
 │   ├── entry            → list / show / add / update / delete
 │   ├── template         → derive / list / show / edit / clone / delete / apply / compare
