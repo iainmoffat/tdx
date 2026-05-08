@@ -38,5 +38,6 @@ func New() *cobra.Command {
 	cmd.AddCommand(newAppCmd(nil))
 	cmd.AddCommand(newTypesCmd(nil))
 	cmd.AddCommand(newStatusesCmd(nil))
+	cmd.AddCommand(newSearchCmd(nil))
 	return cmd
 }
