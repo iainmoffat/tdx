@@ -31,8 +31,10 @@ type ticketsvcAPI interface {
 // New returns the top-level `tdx ticket` command. Subcommands are registered
 // in their respective files as they land.
 func New() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "ticket",
 		Short: "Manage TeamDynamix tickets",
 	}
+	cmd.AddCommand(newAppCmd(nil))
+	return cmd
 }

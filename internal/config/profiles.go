@@ -82,6 +82,25 @@ func (s *ProfileStore) AddProfile(p domain.Profile) error {
 	return s.Save(cfg)
 }
 
+// UpdateProfile replaces an existing profile by name. Returns ErrProfileNotFound
+// if no profile with the given name exists. Validation runs before the write.
+func (s *ProfileStore) UpdateProfile(p domain.Profile) error {
+	if err := p.Validate(); err != nil {
+		return err
+	}
+	cfg, err := s.Load()
+	if err != nil {
+		return err
+	}
+	for i, existing := range cfg.Profiles {
+		if existing.Name == p.Name {
+			cfg.Profiles[i] = p
+			return s.Save(cfg)
+		}
+	}
+	return fmt.Errorf("%w: %s", domain.ErrProfileNotFound, p.Name)
+}
+
 // RemoveProfile deletes a profile by name.
 // If the removed profile was the default, another remaining profile becomes default.
 func (s *ProfileStore) RemoveProfile(name string) error {
