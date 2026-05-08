@@ -36,5 +36,7 @@ func New() *cobra.Command {
 		Short: "Manage TeamDynamix tickets",
 	}
 	cmd.AddCommand(newAppCmd(nil))
+	cmd.AddCommand(newTypesCmd(nil))
+	cmd.AddCommand(newStatusesCmd(nil))
 	return cmd
 }
