@@ -10,6 +10,10 @@ import (
 type Profile struct {
 	Name          string `yaml:"name"`
 	TenantBaseURL string `yaml:"tenantBaseURL"`
+	// TicketAppID is the default ticket-app ID for this profile.
+	// Set via `tdx ticket app use <id>`. Optional — when zero, all
+	// tdx ticket commands require --app <id>.
+	TicketAppID int `yaml:"ticketAppID,omitempty" json:"ticketAppID,omitempty"`
 }
 
 // Validate returns nil if the profile is structurally sound.
