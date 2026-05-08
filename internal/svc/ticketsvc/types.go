@@ -74,12 +74,13 @@ type wireTicket struct {
 // this endpoint is silently ignored — open-only filtering is done client-side
 // by SearchTickets using the StatusClass field returned on each row.
 type wireTicketSearch struct {
-	StatusIDs          []int    `json:"StatusIDs,omitempty"`
-	ResponsibilityUids []string `json:"ResponsibilityUids,omitempty"`
-	RequestorUids      []string `json:"RequestorUids,omitempty"`
-	AccountIDs         []int    `json:"AccountIDs,omitempty"`
-	SearchText         string   `json:"SearchText,omitempty"`
-	MaxResults         int      `json:"MaxResults,omitempty"`
+	StatusIDs              []int    `json:"StatusIDs,omitempty"`
+	ResponsibilityUids     []string `json:"ResponsibilityUids,omitempty"`
+	ResponsibilityGroupIDs []int    `json:"ResponsibilityGroupIDs,omitempty"`
+	RequestorUids          []string `json:"RequestorUids,omitempty"`
+	AccountIDs             []int    `json:"AccountIDs,omitempty"`
+	SearchText             string   `json:"SearchText,omitempty"`
+	MaxResults             int      `json:"MaxResults,omitempty"`
 }
 
 // PatchOp is one JSON-Patch operation. Exported so the CLI layer
@@ -138,4 +139,16 @@ type wireSavedSearchResults struct {
 	TotalCount       int          `json:"TotalCount"`
 	CurrentPageIndex int          `json:"CurrentPageIndex"`
 	PageSize         int          `json:"PageSize"`
+}
+
+// wireGroup matches a row in POST /TDWebApi/api/groups/search.
+// PlatformApplications is included in the response but not surfaced
+// to consumers in v0.16.1.
+type wireGroup struct {
+	ID                   int           `json:"ID"`
+	Name                 string        `json:"Name"`
+	IsActive             bool          `json:"IsActive"`
+	Description          string        `json:"Description,omitempty"`
+	ExternalID           string        `json:"ExternalID,omitempty"`
+	PlatformApplications []interface{} `json:"PlatformApplications,omitempty"`
 }
