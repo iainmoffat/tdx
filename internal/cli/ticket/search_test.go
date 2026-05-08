@@ -14,7 +14,7 @@ import (
 func TestBuildSearchFilterDefaultsToMe(t *testing.T) {
 	stub := &stubTicketsvc{}
 	people := &stubPeoplesvc{}
-	filter, err := buildSearchFilter(context.Background(), stub, people, "default", "uid-of-me", 31, nil, nil, nil, "", "", 50, false)
+	filter, err := buildSearchFilter(context.Background(), stub, people, "default", "uid-of-me", 31, nil, nil, nil, nil, nil, "", "", 50, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,7 +27,7 @@ func TestBuildSearchFilterExplicitAssigneeOverridesDefault(t *testing.T) {
 	stub := &stubTicketsvc{}
 	people := &stubPeoplesvc{}
 	uid := "12345678-1234-1234-1234-123456789012"
-	filter, err := buildSearchFilter(context.Background(), stub, people, "default", "uid-of-me", 31, nil, []string{uid}, nil, "", "", 50, false)
+	filter, err := buildSearchFilter(context.Background(), stub, people, "default", "uid-of-me", 31, nil, []string{uid}, nil, nil, nil, "", "", 50, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func TestBuildSearchFilterExplicitAssigneeOverridesDefault(t *testing.T) {
 func TestBuildSearchFilterMeKeyword(t *testing.T) {
 	stub := &stubTicketsvc{}
 	people := &stubPeoplesvc{}
-	filter, err := buildSearchFilter(context.Background(), stub, people, "default", "uid-of-me", 31, nil, []string{"me"}, nil, "", "", 50, false)
+	filter, err := buildSearchFilter(context.Background(), stub, people, "default", "uid-of-me", 31, nil, []string{"me"}, nil, nil, nil, "", "", 50, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestBuildSearchFilterMeKeyword(t *testing.T) {
 func TestBuildSearchFilterStatusByName(t *testing.T) {
 	stub := &stubTicketsvc{resolvedStatus: domain.TicketStatus{ID: 7, Name: "In Progress"}}
 	people := &stubPeoplesvc{}
-	filter, err := buildSearchFilter(context.Background(), stub, people, "default", "me", 31, []string{"In Progress"}, nil, nil, "", "", 50, false)
+	filter, err := buildSearchFilter(context.Background(), stub, people, "default", "me", 31, []string{"In Progress"}, nil, nil, nil, nil, "", "", 50, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestBuildSearchFilterStatusByName(t *testing.T) {
 func TestBuildSearchFilterStatusByID(t *testing.T) {
 	stub := &stubTicketsvc{}
 	people := &stubPeoplesvc{}
-	filter, err := buildSearchFilter(context.Background(), stub, people, "default", "me", 31, []string{"5"}, nil, nil, "", "", 50, false)
+	filter, err := buildSearchFilter(context.Background(), stub, people, "default", "me", 31, []string{"5"}, nil, nil, nil, nil, "", "", 50, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestBuildSearchFilterClampsLimit(t *testing.T) {
 	stub := &stubTicketsvc{}
 	people := &stubPeoplesvc{}
 	for _, c := range []struct{ in, want int }{{0, 50}, {-1, 50}, {500, 500}, {2000, 1000}} {
-		f, _ := buildSearchFilter(context.Background(), stub, people, "default", "me", 31, nil, []string{"me"}, nil, "", "", c.in, false)
+		f, _ := buildSearchFilter(context.Background(), stub, people, "default", "me", 31, nil, []string{"me"}, nil, nil, nil, "", "", c.in, false)
 		if f.Limit != c.want {
 			t.Errorf("limit %d → %d, want %d", c.in, f.Limit, c.want)
 		}
@@ -164,5 +164,98 @@ func TestRunSavedSearchRunByName(t *testing.T) {
 	}
 	if !strings.Contains(buf.String(), "X") {
 		t.Errorf("output: %s", buf.String())
+	}
+}
+
+func TestBuildSearchFilterGroupByName(t *testing.T) {
+	stub := &stubTicketsvc{resolvedGroup: domain.TicketGroup{ID: 100, Name: "Linux Team"}}
+	people := &stubPeoplesvc{}
+	filter, err := buildSearchFilter(context.Background(), stub, people, "default", "uid-me", 31,
+		nil, nil, nil, []string{"Linux Team"}, nil, "", "", 50, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(filter.ResponsibilityGroupIDs) != 1 || filter.ResponsibilityGroupIDs[0] != 100 {
+		t.Errorf("group ID not resolved: %+v", filter.ResponsibilityGroupIDs)
+	}
+	if len(filter.AssigneeUIDs) != 0 {
+		t.Errorf("default-to-me should not fire when --responsibility-group is set; got %v", filter.AssigneeUIDs)
+	}
+}
+
+func TestBuildSearchFilterGroupByID(t *testing.T) {
+	stub := &stubTicketsvc{}
+	people := &stubPeoplesvc{}
+	filter, err := buildSearchFilter(context.Background(), stub, people, "default", "uid-me", 31,
+		nil, nil, nil, []string{"42"}, nil, "", "", 50, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(filter.ResponsibilityGroupIDs) != 1 || filter.ResponsibilityGroupIDs[0] != 42 {
+		t.Errorf("numeric group not preserved: %+v", filter.ResponsibilityGroupIDs)
+	}
+}
+
+func TestBuildSearchFilterManagerExpandsToReports(t *testing.T) {
+	stub := &stubTicketsvc{}
+	people := &stubPeoplesvc{
+		searchUsers: []domain.User{
+			{UID: "report-1", ReportsToUID: "uid-me"},
+			{UID: "report-2", ReportsToUID: "uid-me"},
+			{UID: "other", ReportsToUID: "someone"},
+		},
+	}
+	filter, err := buildSearchFilter(context.Background(), stub, people, "default", "uid-me", 31,
+		nil, nil, nil, nil, []string{"me"}, "", "", 50, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(filter.AssigneeUIDs) != 2 {
+		t.Fatalf("want 2 reports, got %d: %v", len(filter.AssigneeUIDs), filter.AssigneeUIDs)
+	}
+}
+
+func TestBuildSearchFilterManagerSuppressesDefaultToMe(t *testing.T) {
+	stub := &stubTicketsvc{}
+	people := &stubPeoplesvc{searchUsers: []domain.User{}}
+	filter, err := buildSearchFilter(context.Background(), stub, people, "default", "uid-me", 31,
+		nil, nil, nil, nil, []string{"me"}, "", "", 50, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(filter.AssigneeUIDs) != 0 {
+		t.Errorf("should be empty (no reports), got %v", filter.AssigneeUIDs)
+	}
+}
+
+func TestBuildSearchFilterManagerMergesWithAssignees(t *testing.T) {
+	stub := &stubTicketsvc{}
+	people := &stubPeoplesvc{
+		searchUsers: []domain.User{{UID: "report-1", ReportsToUID: "uid-me"}},
+	}
+	uid := "12345678-1234-1234-1234-123456789012"
+	filter, err := buildSearchFilter(context.Background(), stub, people, "default", "uid-me", 31,
+		nil, []string{uid}, nil, nil, []string{"me"}, "", "", 50, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(filter.AssigneeUIDs) != 2 {
+		t.Fatalf("want 2 (raw + report), got %d: %v", len(filter.AssigneeUIDs), filter.AssigneeUIDs)
+	}
+}
+
+func TestBuildSearchFilterMultipleSelectorsCombine(t *testing.T) {
+	stub := &stubTicketsvc{resolvedGroup: domain.TicketGroup{ID: 200, Name: "Foo"}}
+	people := &stubPeoplesvc{}
+	filter, err := buildSearchFilter(context.Background(), stub, people, "default", "uid-me", 31,
+		nil, []string{"me"}, nil, []string{"Foo"}, nil, "", "", 50, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(filter.AssigneeUIDs) != 1 || filter.AssigneeUIDs[0] != "uid-me" {
+		t.Errorf("assignees: %v", filter.AssigneeUIDs)
+	}
+	if len(filter.ResponsibilityGroupIDs) != 1 || filter.ResponsibilityGroupIDs[0] != 200 {
+		t.Errorf("groups: %v", filter.ResponsibilityGroupIDs)
 	}
 }

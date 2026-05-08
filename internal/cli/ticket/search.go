@@ -23,7 +23,9 @@ func newSearchCmd(svc ticketsvcAPI) *cobra.Command {
 		statusFlags    []string
 		assigneeFlags  []string
 		requestorFlags []string
-		accountFlag    string // accepted but currently no-op; add support in a follow-up
+		groupFlags     []string // NEW: --responsibility-group
+		managerFlags   []string // NEW: --manager
+		accountFlag    string   // accepted but currently no-op; add support in a follow-up
 		textFlag       string
 		limitFlag      int
 		includeClosed  bool
@@ -56,7 +58,7 @@ func newSearchCmd(svc ticketsvcAPI) *cobra.Command {
 				return err
 			}
 
-			filter, err := buildSearchFilter(cmd.Context(), s, people, profile, authedUID, appID, statusFlags, assigneeFlags, requestorFlags, accountFlag, textFlag, limitFlag, includeClosed)
+			filter, err := buildSearchFilter(cmd.Context(), s, people, profile, authedUID, appID, statusFlags, assigneeFlags, requestorFlags, groupFlags, managerFlags, accountFlag, textFlag, limitFlag, includeClosed)
 			if err != nil {
 				return err
 			}
@@ -66,6 +68,8 @@ func newSearchCmd(svc ticketsvcAPI) *cobra.Command {
 	cmd.Flags().StringSliceVar(&statusFlags, "status", nil, "filter by status name or id (repeatable)")
 	cmd.Flags().StringSliceVar(&assigneeFlags, "assignee", nil, "assignee me|UID|email (repeatable; default = me)")
 	cmd.Flags().StringSliceVar(&requestorFlags, "requestor", nil, "requestor me|UID|email (repeatable)")
+	cmd.Flags().StringSliceVar(&groupFlags, "responsibility-group", nil, "responsibility group name or id (repeatable)")
+	cmd.Flags().StringSliceVar(&managerFlags, "manager", nil, "tickets assigned to direct reports of me|UID|email (repeatable)")
 	cmd.Flags().StringVar(&accountFlag, "account", "", "account/department name (currently informational)")
 	cmd.Flags().StringVar(&textFlag, "text", "", "free-text search")
 	cmd.Flags().IntVar(&limitFlag, "limit", 50, "max results (capped at 1000)")
@@ -94,12 +98,17 @@ func authedUIDFor(ctx context.Context, auth *authsvc.Service, profile string) (s
 
 // buildSearchFilter constructs domain.TicketSearchFilter from CLI flags.
 // Behavior:
-//   - If no --assignee and no --requestor flags, default to assignee=authedUID
-//   - Resolve each "me" in --assignee/--requestor to authedUID
+//   - If no individual selector flags (--assignee, --requestor, --responsibility-group, --manager),
+//     default to assignee=authedUID
+//   - Resolve each "me" in --assignee/--requestor/--manager to authedUID
 //   - Resolve --status names → IDs via svc.ResolveStatusByName (numeric strings stay numeric)
+//   - Resolve --responsibility-group names → IDs via svc.ResolveGroupByName (numeric strings stay numeric)
+//   - --manager expands to direct-report UIDs, merged into AssigneeUIDs
 //   - --account is currently informational (TD's POST /tickets/search has weak filter fidelity)
 //   - --limit is clamped to [1, 1000]
-func buildSearchFilter(ctx context.Context, svc ticketsvcAPI, people peoplesvcAPI, profile, authedUID string, appID int, statusFlags, assigneeFlags, requestorFlags []string, _ string, text string, limit int, includeClosed bool) (domain.TicketSearchFilter, error) {
+func buildSearchFilter(ctx context.Context, svc ticketsvcAPI, people peoplesvcAPI, profile, authedUID string, appID int,
+	statusFlags, assigneeFlags, requestorFlags, groupFlags, managerFlags []string,
+	_ string, text string, limit int, includeClosed bool) (domain.TicketSearchFilter, error) {
 	if limit < 1 {
 		limit = 50
 	}
@@ -119,6 +128,21 @@ func buildSearchFilter(ctx context.Context, svc ticketsvcAPI, people peoplesvcAP
 			return domain.TicketSearchFilter{}, fmt.Errorf("--status %q: %w", raw, err)
 		}
 		statusIDs = append(statusIDs, st.ID)
+	}
+
+	// Resolve --responsibility-group (numeric or name)
+	groupIDs := make([]int, 0, len(groupFlags))
+	for _, raw := range groupFlags {
+		id, name := parseStatusArg(raw)
+		if id > 0 {
+			groupIDs = append(groupIDs, id)
+			continue
+		}
+		g, err := svc.ResolveGroupByName(ctx, profile, name)
+		if err != nil {
+			return domain.TicketSearchFilter{}, fmt.Errorf("--responsibility-group %q: %w", raw, err)
+		}
+		groupIDs = append(groupIDs, g.ID)
 	}
 
 	resolveAll := func(args []string) ([]string, error) {
@@ -142,8 +166,31 @@ func buildSearchFilter(ctx context.Context, svc ticketsvcAPI, people peoplesvcAP
 		return domain.TicketSearchFilter{}, fmt.Errorf("--requestor: %w", err)
 	}
 
-	// Default: if user gave neither assignee nor requestor flags, default to assignee=me.
-	if len(assignees) == 0 && len(requestors) == 0 {
+	// Expand --manager into direct-report UIDs and merge into assignees.
+	managerReports, err := expandManagersToReports(ctx, people, profile, authedUID, managerFlags)
+	if err != nil {
+		return domain.TicketSearchFilter{}, err
+	}
+	if len(managerReports) > 0 {
+		seen := make(map[string]struct{}, len(assignees)+len(managerReports))
+		for _, uid := range assignees {
+			seen[uid] = struct{}{}
+		}
+		for _, uid := range managerReports {
+			if _, ok := seen[uid]; ok {
+				continue
+			}
+			seen[uid] = struct{}{}
+			assignees = append(assignees, uid)
+		}
+	}
+
+	// Default: if user gave no individual selectors AT ALL, default to assignee=me.
+	// Note: we check len(managerFlags) (not managerReports) intentionally — a user
+	// who passed --manager me but has no reports gets an empty assignee list, NOT
+	// an auto-injected "me".
+	hasAnySelector := len(assignees) > 0 || len(requestors) > 0 || len(groupIDs) > 0 || len(managerFlags) > 0
+	if !hasAnySelector {
 		if authedUID == "" {
 			return domain.TicketSearchFilter{}, fmt.Errorf("no filter specified and no authenticated UID — pass --assignee or --requestor explicitly")
 		}
@@ -151,13 +198,14 @@ func buildSearchFilter(ctx context.Context, svc ticketsvcAPI, people peoplesvcAP
 	}
 
 	return domain.TicketSearchFilter{
-		AppID:         appID,
-		StatusIDs:     statusIDs,
-		AssigneeUIDs:  assignees,
-		RequestorUIDs: requestors,
-		Text:          text,
-		IncludeClosed: includeClosed,
-		Limit:         limit,
+		AppID:                  appID,
+		StatusIDs:              statusIDs,
+		AssigneeUIDs:           assignees,
+		RequestorUIDs:          requestors,
+		ResponsibilityGroupIDs: groupIDs,
+		Text:                   text,
+		IncludeClosed:          includeClosed,
+		Limit:                  limit,
 	}, nil
 }
 
