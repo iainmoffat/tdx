@@ -68,6 +68,12 @@ tdx
 │   ├── search / show
 │   ├── accounts         → list
 │   └── pools            → list
+├── ticket
+│   ├── app              → list / use / show
+│   ├── search           → saved
+│   ├── show / feed
+│   ├── comment / status / assign / log
+│   └── types / statuses → list
 ├── time
 │   ├── entry            → list / show / add / update / delete
 │   ├── template         → derive / list / show / edit / clone / delete / apply / compare
@@ -85,6 +91,7 @@ Full reference: [User Guide](docs/guide.md). The guide is split per top-level co
 - [tdx auth](docs/guide/auth.md)
 - [tdx time](docs/guide/time.md)
 - [tdx people](docs/guide/people.md)
+- [tdx ticket](docs/guide/ticket.md)
 - [tdx mcp](docs/guide/mcp.md)
 
 ## MCP Integration
@@ -102,7 +109,7 @@ Add tdx as an MCP server in your AI tool's configuration:
 }
 ```
 
-The MCP server exposes 44 tools (22 read-only, 22 mutating). All mutating
+The MCP server exposes 56 tools (29 read-only, 27 mutating). All mutating
 tools require `confirm: true`. Template applies require an `expectedDiffHash`
 from a prior preview call for race protection. See [tdx mcp](docs/guide/mcp.md)
 for the full tool catalog and safety model.

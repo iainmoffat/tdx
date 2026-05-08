@@ -53,7 +53,7 @@ Add tdx to your AI tool's MCP configuration:
 
 ## Available tools
 
-The MCP server exposes 44 tools (22 read-only, 22 mutating). All mutating
+The MCP server exposes 56 tools (29 read-only, 27 mutating). All mutating
 tools require `confirm: true`. Template applies require an `expectedDiffHash`
 from a prior preview call for race protection.
 
@@ -122,6 +122,28 @@ Requires `confirm: true`.
 | `get_person` | Fetch full record for a single user by UID |
 | `list_accounts` | List TD accounts/departments, sorted by name |
 | `list_resource_pools` | List TD resource pools, sorted by name |
+
+#### Tickets (Phase D — read-only, 8 tools)
+
+| Tool | Description |
+|------|-------------|
+| `list_ticket_apps` | List ticket apps in the tenant |
+| `list_ticket_types` | List ticket types in an app |
+| `list_ticket_statuses` | List ticket statuses in an app |
+| `list_saved_searches` | List saved searches visible to the user |
+| `search_tickets` | Search tickets with filters (returns partial records) |
+| `run_saved_search` | Execute a saved search by ID (rate-limited 60/min/IP) |
+| `get_ticket` | Get full detail for one ticket |
+| `get_ticket_feed` | Read feed entries for a ticket |
+
+#### Tickets (Phase D — mutating, 4 tools, all require `confirm: true`)
+
+| Tool | Description |
+|------|-------------|
+| `add_ticket_comment` | Post a feed comment to a ticket |
+| `update_ticket_status` | Change a ticket's status (by name or id) |
+| `update_ticket_assignee` | Reassign a ticket by responsible UID |
+| `log_ticket_time` | Log time worked against a ticket (creates a time entry) |
 
 ## Safety model
 
