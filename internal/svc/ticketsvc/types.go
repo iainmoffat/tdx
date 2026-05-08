@@ -161,8 +161,6 @@ type wireGroup struct {
 // returns zero time for that). ResponsibleUid is null (empty string)
 // when unassigned at the individual level — group assignment uses
 // ResponsibleGroupID/Name instead.
-//
-//nolint:unused // used by tasks.go in Task 3
 type wireTicketTask struct {
 	ID                   int    `json:"ID"`
 	TicketID             int    `json:"TicketID"`
@@ -195,8 +193,6 @@ type wireTicketTask struct {
 //
 // PercentComplete is *int because 0 is a valid value (means "set to 0%
 // complete"); nil means "don't send PercentComplete in the body."
-//
-//nolint:unused // used by tasks.go in Task 3
 type wireTaskFeedUpdate struct {
 	Comments        string   `json:"Comments,omitempty"`
 	PercentComplete *int     `json:"PercentComplete,omitempty"`
