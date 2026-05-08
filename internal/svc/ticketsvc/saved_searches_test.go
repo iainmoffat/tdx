@@ -16,8 +16,8 @@ func TestListSavedSearches(t *testing.T) {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		_, _ = w.Write([]byte(`[
-			{"ID": 100, "Name": "  My Open  ", "OwnerUid": "uid-a", "OwnerFullName": "Alice", "Description": "Tickets I own"},
-			{"ID": 101, "Name": "Closed This Week", "OwnerUid": "uid-b", "OwnerFullName": "Bob", "Description": ""}
+			{"ID": 100, "Name": "  My Open  ", "CreatedUID": "uid-a", "CreatedFullName": "Alice"},
+			{"ID": 101, "Name": "Closed This Week", "CreatedUID": "uid-b", "CreatedFullName": "Bob"}
 		]`))
 	}))
 	defer srv.Close()
@@ -44,7 +44,7 @@ func TestRunSavedSearchSendsLimit(t *testing.T) {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		capturedBody, _ = io.ReadAll(r.Body)
-		_, _ = w.Write([]byte(`[{"ID": 1, "Title": "T1"}, {"ID": 2, "Title": "T2"}]`))
+		_, _ = w.Write([]byte(`{"Data":[{"ID":1,"Title":"T1"},{"ID":2,"Title":"T2"}],"TotalCount":2,"CurrentPageIndex":0,"PageSize":25}`))
 	}))
 	defer srv.Close()
 	svc, prof := harness(t, srv.URL)
@@ -62,8 +62,12 @@ func TestRunSavedSearchSendsLimit(t *testing.T) {
 	if err := json.Unmarshal(capturedBody, &sent); err != nil {
 		t.Fatal(err)
 	}
-	if mr, _ := sent["MaxResults"].(float64); mr != 25 {
-		t.Errorf("MaxResults: %v", sent["MaxResults"])
+	page, _ := sent["Page"].(map[string]interface{})
+	if page == nil {
+		t.Fatalf("Page object missing; body: %s", capturedBody)
+	}
+	if ps, _ := page["PageSize"].(float64); ps != 25 {
+		t.Errorf("Page.PageSize: %v", page["PageSize"])
 	}
 }
 
@@ -71,15 +75,19 @@ func TestRunSavedSearchDefaultsLimit(t *testing.T) {
 	var capturedBody []byte
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedBody, _ = io.ReadAll(r.Body)
-		_, _ = w.Write([]byte(`[]`))
+		_, _ = w.Write([]byte(`{"Data":[],"TotalCount":0,"CurrentPageIndex":0,"PageSize":50}`))
 	}))
 	defer srv.Close()
 	svc, prof := harness(t, srv.URL)
 	_, _ = svc.RunSavedSearch(context.Background(), prof, 31, 100, 0)
 	var sent map[string]interface{}
 	_ = json.Unmarshal(capturedBody, &sent)
-	if mr, _ := sent["MaxResults"].(float64); mr != 50 {
-		t.Errorf("default limit should be 50, got %v", sent["MaxResults"])
+	page, _ := sent["Page"].(map[string]interface{})
+	if page == nil {
+		t.Fatalf("Page object missing; body: %s", capturedBody)
+	}
+	if ps, _ := page["PageSize"].(float64); ps != 50 {
+		t.Errorf("default Page.PageSize should be 50, got %v", page["PageSize"])
 	}
 }
 

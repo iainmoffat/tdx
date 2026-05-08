@@ -14,13 +14,20 @@ type wireApp struct {
 }
 
 // wireTicketStatus matches GET /TDWebApi/api/{appId}/tickets/statuses rows.
+//
+// StatusClass enum (live-verified on UFL 2026-05-08):
+//
+//	1 = New, 2 = InProcess, 3 = Completed (Resolved/Closed),
+//	4 = Cancelled, 5 = OnHold
+//
+// Closed-state semantics: classes 3 (Completed) and 4 (Cancelled) are terminal.
 type wireTicketStatus struct {
 	ID          int     `json:"ID"`
 	Name        string  `json:"Name"`
 	IsActive    bool    `json:"IsActive"`
 	Order       float64 `json:"Order"`
 	IsDefault   bool    `json:"IsDefault"`
-	StatusClass int     `json:"StatusClass"` // TD enum; 6 = Closed (verify live in Task 19)
+	StatusClass int     `json:"StatusClass"`
 }
 
 // wireTicketType matches GET /TDWebApi/api/{appId}/tickets/types rows.
@@ -32,7 +39,9 @@ type wireTicketType struct {
 }
 
 // wireTicket matches GET /TDWebApi/api/{appId}/tickets/{id} and rows in
-// POST /TDWebApi/api/{appId}/tickets/search responses.
+// POST /TDWebApi/api/{appId}/tickets/search responses. StatusClass is
+// included so client-side open-only filtering can be applied (TD's IsOpen
+// filter on the search endpoint is silently ignored on UFL).
 type wireTicket struct {
 	ID                  int      `json:"ID"`
 	AppID               int      `json:"AppID"`
@@ -40,6 +49,7 @@ type wireTicket struct {
 	Description         string   `json:"Description"`
 	StatusID            int      `json:"StatusID"`
 	StatusName          string   `json:"StatusName"`
+	StatusClass         int      `json:"StatusClass"`
 	TypeID              int      `json:"TypeID"`
 	TypeName            string   `json:"TypeName"`
 	PriorityID          int      `json:"PriorityID"`
@@ -58,17 +68,17 @@ type wireTicket struct {
 }
 
 // wireTicketSearch is the request body for POST /tickets/search.
-// Per the spec, only IsOpen/MaxResults are reliably honored on the live
-// tenant — the CLI may still send other filters and post-filter client-side
-// in later tasks; we send what TD documents and treat extra-filter
-// fidelity as a best-effort.
+//
+// Live-verified on UFL 2026-05-08: only StatusIDs/MaxResults/ResponsibilityUids/
+// RequestorUids are reliably honored. The IsOpen field that TD documents on
+// this endpoint is silently ignored — open-only filtering is done client-side
+// by SearchTickets using the StatusClass field returned on each row.
 type wireTicketSearch struct {
 	StatusIDs          []int    `json:"StatusIDs,omitempty"`
 	ResponsibilityUids []string `json:"ResponsibilityUids,omitempty"`
 	RequestorUids      []string `json:"RequestorUids,omitempty"`
 	AccountIDs         []int    `json:"AccountIDs,omitempty"`
 	SearchText         string   `json:"SearchText,omitempty"`
-	IsOpen             *bool    `json:"IsOpen,omitempty"`
 	MaxResults         int      `json:"MaxResults,omitempty"`
 }
 
@@ -100,15 +110,32 @@ type wireFeedAdd struct {
 }
 
 // wireSavedSearch matches a row in GET /tickets/searches.
+// Live-verified on UFL 2026-05-08: owner fields are CreatedUID/CreatedFullName,
+// and there is no Description field on saved searches in this app type.
 type wireSavedSearch struct {
-	ID            int    `json:"ID"`
-	Name          string `json:"Name"`
-	OwnerUid      string `json:"OwnerUid"`
-	OwnerFullName string `json:"OwnerFullName"`
-	Description   string `json:"Description"`
+	ID              int    `json:"ID"`
+	Name            string `json:"Name"`
+	CreatedUID      string `json:"CreatedUID"`
+	CreatedFullName string `json:"CreatedFullName"`
+}
+
+// wireRequestPage is TD's required pagination object for saved-search results.
+type wireRequestPage struct {
+	PageIndex int `json:"PageIndex"`
+	PageSize  int `json:"PageSize"`
 }
 
 // wireSavedSearchOptions is the request body for POST /tickets/searches/{id}/results.
+// Page is required (the endpoint 400s without it).
 type wireSavedSearchOptions struct {
-	MaxResults int `json:"MaxResults,omitempty"`
+	Page wireRequestPage `json:"Page"`
+}
+
+// wireSavedSearchResults is the response wrapper from POST /tickets/searches/{id}/results.
+// Unlike POST /tickets/search (flat list), saved-search results come paginated.
+type wireSavedSearchResults struct {
+	Data             []wireTicket `json:"Data"`
+	TotalCount       int          `json:"TotalCount"`
+	CurrentPageIndex int          `json:"CurrentPageIndex"`
+	PageSize         int          `json:"PageSize"`
 }

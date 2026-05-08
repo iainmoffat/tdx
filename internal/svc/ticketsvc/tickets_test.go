@@ -66,15 +66,13 @@ func TestSearchTicketsDefaultsLimit(t *testing.T) {
 	if err := json.Unmarshal(capturedBody, &sent); err != nil {
 		t.Fatal(err)
 	}
-	if mr, _ := sent["MaxResults"].(float64); mr != 50 {
-		t.Errorf("default MaxResults should be 50, got %v", sent["MaxResults"])
-	}
-	if open, ok := sent["IsOpen"].(bool); !ok || !open {
-		t.Errorf("IsOpen should be true (open-only default), got %v", sent["IsOpen"])
+	// Default Limit=0 → 50 internally; over-fetch by 5x → 250 sent on the wire.
+	if mr, _ := sent["MaxResults"].(float64); mr != 250 {
+		t.Errorf("over-fetched MaxResults should be 250 (50 * 5), got %v", sent["MaxResults"])
 	}
 }
 
-func TestSearchTicketsIncludeClosedOmitsIsOpen(t *testing.T) {
+func TestSearchTicketsIncludeClosedDoesNotOverFetch(t *testing.T) {
 	var capturedBody []byte
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedBody, _ = io.ReadAll(r.Body)
@@ -82,11 +80,40 @@ func TestSearchTicketsIncludeClosedOmitsIsOpen(t *testing.T) {
 	}))
 	defer srv.Close()
 	svc, prof := harness(t, srv.URL)
-	_, _ = svc.SearchTickets(context.Background(), prof, domain.TicketSearchFilter{AppID: 31, IncludeClosed: true})
+	_, _ = svc.SearchTickets(context.Background(), prof, domain.TicketSearchFilter{AppID: 31, IncludeClosed: true, Limit: 50})
 	var sent map[string]interface{}
 	_ = json.Unmarshal(capturedBody, &sent)
-	if _, present := sent["IsOpen"]; present {
-		t.Errorf("IsOpen should be omitted when IncludeClosed=true; body: %s", capturedBody)
+	// IncludeClosed=true skips the over-fetch — sends the requested limit unchanged.
+	if mr, _ := sent["MaxResults"].(float64); mr != 50 {
+		t.Errorf("with IncludeClosed=true, MaxResults should match Limit=50, got %v", sent["MaxResults"])
+	}
+}
+
+func TestSearchTicketsClientSideOpenOnlyFilter(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
+	srv.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`[
+			{"ID":1,"Title":"open-1","StatusClass":2},
+			{"ID":2,"Title":"closed-1","StatusClass":3},
+			{"ID":3,"Title":"open-2","StatusClass":1},
+			{"ID":4,"Title":"cancelled","StatusClass":4},
+			{"ID":5,"Title":"on-hold","StatusClass":5}
+		]`))
+	})
+	defer srv.Close()
+	svc, prof := harness(t, srv.URL)
+	got, err := svc.SearchTickets(context.Background(), prof, domain.TicketSearchFilter{AppID: 31, Limit: 50})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// IncludeClosed=false (default) → drops StatusClass 3 and 4.
+	if len(got) != 3 {
+		t.Fatalf("want 3 open rows, got %d: %+v", len(got), got)
+	}
+	for _, tk := range got {
+		if tk.ID == 2 || tk.ID == 4 {
+			t.Errorf("terminal status should be filtered: %+v", tk)
+		}
 	}
 }
 

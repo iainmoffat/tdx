@@ -27,11 +27,10 @@ func (s *Service) ListSavedSearches(ctx context.Context, profileName string, app
 	out := make([]domain.TicketSavedSearch, 0, len(wire))
 	for _, w := range wire {
 		out = append(out, domain.TicketSavedSearch{
-			ID:          w.ID,
-			Name:        strings.TrimSpace(w.Name),
-			OwnerUID:    w.OwnerUid,
-			OwnerName:   w.OwnerFullName,
-			Description: w.Description,
+			ID:        w.ID,
+			Name:      strings.TrimSpace(w.Name),
+			OwnerUID:  w.CreatedUID,
+			OwnerName: w.CreatedFullName,
 		})
 	}
 	return out, nil
@@ -40,6 +39,11 @@ func (s *Service) ListSavedSearches(ctx context.Context, profileName string, app
 // RunSavedSearch executes the saved search by ID and returns results.
 // limit caps results (default 50 when limit <= 0).
 // Returned tickets are partial records (IsFull=false).
+//
+// Wire shape (live-verified on UFL 2026-05-08): the request body needs a
+// Page object (PageIndex, PageSize) — POSTing without one returns a 400.
+// The response is wrapped in {Data: [...], TotalCount, ...} rather than
+// being a flat array.
 func (s *Service) RunSavedSearch(ctx context.Context, profileName string, appID, searchID, limit int) ([]domain.Ticket, error) {
 	resolvedAppID, err := s.resolveAppID(profileName, appID)
 	if err != nil {
@@ -52,14 +56,14 @@ func (s *Service) RunSavedSearch(ctx context.Context, profileName string, appID,
 	if limit <= 0 {
 		limit = 50
 	}
-	req := wireSavedSearchOptions{MaxResults: limit}
-	var wire []wireTicket
+	req := wireSavedSearchOptions{Page: wireRequestPage{PageIndex: 0, PageSize: limit}}
+	var resp wireSavedSearchResults
 	path := fmt.Sprintf("/TDWebApi/api/%d/tickets/searches/%d/results", resolvedAppID, searchID)
-	if err := client.DoJSON(ctx, "POST", path, req, &wire); err != nil {
+	if err := client.DoJSON(ctx, "POST", path, req, &resp); err != nil {
 		return nil, fmt.Errorf("run saved search %d: %w", searchID, err)
 	}
-	out := make([]domain.Ticket, 0, len(wire))
-	for _, w := range wire {
+	out := make([]domain.Ticket, 0, len(resp.Data))
+	for _, w := range resp.Data {
 		out = append(out, decodeTicket(w, false))
 	}
 	return out, nil

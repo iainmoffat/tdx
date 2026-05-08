@@ -27,6 +27,12 @@ func (s *Service) GetTicket(ctx context.Context, profileName string, appID, id i
 }
 
 // SearchTickets calls POST /tickets/search. Returns partial records (IsFull=false).
+//
+// Open-only filtering note (live-verified on UFL 2026-05-08): TD's IsOpen
+// request-body field is silently ignored on the search endpoint, so we
+// filter client-side using the StatusClass field on each result. We
+// over-fetch by 5x (capped at 1000) to give the post-filter enough rows
+// to honor Limit, then truncate.
 func (s *Service) SearchTickets(ctx context.Context, profileName string, filter domain.TicketSearchFilter) ([]domain.Ticket, error) {
 	resolvedAppID, err := s.resolveAppID(profileName, filter.AppID)
 	if err != nil {
@@ -44,12 +50,16 @@ func (s *Service) SearchTickets(ctx context.Context, profileName string, filter 
 		SearchText:         filter.Text,
 		MaxResults:         filter.Limit,
 	}
-	if !filter.IncludeClosed {
-		t := true
-		req.IsOpen = &t
-	}
 	if req.MaxResults == 0 {
 		req.MaxResults = 50
+	}
+	requestedLimit := req.MaxResults
+	if !filter.IncludeClosed {
+		over := req.MaxResults * 5
+		if over > 1000 {
+			over = 1000
+		}
+		req.MaxResults = over
 	}
 	var wire []wireTicket
 	path := fmt.Sprintf("/TDWebApi/api/%d/tickets/search", resolvedAppID)
@@ -58,7 +68,13 @@ func (s *Service) SearchTickets(ctx context.Context, profileName string, filter 
 	}
 	out := make([]domain.Ticket, 0, len(wire))
 	for _, w := range wire {
+		if !filter.IncludeClosed && isTerminalStatusClass(w.StatusClass) {
+			continue
+		}
 		out = append(out, decodeTicket(w, false))
+		if len(out) >= requestedLimit {
+			break
+		}
 	}
 	return out, nil
 }

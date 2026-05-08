@@ -29,7 +29,7 @@ func (s *Service) ListStatuses(ctx context.Context, profileName string, appID in
 		out = append(out, domain.TicketStatus{
 			ID:        w.ID,
 			Name:      strings.TrimSpace(w.Name),
-			IsClosed:  w.StatusClass == 6,
+			IsClosed:  isTerminalStatusClass(w.StatusClass),
 			IsDefault: w.IsDefault,
 			Order:     w.Order,
 		})
@@ -90,6 +90,14 @@ func (s *Service) ResolveStatusByName(ctx context.Context, profileName string, a
 		}
 		return domain.TicketStatus{}, fmt.Errorf("multiple statuses match %q: %s — pass --status-id <int> instead", name, strings.Join(names, ", "))
 	}
+}
+
+// isTerminalStatusClass returns true for TD StatusClass values that mean a
+// ticket is closed (no further work). Live-verified on UFL 2026-05-08:
+// 3 = Completed (Resolved/Closed), 4 = Cancelled. Other classes (1=New,
+// 2=InProcess, 5=OnHold) are open.
+func isTerminalStatusClass(class int) bool {
+	return class == 3 || class == 4
 }
 
 // ResolveTypeByName finds a ticket type by case-insensitive exact match.

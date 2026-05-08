@@ -16,8 +16,8 @@ func TestListStatusesDecodesAndComputesIsClosed(t *testing.T) {
 		_, _ = w.Write([]byte(`[
 			{"ID": 1, "Name": "New", "IsActive": true, "Order": 1.0, "IsDefault": true, "StatusClass": 1},
 			{"ID": 2, "Name": "In Progress", "IsActive": true, "Order": 2.0, "IsDefault": false, "StatusClass": 2},
-			{"ID": 3, "Name": "  Closed  ", "IsActive": true, "Order": 3.0, "IsDefault": false, "StatusClass": 6},
-			{"ID": 4, "Name": "Cancelled", "IsActive": true, "Order": 4.0, "IsDefault": false, "StatusClass": 6}
+			{"ID": 3, "Name": "  Closed  ", "IsActive": true, "Order": 3.0, "IsDefault": false, "StatusClass": 3},
+			{"ID": 4, "Name": "Cancelled", "IsActive": true, "Order": 4.0, "IsDefault": false, "StatusClass": 4}
 		]`))
 	}))
 	defer srv.Close()
@@ -33,10 +33,16 @@ func TestListStatusesDecodesAndComputesIsClosed(t *testing.T) {
 		t.Errorf("name not trimmed: %q", got[2].Name)
 	}
 	if !got[2].IsClosed {
-		t.Errorf("StatusClass=6 should be IsClosed: %+v", got[2])
+		t.Errorf("StatusClass=3 (Completed) should be IsClosed: %+v", got[2])
+	}
+	if !got[3].IsClosed {
+		t.Errorf("StatusClass=4 (Cancelled) should be IsClosed: %+v", got[3])
 	}
 	if got[0].IsClosed {
-		t.Errorf("StatusClass=1 should NOT be IsClosed: %+v", got[0])
+		t.Errorf("StatusClass=1 (New) should NOT be IsClosed: %+v", got[0])
+	}
+	if got[1].IsClosed {
+		t.Errorf("StatusClass=2 (InProcess) should NOT be IsClosed: %+v", got[1])
 	}
 	if !got[0].IsDefault {
 		t.Errorf("first row should be IsDefault: %+v", got[0])
