@@ -22,6 +22,7 @@ All commands accept `--profile <name>` to override the active profile.
 - [tdx ticket log](#tdx-ticket-log)
 - [tdx ticket types](#tdx-ticket-types)
 - [tdx ticket statuses](#tdx-ticket-statuses)
+- [tdx ticket groups](#tdx-ticket-groups)
 
 ---
 
@@ -80,6 +81,15 @@ tdx ticket search --text "database migration" --limit 20
 
 # Tickets requested by a specific user, in a different app
 tdx ticket search --requestor alice@example.com --app 99 --json
+
+# Tickets assigned to my team (direct reports), open only
+tdx ticket search --manager me
+
+# Tickets assigned to a specific group
+tdx ticket search --responsibility-group "Linux Platform Services"
+
+# Mixed: my open tickets PLUS Linux Team's
+tdx ticket search --assignee me --responsibility-group "Linux Platform Services"
 ```
 
 Output is a partial-record table: ID, TITLE, STATUS, ASSIGNEE, REQUESTOR, MODIFIED. The records omit description and time data; use `tdx ticket show <id>` for full detail.
@@ -89,6 +99,8 @@ Output is a partial-record table: ID, TITLE, STATUS, ASSIGNEE, REQUESTOR, MODIFI
 - `--status <name|id>` — filter by status name or ID; repeatable (OR logic); case-insensitive
 - `--assignee <me|UID|email>` — filter by assignee; repeatable; defaults to `me` when no assignee/requestor flag is given
 - `--requestor <me|UID|email>` — filter by requestor; repeatable
+- `--responsibility-group <name|id>` — filter to tickets assigned to a TD responsibility group (team). Repeatable. Numeric arg = ID; non-numeric = case-insensitive exact name match (errors with candidate list on ambiguity). Use `tdx ticket groups list` to discover groups.
+- `--manager me|UID|email` — expand to "tickets assigned to direct reports of this person." Repeatable. `me` = the authenticated user. Resolution: fetches employees (~1k staff on UFL) and filters client-side by `ReportsToUID`, then injects matching UIDs as assignees. Direct reports only (no transitive walk).
 - `--account <name>` — informational label only (not a TD-side filter); name-resolves for display
 - `--text <q>` — full-text search string
 - `--limit N` — max results (default 50, max 1000)
@@ -321,3 +333,24 @@ tdx ticket statuses list --app 42 --json  # schema: tdx.v1.ticketStatusList
 
 - `--app <id>` — override the profile default ticket app
 - `--json` — emit JSON; schema: `tdx.v1.ticketStatusList`
+
+---
+
+## tdx ticket groups
+
+Inspect tenant-wide ticket responsibility groups (teams that tickets can be assigned to as a group rather than to an individual).
+
+### tdx ticket groups list
+
+```bash
+tdx ticket groups list
+tdx ticket groups list --json
+```
+
+Output: `ID | NAME | ACTIVE` table. JSON envelope: `tdx.v1.ticketGroupList`.
+
+Groups are tenant-wide — the same group can serve multiple ticket apps. Use `--responsibility-group <name>` on `tdx ticket search` once you know the group you care about.
+
+**Flags:**
+
+- `--json` — emit JSON; schema: `tdx.v1.ticketGroupList`

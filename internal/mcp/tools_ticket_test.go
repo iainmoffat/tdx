@@ -200,3 +200,34 @@ func TestLogTicketTime_RequiresConfirm(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, res.IsError)
 }
+
+// TestListTicketGroups_SchemaName verifies the ticketGroupList schema envelope.
+func TestListTicketGroups_SchemaName(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/TDWebApi/api/auth/getuser":
+			_, _ = w.Write([]byte(`{"UID":"u","FullName":"T"}`))
+		case "/TDWebApi/api/groups/search":
+			_, _ = w.Write([]byte(`[
+				{"ID":10,"Name":"Service Team","IsActive":true},
+				{"ID":20,"Name":"Network Team","IsActive":false}
+			]`))
+		default:
+			t.Errorf("unexpected request: %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	svcs := mcpTicketHarness(t, ts.URL)
+	res, _, err := listTicketGroupsHandler(svcs)(context.Background(), &sdkmcp.CallToolRequest{}, listTicketGroupsArgs{})
+	require.NoError(t, err)
+	require.False(t, res.IsError)
+
+	var got map[string]any
+	require.NoError(t, json.Unmarshal([]byte(extractText(t, res)), &got))
+	require.Equal(t, "tdx.v1.ticketGroupList", got["schema"])
+	groups, ok := got["groups"].([]any)
+	require.True(t, ok)
+	require.Len(t, groups, 2)
+}

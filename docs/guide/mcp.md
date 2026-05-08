@@ -53,7 +53,7 @@ Add tdx to your AI tool's MCP configuration:
 
 ## Available tools
 
-The MCP server exposes 56 tools (29 read-only, 27 mutating). All mutating
+The MCP server exposes 57 tools (30 read-only, 27 mutating). All mutating
 tools require `confirm: true`. Template applies require an `expectedDiffHash`
 from a prior preview call for race protection.
 
@@ -123,7 +123,7 @@ Requires `confirm: true`.
 | `list_accounts` | List TD accounts/departments, sorted by name |
 | `list_resource_pools` | List TD resource pools, sorted by name |
 
-#### Tickets (Phase D — read-only, 8 tools)
+#### Tickets (Phase D — read-only, 9 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -135,6 +135,7 @@ Requires `confirm: true`.
 | `run_saved_search` | Execute a saved search by ID (rate-limited 60/min/IP) |
 | `get_ticket` | Get full detail for one ticket |
 | `get_ticket_feed` | Read feed entries for a ticket |
+| `list_ticket_groups` | List tenant responsibility groups (teams) |
 
 #### Tickets (Phase D — mutating, 4 tools, all require `confirm: true`)
 

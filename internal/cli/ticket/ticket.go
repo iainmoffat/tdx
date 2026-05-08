@@ -26,6 +26,8 @@ type ticketsvcAPI interface {
 	ListSavedSearches(ctx context.Context, profile string, appID int) ([]domain.TicketSavedSearch, error)
 	RunSavedSearch(ctx context.Context, profile string, appID, searchID, limit int) ([]domain.Ticket, error)
 	ResolveSavedSearchByName(ctx context.Context, profile string, appID int, name string) (domain.TicketSavedSearch, error)
+	ListGroups(ctx context.Context, profile string) ([]domain.TicketGroup, error)
+	ResolveGroupByName(ctx context.Context, profile string, name string) (domain.TicketGroup, error)
 }
 
 // New returns the top-level `tdx ticket` command. Subcommands are registered
@@ -38,6 +40,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(newAppCmd(nil))
 	cmd.AddCommand(newTypesCmd(nil))
 	cmd.AddCommand(newStatusesCmd(nil))
+	cmd.AddCommand(newGroupsCmd(nil))
 	cmd.AddCommand(newSearchCmd(nil))
 	cmd.AddCommand(newShowCmd(nil))
 	cmd.AddCommand(newFeedCmd(nil))

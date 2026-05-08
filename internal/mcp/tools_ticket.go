@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -31,15 +32,17 @@ type listSavedSearchesArgs struct {
 }
 
 type searchTicketsArgs struct {
-	Profile       string   `json:"profile,omitempty"`
-	AppID         int      `json:"appID,omitempty"`
-	StatusIDs     []int    `json:"statusIDs,omitempty"`
-	AssigneeUIDs  []string `json:"assigneeUIDs,omitempty"`
-	RequestorUIDs []string `json:"requestorUIDs,omitempty"`
-	AccountIDs    []int    `json:"accountIDs,omitempty"`
-	SearchText    string   `json:"searchText,omitempty"`
-	IncludeClosed bool     `json:"includeClosed,omitempty"`
-	MaxResults    int      `json:"maxResults,omitempty"`
+	Profile                string   `json:"profile,omitempty"`
+	AppID                  int      `json:"appID,omitempty"`
+	StatusIDs              []int    `json:"statusIDs,omitempty"`
+	AssigneeUIDs           []string `json:"assigneeUIDs,omitempty"`
+	RequestorUIDs          []string `json:"requestorUIDs,omitempty"`
+	AccountIDs             []int    `json:"accountIDs,omitempty"`
+	ResponsibilityGroupIDs []int    `json:"responsibilityGroupIDs,omitempty"` // NEW
+	ManagerUIDs            []string `json:"managerUIDs,omitempty"`            // NEW
+	SearchText             string   `json:"searchText,omitempty"`
+	IncludeClosed          bool     `json:"includeClosed,omitempty"`
+	MaxResults             int      `json:"maxResults,omitempty"`
 }
 
 type runSavedSearchArgs struct {
@@ -174,9 +177,43 @@ func formatTicketTime(t time.Time) string {
 	return t.Format(time.RFC3339)
 }
 
+// mcpExpandManagersToReports mirrors the CLI helper for the MCP layer.
+// MCP inputs accept UIDs only (no "me" or email), so this skips the
+// resolvePrincipal step and does only the bulk staff fetch + filter.
+func mcpExpandManagersToReports(ctx context.Context, svcs Services, profile string, managerUIDs []string) ([]string, error) {
+	if len(managerUIDs) == 0 {
+		return nil, nil
+	}
+	managerSet := make(map[string]struct{}, len(managerUIDs))
+	for _, u := range managerUIDs {
+		managerSet[u] = struct{}{}
+	}
+	trueVal := true
+	all, err := svcs.People.SearchUsers(ctx, profile, domain.UserFilter{
+		Employee: &trueVal,
+		Limit:    5000,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("fetch staff for manager expansion: %w", err)
+	}
+	seen := make(map[string]struct{})
+	var out []string
+	for _, u := range all {
+		if _, ok := managerSet[u.ReportsToUID]; !ok {
+			continue
+		}
+		if _, dup := seen[u.UID]; dup {
+			continue
+		}
+		seen[u.UID] = struct{}{}
+		out = append(out, u.UID)
+	}
+	return out, nil
+}
+
 // --- Registration ---
 
-// RegisterTicketTools registers the 8 read-only ticket MCP tools.
+// RegisterTicketTools registers the 9 read-only ticket MCP tools.
 func RegisterTicketTools(srv *sdkmcp.Server, svcs Services) {
 	sdkmcp.AddTool(srv, &sdkmcp.Tool{
 		Name:        "list_ticket_apps",
@@ -218,6 +255,11 @@ func RegisterTicketTools(srv *sdkmcp.Server, svcs Services) {
 		Name:        "get_ticket_feed",
 		Description: "Read feed entries for a ticket. Read-only.",
 	}, getTicketFeedHandler(svcs))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name:        "list_ticket_groups",
+		Description: "List tenant responsibility groups (teams that can be assigned tickets). Read-only.",
+	}, listTicketGroupsHandler(svcs))
 }
 
 // --- Handlers ---
@@ -306,15 +348,34 @@ func listSavedSearchesHandler(svcs Services) func(context.Context, *sdkmcp.CallT
 func searchTicketsHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, searchTicketsArgs) (*sdkmcp.CallToolResult, any, error) {
 	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, args searchTicketsArgs) (*sdkmcp.CallToolResult, any, error) {
 		profile := resolveProfile(svcs, args.Profile)
+		assignees := args.AssigneeUIDs
+		if len(args.ManagerUIDs) > 0 {
+			reports, err := mcpExpandManagersToReports(ctx, svcs, profile, args.ManagerUIDs)
+			if err != nil {
+				return errorResult(fmt.Sprintf("search_tickets: %v", err)), nil, nil
+			}
+			seen := make(map[string]struct{}, len(assignees)+len(reports))
+			for _, u := range assignees {
+				seen[u] = struct{}{}
+			}
+			for _, u := range reports {
+				if _, ok := seen[u]; ok {
+					continue
+				}
+				seen[u] = struct{}{}
+				assignees = append(assignees, u)
+			}
+		}
 		filter := domain.TicketSearchFilter{
-			AppID:         args.AppID,
-			StatusIDs:     args.StatusIDs,
-			AssigneeUIDs:  args.AssigneeUIDs,
-			RequestorUIDs: args.RequestorUIDs,
-			AccountIDs:    args.AccountIDs,
-			Text:          args.SearchText,
-			IncludeClosed: args.IncludeClosed,
-			Limit:         args.MaxResults,
+			AppID:                  args.AppID,
+			StatusIDs:              args.StatusIDs,
+			AssigneeUIDs:           assignees,
+			RequestorUIDs:          args.RequestorUIDs,
+			AccountIDs:             args.AccountIDs,
+			ResponsibilityGroupIDs: args.ResponsibilityGroupIDs,
+			Text:                   args.SearchText,
+			IncludeClosed:          args.IncludeClosed,
+			Limit:                  args.MaxResults,
 		}
 		tickets, err := svcs.Tickets.SearchTickets(ctx, profile, filter)
 		if err != nil {
@@ -389,5 +450,35 @@ func getTicketFeedHandler(svcs Services) func(context.Context, *sdkmcp.CallToolR
 			Schema  string          `json:"schema"`
 			Entries []feedEntryJSON `json:"entries"`
 		}{Schema: "tdx.v1.ticketFeed", Entries: out})
+	}
+}
+
+// --- list_ticket_groups types and handler ---
+
+type listTicketGroupsArgs struct {
+	Profile string `json:"profile,omitempty"`
+}
+
+type ticketGroupJSON struct {
+	ID     int    `json:"id"`
+	Name   string `json:"name"`
+	Active bool   `json:"active"`
+}
+
+func listTicketGroupsHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, listTicketGroupsArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, args listTicketGroupsArgs) (*sdkmcp.CallToolResult, any, error) {
+		profile := resolveProfile(svcs, args.Profile)
+		groups, err := svcs.Tickets.ListGroups(ctx, profile)
+		if err != nil {
+			return errorResult(fmt.Sprintf("list_ticket_groups: %v", err)), nil, nil
+		}
+		out := make([]ticketGroupJSON, 0, len(groups))
+		for _, g := range groups {
+			out = append(out, ticketGroupJSON{ID: g.ID, Name: g.Name, Active: g.Active})
+		}
+		return jsonResult(struct {
+			Schema string            `json:"schema"`
+			Groups []ticketGroupJSON `json:"groups"`
+		}{Schema: "tdx.v1.ticketGroupList", Groups: out})
 	}
 }

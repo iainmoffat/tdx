@@ -184,3 +184,23 @@ func TestParseTDTimeMultipleFormats(t *testing.T) {
 		t.Error("garbage should return zero")
 	}
 }
+
+func TestSearchTicketsSendsResponsibilityGroupIDs(t *testing.T) {
+	var capturedBody []byte
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedBody, _ = io.ReadAll(r.Body)
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+	svc, prof := harness(t, srv.URL)
+	_, err := svc.SearchTickets(context.Background(), prof, domain.TicketSearchFilter{
+		AppID:                  31,
+		ResponsibilityGroupIDs: []int{100, 200},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(capturedBody), `"ResponsibilityGroupIDs":[100,200]`) {
+		t.Errorf("ResponsibilityGroupIDs not in request body: %s", capturedBody)
+	}
+}

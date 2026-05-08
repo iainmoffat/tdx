@@ -13,6 +13,7 @@ import (
 // Mirrors the LookupPeople signature in internal/svc/peoplesvc.
 type peoplesvcAPI interface {
 	LookupPeople(ctx context.Context, profile string, q string, limit int) ([]domain.User, error)
+	SearchUsers(ctx context.Context, profile string, filter domain.UserFilter) ([]domain.User, error)
 }
 
 // resolvePrincipal maps a CLI argument to a UID.
@@ -75,4 +76,47 @@ func partialResultBanner(n int) string {
 		return ""
 	}
 	return fmt.Sprintf("(%d row(s) — partial; use `tdx ticket show <id>` for full detail)", n)
+}
+
+// expandManagersToReports resolves each manager argument (me|UID|email) to
+// a manager UID, then fetches all employees and filters those whose
+// ReportsToUID matches one of the resolved manager UIDs. Returns the
+// deduplicated set of direct-report UIDs.
+//
+// Why: TD's /api/people/search silently ignores ReportsToUid in the
+// request body, so we can't filter server-side. This helper does the
+// expansion in one pass over the staff list.
+func expandManagersToReports(ctx context.Context, people peoplesvcAPI, profile, authedUID string, managerArgs []string) ([]string, error) {
+	if len(managerArgs) == 0 {
+		return nil, nil
+	}
+	managerUIDs := make(map[string]struct{}, len(managerArgs))
+	for _, arg := range managerArgs {
+		uid, err := resolvePrincipal(ctx, people, profile, authedUID, arg)
+		if err != nil {
+			return nil, fmt.Errorf("--manager %q: %w", arg, err)
+		}
+		managerUIDs[uid] = struct{}{}
+	}
+	trueVal := true
+	all, err := people.SearchUsers(ctx, profile, domain.UserFilter{
+		Employee: &trueVal,
+		Limit:    5000,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("fetch staff for --manager expansion: %w", err)
+	}
+	seen := make(map[string]struct{})
+	var reports []string
+	for _, u := range all {
+		if _, ok := managerUIDs[u.ReportsToUID]; !ok {
+			continue
+		}
+		if _, dup := seen[u.UID]; dup {
+			continue
+		}
+		seen[u.UID] = struct{}{}
+		reports = append(reports, u.UID)
+	}
+	return reports, nil
 }
