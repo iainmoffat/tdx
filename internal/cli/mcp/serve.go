@@ -7,6 +7,7 @@ import (
 	mcpsrv "github.com/iainmoffat/tdx/internal/mcp"
 	"github.com/iainmoffat/tdx/internal/svc/authsvc"
 	"github.com/iainmoffat/tdx/internal/svc/draftsvc"
+	"github.com/iainmoffat/tdx/internal/svc/ticketsvc"
 	"github.com/iainmoffat/tdx/internal/svc/timesvc"
 	"github.com/iainmoffat/tdx/internal/svc/tmplsvc"
 
@@ -29,6 +30,7 @@ func newServeCmd() *cobra.Command {
 			tsvc := timesvc.New(paths)
 			tmsvc := tmplsvc.New(paths, tsvc)
 			drafts := draftsvc.NewService(paths, tsvc)
+			tickets := ticketsvc.New(paths)
 
 			profileName, err := auth.ResolveProfile(profileFlag)
 			if err != nil {
@@ -40,6 +42,7 @@ func newServeCmd() *cobra.Command {
 				Time:     tsvc,
 				Template: tmsvc,
 				Drafts:   drafts,
+				Tickets:  tickets,
 				Profile:  profileName,
 			})
 
