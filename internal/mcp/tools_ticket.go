@@ -65,6 +65,27 @@ type getTicketFeedArgs struct {
 	Limit   int    `json:"limit,omitempty"`
 }
 
+type listTicketTasksArgs struct {
+	Profile  string `json:"profile,omitempty"`
+	AppID    int    `json:"appID,omitempty"`
+	TicketID int    `json:"ticketID"`
+}
+
+type getTicketTaskArgs struct {
+	Profile  string `json:"profile,omitempty"`
+	AppID    int    `json:"appID,omitempty"`
+	TicketID int    `json:"ticketID"`
+	TaskID   int    `json:"taskID"`
+}
+
+type getTicketTaskFeedArgs struct {
+	Profile  string `json:"profile,omitempty"`
+	AppID    int    `json:"appID,omitempty"`
+	TicketID int    `json:"ticketID"`
+	TaskID   int    `json:"taskID"`
+	Limit    int    `json:"limit,omitempty"`
+}
+
 // --- JSON row types (mirrors cli/ticket shapes) ---
 
 type ticketAppJSON struct {
@@ -177,6 +198,30 @@ func formatTicketTime(t time.Time) string {
 	return t.Format(time.RFC3339)
 }
 
+type ticketTaskRowJSON struct {
+	ID               int    `json:"id"`
+	TicketID         int    `json:"ticketID"`
+	Title            string `json:"title"`
+	PercentComplete  int    `json:"percentComplete"`
+	EstimatedMinutes int    `json:"estimatedMinutes,omitempty"`
+	ActualMinutes    int    `json:"actualMinutes,omitempty"`
+	ResponsibleName  string `json:"responsibleName,omitempty"`
+	Order            int    `json:"order"`
+}
+
+func toTaskRowJSON(t domain.TicketTask) ticketTaskRowJSON {
+	resp := t.ResponsibleName
+	if resp == "" && t.ResponsibleGroupName != "" {
+		resp = t.ResponsibleGroupName + " (group)"
+	}
+	return ticketTaskRowJSON{
+		ID: t.ID, TicketID: t.TicketID, Title: t.Title,
+		PercentComplete:  t.PercentComplete,
+		EstimatedMinutes: t.EstimatedMinutes, ActualMinutes: t.ActualMinutes,
+		ResponsibleName: resp, Order: t.Order,
+	}
+}
+
 // mcpExpandManagersToReports mirrors the CLI helper for the MCP layer.
 // MCP inputs accept UIDs only (no "me" or email), so this skips the
 // resolvePrincipal step and does only the bulk staff fetch + filter.
@@ -260,6 +305,21 @@ func RegisterTicketTools(srv *sdkmcp.Server, svcs Services) {
 		Name:        "list_ticket_groups",
 		Description: "List tenant responsibility groups (teams that can be assigned tickets). Read-only.",
 	}, listTicketGroupsHandler(svcs))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name:        "list_ticket_tasks",
+		Description: "List tasks on a ticket. Read-only.",
+	}, listTicketTasksHandler(svcs))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name:        "get_ticket_task",
+		Description: "Get full detail for one ticket task. Read-only.",
+	}, getTicketTaskHandler(svcs))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name:        "get_ticket_task_feed",
+		Description: "Read feed entries for a ticket task. Read-only.",
+	}, getTicketTaskFeedHandler(svcs))
 }
 
 // --- Handlers ---
@@ -480,5 +540,54 @@ func listTicketGroupsHandler(svcs Services) func(context.Context, *sdkmcp.CallTo
 			Schema string            `json:"schema"`
 			Groups []ticketGroupJSON `json:"groups"`
 		}{Schema: "tdx.v1.ticketGroupList", Groups: out})
+	}
+}
+
+func listTicketTasksHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, listTicketTasksArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, args listTicketTasksArgs) (*sdkmcp.CallToolResult, any, error) {
+		profile := resolveProfile(svcs, args.Profile)
+		tasks, err := svcs.Tickets.ListTasks(ctx, profile, args.AppID, args.TicketID)
+		if err != nil {
+			return errorResult(fmt.Sprintf("list_ticket_tasks: %v", err)), nil, nil
+		}
+		out := make([]ticketTaskRowJSON, 0, len(tasks))
+		for _, t := range tasks {
+			out = append(out, toTaskRowJSON(t))
+		}
+		return jsonResult(struct {
+			Schema string              `json:"schema"`
+			Tasks  []ticketTaskRowJSON `json:"tasks"`
+		}{Schema: "tdx.v1.ticketTaskList", Tasks: out})
+	}
+}
+
+func getTicketTaskHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, getTicketTaskArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, args getTicketTaskArgs) (*sdkmcp.CallToolResult, any, error) {
+		profile := resolveProfile(svcs, args.Profile)
+		task, err := svcs.Tickets.GetTask(ctx, profile, args.AppID, args.TicketID, args.TaskID)
+		if err != nil {
+			return errorResult(fmt.Sprintf("get_ticket_task: %v", err)), nil, nil
+		}
+		return jsonResult(struct {
+			Schema string            `json:"schema"`
+			Task   domain.TicketTask `json:"task"`
+		}{Schema: "tdx.v1.ticketTask", Task: task})
+	}
+}
+
+func getTicketTaskFeedHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, getTicketTaskFeedArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, args getTicketTaskFeedArgs) (*sdkmcp.CallToolResult, any, error) {
+		profile := resolveProfile(svcs, args.Profile)
+		entries, err := svcs.Tickets.GetTaskFeed(ctx, profile, args.AppID, args.TicketID, args.TaskID)
+		if err != nil {
+			return errorResult(fmt.Sprintf("get_ticket_task_feed: %v", err)), nil, nil
+		}
+		if args.Limit > 0 && len(entries) > args.Limit {
+			entries = entries[:args.Limit]
+		}
+		return jsonResult(struct {
+			Schema  string                   `json:"schema"`
+			Entries []domain.TicketFeedEntry `json:"entries"`
+		}{Schema: "tdx.v1.ticketTaskFeed", Entries: entries})
 	}
 }

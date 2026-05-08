@@ -51,7 +51,7 @@ func TestNewServer_RegistersAllTools(t *testing.T) {
 		names[i] = tool.Name
 	}
 
-	const wantCount = 57
+	const wantCount = 60
 	require.Len(t, result.Tools, wantCount,
 		"expected %d tools, got %d: %v", wantCount, len(result.Tools), names)
 }
