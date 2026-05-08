@@ -16,7 +16,7 @@ func TestGetFeedDecodes(t *testing.T) {
 		}
 		_, _ = w.Write([]byte(`[
 			{"ID": 100, "CreatedUid": "uid-a", "CreatedFullName": "Alice", "CreatedDate": "2026-05-01T10:00:00Z", "Body": "first comment", "IsPrivate": false, "UpdateType": 1},
-			{"ID": 101, "CreatedUid": "uid-b", "CreatedFullName": "Bob", "CreatedDate": "2026-05-02T11:00:00Z", "Body": "status changed", "IsPrivate": false, "UpdateType": 2}
+			{"ID": 101, "CreatedUid": "uid-b", "CreatedFullName": "Bob", "CreatedDate": "2026-05-02T11:00:00Z", "Body": "status changed", "IsPrivate": false, "UpdateType": 3}
 		]`))
 	}))
 	defer srv.Close()
@@ -31,7 +31,7 @@ func TestGetFeedDecodes(t *testing.T) {
 	if entries[0].AuthorName != "Alice" || entries[0].EventKind != "comment" {
 		t.Errorf("first entry decode: %+v", entries[0])
 	}
-	if entries[1].EventKind != "statusChange" {
+	if entries[1].EventKind != "event" {
 		t.Errorf("second entry kind: %+v", entries[1])
 	}
 	if entries[0].CreatedAt.IsZero() {
@@ -94,7 +94,7 @@ func TestClassifyFeedKind(t *testing.T) {
 		in   int
 		want string
 	}{
-		{1, "comment"}, {2, "statusChange"}, {3, "attachment"}, {4, "task"},
+		{1, "comment"}, {3, "event"},
 		{0, "event"}, {99, "event"},
 	}
 	for _, c := range cases {

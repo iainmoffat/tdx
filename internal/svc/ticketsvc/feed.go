@@ -63,17 +63,17 @@ func (s *Service) AddFeed(ctx context.Context, profileName string, appID, ticket
 }
 
 // classifyFeedKind maps TD's UpdateType integer to a human label.
-// Mapping per documented TD enum (verify live in Task 19).
+//
+// Live-verified on UFL 2026-05-08: comments come through as UpdateType=1;
+// system events (status changes, assignment changes, attachments, etc.)
+// all come through as UpdateType=3. The body text already describes what
+// the event is, so we label class 3 generically as "event" rather than
+// pretending we can distinguish status-change from attachment from
+// assignment without parsing the body.
 func classifyFeedKind(t int) string {
 	switch t {
 	case 1:
 		return "comment"
-	case 2:
-		return "statusChange"
-	case 3:
-		return "attachment"
-	case 4:
-		return "task"
 	default:
 		return "event"
 	}
