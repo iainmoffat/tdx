@@ -59,120 +59,33 @@ tdx time report status --resource-pool "Pool A" --resource-pool "Pool B" --week 
 
 ## Commands
 
-### Auth
+```text
+tdx
+├── auth
+│   ├── login / logout / status
+│   └── profile          → list / add / remove / use
+├── people
+│   ├── search / show
+│   ├── accounts         → list
+│   └── pools            → list
+├── time
+│   ├── entry            → list / show / add / update / delete
+│   ├── template         → derive / list / show / edit / clone / delete / apply / compare
+│   ├── type             → list / for
+│   ├── week             → show / locked / pull / list / status / edit / diff / preview / push / delete / set / note / history / new / copy / rename / reset / refresh / rebase / resolve / archive / unarchive / snapshot / restore / prune
+│   └── report           → status
+├── mcp                  → serve
+├── config               → path / init / show
+├── completion           → bash / zsh / fish
+└── version
+```
 
-| Command | Description |
-|---|---|
-| `tdx auth login --url <tenant>` | Authenticate with a TD tenant |
-| `tdx auth login --sso` | Re-authenticate via SSO |
-| `tdx auth status` | Show current user and session |
-| `tdx auth logout` | Clear stored credentials |
-| `tdx auth profile list` | List configured profiles |
-| `tdx auth profile add <name> --url <tenant>` | Add a profile |
-| `tdx auth profile remove <name>` | Remove a profile |
-| `tdx auth profile use <name>` | Set the default profile |
+Full reference: [User Guide](docs/guide.md). The guide is split per top-level command:
 
-### Time Entries
-
-| Command | Description | Key Flags |
-|---|---|---|
-| `tdx time entry list` | List entries (default: this week) | `--week`, `--from`/`--to`, `--ticket`, `--type`, `--json` |
-| `tdx time entry show <id>` | Show a single entry | `--json` |
-| `tdx time entry add` | Create an entry | `--date`, `--hours`/`--minutes`, `--type`, target flags, `--dry-run` |
-| `tdx time entry update <id>` | Update an entry | `--date`, `--hours`, `--type`, `-d`, `--dry-run` |
-| `tdx time entry delete <id> [<id>...] --yes` | Delete entries (preview with `--dry-run`) | `--yes`, `--dry-run` |
-
-### Time Week
-
-| Command | Description |
-|---|---|
-| `tdx time week show [date]` | Show week as a grid (default: this week) |
-| `tdx time week locked` | Show locked days |
-
-### Time Week Drafts
-
-Local week drafts let you pull a live week down, edit it as a YAML
-artifact, validate, diff, preview, and push back with safety guarantees.
-
-| Command | Description | Key Flags |
-|---|---|---|
-| `tdx time week pull [date]` | Pull live week into a local draft | `--name`, `--force`, `--json` |
-| `tdx time week list` | List local drafts with sync state | `--dirty`, `--conflicted`, `--date`, `--archived`, `--no-remote-check`, `--json` |
-| `tdx time week show [date] --draft [name]` | Show a draft as a grid | (flag added to existing `show`) |
-| `tdx time week status [date[/name]]` | One-screen draft status | `--json`, `--no-remote-check` |
-| `tdx time week edit [date[/name]]` | Edit a draft in an interactive grid | `--web`, `--profile` |
-| `tdx time week diff [date[/name]]` | Diff a draft vs current remote | `--against remote`, `--json` |
-| `tdx time week preview [date[/name]]` | Preview what `push` will do | `--json` |
-| `tdx time week push [date[/name]] --yes` | Push a draft to TD | `--allow-deletes`, `--expected-diff-hash`, `--json` |
-| `tdx time week delete [date[/name]] --yes` | Delete a draft (auto-snapshots first) | `--keep-snapshots` |
-| `tdx time week set <date>[/<name>] <row>:<day>=<h>` | Non-interactive cell write | (repeatable) |
-| `tdx time week note [date[/name]]` | Edit free-form notes | `--append`, `--clear` |
-| `tdx time week history [date[/name]]` | List snapshots | `--json`, `--limit N` |
-| `tdx time week new [date]` | Create blank/template-seeded/cloned draft | `--from-template`, `--from-draft`, `--shift`, `--name` |
-| `tdx time week copy <src> <dst>` | Clone a draft to a new ref | (positional) |
-| `tdx time week rename <date>[/<old>] <new>` | Rename a draft (preserves snapshots) | (positional) |
-| `tdx time week reset [date[/name]] --yes` | Discard local edits + re-pull (auto-snapshots) | `--yes` |
-| `tdx time week refresh [date[/name]]` | Three-way merge against current remote | `--strategy abort\|ours\|theirs\|surface`, `--json` |
-| `tdx time week rebase [date[/name]]` | Alias of refresh (same flags, same behavior) | `--strategy abort\|ours\|theirs\|surface`, `--json` |
-| `tdx time week resolve [date[/name]]` | Pick winners for conflicts produced by `--strategy surface` | `--row`, `--day`, `--pick`, `--all-local`, `--all-remote`, `--yes`, `--json` |
-| `tdx time week archive [date[/name]]` | Hide draft from default `list` | (none) |
-| `tdx time week unarchive [date[/name]]` | Show previously archived draft | (none) |
-| `tdx time week snapshot [date[/name]]` | Take a manual snapshot | `--keep`, `--note` |
-| `tdx time week restore [date[/name]] --snapshot N --yes` | Restore from snapshot | `--snapshot`, `--yes` |
-| `tdx time week prune [date[/name]] --yes` | Drop unpinned snapshots | `--older-than`, `--yes` |
-
-> Commands taking `[date]` or `[date[/name]]` default to the current week if omitted. `set`, `copy`, and `rename` keep their explicit week argument.
-
-### Time Types
-
-| Command | Description |
-|---|---|
-| `tdx time type list` | List all time types |
-| `tdx time type for <kind> <id>` | Show valid types for a work item |
-
-### Templates
-
-| Command | Description | Key Flags |
-|---|---|---|
-| `tdx time template derive <name>` | Create template from a live week | `--from-week` |
-| `tdx time template list` | List saved templates | `--json` |
-| `tdx time template show <name>` | Show template as a grid | `--json` |
-| `tdx time template edit <name>` | Edit template hours in a grid editor | `--web` |
-| `tdx time template clone <name> <new>` | Copy a template | |
-| `tdx time template delete <name>` | Delete a template | |
-| `tdx time template apply <name>` | Apply template to a week | `--week`, `--mode`, `--days`, `--dry-run`, `--yes` |
-| `tdx time template compare <name>` | Compare template vs live week | `--week`, `--mode` |
-
-### Time Reports
-
-| Command | Description | Key Flags |
-|---|---|---|
-| `tdx time report status` | Weekly time-status report (per user, per week) | `--week`, `--from`/`--to`, `--user`, `--manager`, `--account`, `--resource-pool`, `--all`, `--include-zero`, `--incomplete`, `--threshold`, `--limit`, `--json`, `--csv`, `--xlsx` |
-
-> Selector **types** are mutually exclusive (exactly one of `--user`, `--manager`, `--account`, `--resource-pool`, `--all` required) but each accepts multiple values via repeated flags or comma-separated lists. Multi-value semantics are union: `--manager me --manager other-uid` reports on direct reports of either. `--manager me` resolves to the authenticated user. `--account` and `--resource-pool` match by exact name (case-insensitive); use `tdx people pools list` to see available pool names. Output formats are mutually exclusive; default is human table.
-
-### People
-
-| Command | Description | Key Flags |
-|---|---|---|
-| `tdx people search QUERY` | Find people by partial name/email/ID (defaults to staff only) | `--limit`, `--include-clients`, `--json` |
-| `tdx people show <UID>` | Full details for one user | `--json` |
-| `tdx people accounts list` | List TD accounts/departments | `--json` |
-| `tdx people pools list` | List TD resource pools | `--json` |
-
-### MCP
-
-| Command | Description |
-|---|---|
-| `tdx mcp serve` | Start the MCP server over stdio |
-
-### Other
-
-| Command | Description |
-|---|---|
-| `tdx version` | Print version |
-| `tdx config show` | Show configuration |
-| `tdx completion bash\|zsh\|fish` | Generate shell completions |
+- [tdx auth](docs/guide/auth.md)
+- [tdx time](docs/guide/time.md)
+- [tdx people](docs/guide/people.md)
+- [tdx mcp](docs/guide/mcp.md)
 
 ## MCP Integration
 
@@ -191,67 +104,8 @@ Add tdx as an MCP server in your AI tool's configuration:
 
 The MCP server exposes 44 tools (22 read-only, 22 mutating). All mutating
 tools require `confirm: true`. Template applies require an `expectedDiffHash`
-from a prior preview call for race protection.
-
-**Week drafts (Phase A — read-only, 4 tools):**
-
-| Tool | Description |
-|------|-------------|
-| `list_week_drafts` | List local drafts with sync state |
-| `get_week_draft` | Load a single draft + sync state |
-| `preview_push_week_draft` | Preview push and capture diffHash |
-| `diff_week_draft` | Cell-level diff vs remote |
-
-**Week drafts (Phase A — mutating, 4 tools, all require `confirm: true`):**
-
-| Tool | Description |
-|------|-------------|
-| `pull_week_draft` | Pull live week into a local draft |
-| `update_week_draft` | Apply per-cell edits (hours=0 on pulled cell = delete-on-push) |
-| `delete_week_draft` | Delete a draft (auto-snapshots) |
-| `push_week_draft` | Push to TD; requires `expectedDiffHash` and `allowDeletes` for any deletes |
-
-**Week drafts (Phase B.1 — read-only, 1 tool):**
-
-| Tool | Description |
-|------|-------------|
-| `list_week_draft_snapshots` | List snapshots for a draft |
-
-**Week drafts (Phase B.1 — mutating, 8 tools, all require `confirm: true`):**
-
-| Tool | Description |
-|------|-------------|
-| `create_week_draft` | Create a draft: blank, template:<n>, or draft:<ref> seed |
-| `copy_week_draft` | Clone a draft (src ref) to a new ref (dst ref) |
-| `rename_week_draft` | Rename a draft (preserves snapshot history) |
-| `reset_week_draft` | Discard local edits and re-pull from remote (auto-snapshots first) |
-| `archive_week_draft` | Hide a draft from default list output |
-| `unarchive_week_draft` | Show a previously archived draft in list output |
-| `snapshot_week_draft` | Take a manual snapshot; optional `--keep` to pin |
-| `restore_week_draft_snapshot` | Restore a draft from a snapshot by sequence number |
-| `prune_week_draft_snapshots` | Drop unpinned snapshots (by age or to retention cap) |
-
-**Week drafts (Phase B.2a — mutating, 1 tool, requires `confirm: true`):**
-
-| Tool | Description |
-|------|-------------|
-| `refresh_week_draft` | Three-way merge a draft against current remote; supports `strategy` `abort`/`ours`/`theirs`/`surface` |
-| `resolve_week_draft` | Pick winners for conflicts surfaced by `refresh strategy=surface` (cell-by-cell or bulk) |
-
-**Time Reports (Phase C — read-only, 1 tool):**
-
-| Tool | Description |
-|------|-------------|
-| `get_time_status_report` | Generate a per-user, per-week time-status report (selectors: `userUIDs`, `managers`, `accounts`, `resourcePools`, `all`) |
-
-**People (read-only, 4 tools):**
-
-| Tool | Description |
-|------|-------------|
-| `search_people` | Find people by partial name/email/ID; defaults to staff only (`includeClients: true` to add portal users) |
-| `get_person` | Fetch full record for a single user by UID |
-| `list_accounts` | List TD accounts/departments, sorted by name |
-| `list_resource_pools` | List TD resource pools, sorted by name |
+from a prior preview call for race protection. See [tdx mcp](docs/guide/mcp.md)
+for the full tool catalog and safety model.
 
 ## JSON Output
 
