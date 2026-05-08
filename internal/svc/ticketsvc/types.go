@@ -98,3 +98,17 @@ type wireFeedAdd struct {
 	Notify    []string `json:"Notify,omitempty"`
 	IsPrivate bool     `json:"IsPrivate"`
 }
+
+// wireSavedSearch matches a row in GET /tickets/searches.
+type wireSavedSearch struct {
+	ID            int    `json:"ID"`
+	Name          string `json:"Name"`
+	OwnerUid      string `json:"OwnerUid"`
+	OwnerFullName string `json:"OwnerFullName"`
+	Description   string `json:"Description"`
+}
+
+// wireSavedSearchOptions is the request body for POST /tickets/searches/{id}/results.
+type wireSavedSearchOptions struct {
+	MaxResults int `json:"MaxResults,omitempty"`
+}
