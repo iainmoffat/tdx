@@ -114,3 +114,23 @@ func TestProfileStore_SetDefaultMissing(t *testing.T) {
 	err := s.SetDefault("nope")
 	require.ErrorIs(t, err, domain.ErrProfileNotFound)
 }
+
+func TestProfileStore_UpdateProfile(t *testing.T) {
+	p := writablePaths(t)
+	store := NewProfileStore(p)
+
+	require.NoError(t, store.AddProfile(domain.Profile{Name: "default", TenantBaseURL: "https://x.example.com/"}))
+	require.NoError(t, store.UpdateProfile(domain.Profile{Name: "default", TenantBaseURL: "https://x.example.com/", TicketAppID: 42}))
+
+	got, err := store.GetProfile("default")
+	require.NoError(t, err)
+	require.Equal(t, 42, got.TicketAppID)
+}
+
+func TestProfileStore_UpdateProfileNotFound(t *testing.T) {
+	p := writablePaths(t)
+	store := NewProfileStore(p)
+
+	err := store.UpdateProfile(domain.Profile{Name: "ghost", TenantBaseURL: "https://x.example.com/"})
+	require.ErrorIs(t, err, domain.ErrProfileNotFound)
+}

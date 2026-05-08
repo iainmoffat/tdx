@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestProfile_Validate_AcceptsValidProfile(t *testing.T) {
@@ -71,4 +72,46 @@ func TestProfile_Validate_RejectsURLWithNoHost(t *testing.T) {
 		TenantBaseURL: "https://",
 	}
 	require.ErrorIs(t, p.Validate(), ErrInvalidProfile)
+}
+
+func TestProfileTicketAppIDRoundTrip(t *testing.T) {
+	// Construct a Profile with TicketAppID set; round-trip through yaml.Marshal/Unmarshal;
+	// verify the field survives.
+	original := Profile{
+		Name:          "myprofile",
+		TenantBaseURL: "https://example.teamdynamix.com/",
+		TicketAppID:   42,
+	}
+
+	// Marshal to YAML
+	data, err := yaml.Marshal(original)
+	require.NoError(t, err)
+
+	// Unmarshal back
+	var restored Profile
+	err = yaml.Unmarshal(data, &restored)
+	require.NoError(t, err)
+
+	// Verify all fields match, including TicketAppID
+	require.Equal(t, original.Name, restored.Name)
+	require.Equal(t, original.TenantBaseURL, restored.TenantBaseURL)
+	require.Equal(t, original.TicketAppID, restored.TicketAppID)
+	require.Equal(t, 42, restored.TicketAppID)
+}
+
+func TestProfileTicketAppIDOmittedWhenZero(t *testing.T) {
+	// Construct a Profile WITHOUT TicketAppID (zero value); marshal to yaml;
+	// verify the output does NOT contain the string "ticketAppID" (omitempty should drop it).
+	p := Profile{
+		Name:          "myprofile",
+		TenantBaseURL: "https://example.teamdynamix.com/",
+		// TicketAppID is implicitly 0
+	}
+
+	data, err := yaml.Marshal(p)
+	require.NoError(t, err)
+
+	// Verify the YAML output does not contain "ticketAppID"
+	yamlStr := string(data)
+	require.NotContains(t, yamlStr, "ticketAppID")
 }

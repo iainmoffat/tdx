@@ -28,6 +28,12 @@ tdx
 │   ├── search / show
 │   ├── accounts         → list
 │   └── pools            → list
+├── ticket
+│   ├── app              → list / use / show
+│   ├── search           → saved
+│   ├── show / feed
+│   ├── comment / status / assign / log
+│   └── types / statuses → list
 ├── time
 │   ├── entry            → list / show / add / update / delete
 │   ├── template         → derive / list / show / edit / clone / delete / apply / compare
@@ -45,6 +51,7 @@ tdx
 - [tdx auth](guide/auth.md) — authenticate and manage profiles
 - [tdx time](guide/time.md) — time entries, week drafts, templates, reports
 - [tdx people](guide/people.md) — find users, accounts, resource pools
+- [tdx ticket](guide/ticket.md) — search, show, comment, status/assign, log time
 - [tdx mcp](guide/mcp.md) — MCP server for AI agents
 
 ---
