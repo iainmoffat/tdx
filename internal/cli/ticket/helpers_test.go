@@ -140,3 +140,69 @@ func (s *stubPeoplesvc) SearchUsers(_ context.Context, _ string, filter domain.U
 	s.lastFilter = filter
 	return s.searchUsers, s.searchErr
 }
+
+func TestExpandManagersToReportsEmpty(t *testing.T) {
+	got, err := expandManagersToReports(context.Background(), &stubPeoplesvc{}, "default", "uid-me", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 0 {
+		t.Errorf("want empty, got %v", got)
+	}
+}
+
+func TestExpandManagersToReportsMe(t *testing.T) {
+	stub := &stubPeoplesvc{
+		searchUsers: []domain.User{
+			{UID: "report-1", FullName: "Alice", ReportsToUID: "uid-me"},
+			{UID: "report-2", FullName: "Bob", ReportsToUID: "uid-me"},
+			{UID: "other-1", FullName: "Carol", ReportsToUID: "uid-someone-else"},
+		},
+	}
+	got, err := expandManagersToReports(context.Background(), stub, "default", "uid-me", []string{"me"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("want 2 reports, got %d: %v", len(got), got)
+	}
+	want := map[string]bool{"report-1": true, "report-2": true}
+	for _, uid := range got {
+		if !want[uid] {
+			t.Errorf("unexpected uid: %s", uid)
+		}
+	}
+	if stub.lastFilter.Employee == nil || !*stub.lastFilter.Employee {
+		t.Errorf("Employee filter not set: %+v", stub.lastFilter)
+	}
+	if stub.lastFilter.Limit != 5000 {
+		t.Errorf("Limit: got %d, want 5000", stub.lastFilter.Limit)
+	}
+}
+
+func TestExpandManagersToReportsMultipleManagers(t *testing.T) {
+	stub := &stubPeoplesvc{
+		users: []domain.User{{UID: "alice-uid", FullName: "Alice", Email: "alice@x"}},
+		searchUsers: []domain.User{
+			{UID: "u1", ReportsToUID: "alice-uid"},
+			{UID: "u2", ReportsToUID: "uid-me"},
+			{UID: "u3", ReportsToUID: "alice-uid"},
+			{UID: "u4", ReportsToUID: "someone-else"},
+		},
+	}
+	got, err := expandManagersToReports(context.Background(), stub, "default", "uid-me", []string{"me", "Alice"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("want 3 reports, got %d: %v", len(got), got)
+	}
+}
+
+func TestExpandManagersToReportsErrorPropagates(t *testing.T) {
+	stub := &stubPeoplesvc{searchErr: errors.New("boom")}
+	_, err := expandManagersToReports(context.Background(), stub, "default", "uid-me", []string{"me"})
+	if err == nil || !strings.Contains(err.Error(), "boom") {
+		t.Fatalf("want propagated error, got %v", err)
+	}
+}
