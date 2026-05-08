@@ -24,3 +24,14 @@ func TestTicketSearchFilterResponsibilityGroupIDs(t *testing.T) {
 		t.Fatalf("want 2, got %d", len(f.ResponsibilityGroupIDs))
 	}
 }
+
+func TestTicketTaskZeroValueIsValid(t *testing.T) {
+	_ = TicketTask{}
+}
+
+func TestTicketTaskFields(t *testing.T) {
+	tk := TicketTask{ID: 1, TicketID: 100, Title: "x", PercentComplete: 50}
+	if tk.PercentComplete != 50 {
+		t.Fatalf("PercentComplete: got %d, want 50", tk.PercentComplete)
+	}
+}
