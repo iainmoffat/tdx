@@ -13,3 +13,14 @@ func TestTicketSearchFilterZeroValueIsValid(t *testing.T) {
 	// No fields are required at construction time — service layer applies defaults.
 	_ = TicketSearchFilter{}
 }
+
+func TestTicketGroupZeroValueIsValid(t *testing.T) {
+	_ = TicketGroup{}
+}
+
+func TestTicketSearchFilterResponsibilityGroupIDs(t *testing.T) {
+	f := TicketSearchFilter{ResponsibilityGroupIDs: []int{1, 2}}
+	if len(f.ResponsibilityGroupIDs) != 2 {
+		t.Fatalf("want 2, got %d", len(f.ResponsibilityGroupIDs))
+	}
+}

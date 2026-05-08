@@ -30,6 +30,15 @@ type TicketType struct {
 	Active      bool
 }
 
+// TicketGroup is a TD responsibility group (a team that can be assigned
+// tickets). Groups exist tenant-wide and can serve multiple ticket apps;
+// the search endpoint filters by ResponsibilityGroupIDs (server-side honored).
+type TicketGroup struct {
+	ID     int
+	Name   string
+	Active bool
+}
+
 // Ticket is one row from POST /tickets/search (partial; IsFull=false) or
 // GET /tickets/{id} (full; IsFull=true).
 type Ticket struct {
@@ -70,14 +79,15 @@ type TicketFeedEntry struct {
 
 // TicketSearchFilter drives POST /tickets/search.
 type TicketSearchFilter struct {
-	AppID         int
-	StatusIDs     []int
-	AssigneeUIDs  []string
-	RequestorUIDs []string
-	AccountIDs    []int
-	Text          string
-	IncludeClosed bool
-	Limit         int
+	AppID                  int
+	StatusIDs              []int
+	AssigneeUIDs           []string
+	RequestorUIDs          []string
+	AccountIDs             []int
+	ResponsibilityGroupIDs []int
+	Text                   string
+	IncludeClosed          bool
+	Limit                  int
 }
 
 // TicketSavedSearch is one row from GET /tickets/searches.
