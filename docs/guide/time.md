@@ -363,7 +363,7 @@ Week drafts are first-class, locally-stored, dated week documents that let
 you pull a live week from TeamDynamix, edit it offline, validate, diff,
 preview, and push back with safety guarantees.
 
-#### Concepts
+### Concepts
 
 A **week draft** is identified by `(profile, weekStart, name)` where:
 - `weekStart` is the Sunday of the target week (in EasternTZ)
@@ -377,7 +377,7 @@ A **snapshot** is an immutable point-in-time copy of a draft, taken automaticall
 before destructive operations (pull-overwriting-dirty, push, delete). Bounded
 retention (last 10 unpinned by default).
 
-#### Sync state
+### Sync state
 
 Every draft is in one of these states:
 
@@ -388,7 +388,7 @@ Every draft is in one of these states:
 | **stale** | Remote fingerprint changed since pull (independent flag). |
 | **conflicted** | Refresh detected divergent remote changes (Phase B). |
 
-#### Lifecycle
+### Lifecycle
 
 ```
 ABSENT --pull--> EXISTS (clean) --edit--> EXISTS (dirty)
@@ -401,7 +401,7 @@ ABSENT --pull--> EXISTS (clean) --edit--> EXISTS (dirty)
                                             EXISTS (clean, pushed)
 ```
 
-#### Editing
+### Editing
 
 The interactive grid editor (same as `tdx time template edit`) lets you
 navigate cells with arrow keys or Tab and type new values. Use `--web` to
@@ -415,7 +415,7 @@ zeroing a local-only addition drops the cell entirely.
 To add or remove rows, use `tdx time week new --from-template` or
 `tdx time week set`.
 
-#### Push safety contract
+### Push safety contract
 
 Three layered guarantees:
 
@@ -429,7 +429,7 @@ Three layered guarantees:
    without the explicit `--allow-deletes` flag. This is an extra speed
    bump beyond `--yes` whenever destruction is involved.
 
-#### Worked examples
+### Worked examples
 
 **Mid-week correction:**
 
@@ -455,7 +455,7 @@ tdx time week diff 2026-04-27   # vs current remote
 In the grid, leave Sun/Sat cells at their pulled value (or zero if they
 weren't pulled); only edited cells generate actions on push.
 
-#### Auto-snapshot history
+### Auto-snapshot history
 
 Use `tdx time week history <date>` to list snapshots:
 
@@ -539,8 +539,10 @@ Alternates for the same date are grouped visually under the same week header:
 ```
 
 Flags: `--dirty` to show only drafts with uncommitted edits; `--conflicted`
-to show only drafts in the conflicted state; `--archived` to include
-archived drafts (hidden by default).
+to show only drafts in the conflicted state; `--date <YYYY-MM-DD>` to filter
+by week; `--archived` to include archived drafts (hidden by default).
+Use `--no-remote-check` to skip the live-week fingerprint check, and `--json`
+for machine-readable output.
 
 ### tdx time week status
 
@@ -583,12 +585,9 @@ tdx time week diff 2026-04-27
 tdx time week diff 2026-04-27 --json
 ```
 
-Diff is cell-level. Pass `--against <ref>` to diff against another local
-draft instead of the remote:
-
-```bash
-tdx time week diff 2026-04-27 --against 2026-04-27/pristine
-```
+Diff is cell-level. Default compares the draft against the live remote week.
+Pass `--against remote` to make this explicit (e.g. when piping output where
+defaults are unclear).
 
 ### tdx time week preview
 
@@ -666,6 +665,8 @@ SEQ   OP            TAKEN                 PINNED  NOTE
 2     pre-push      2026-04-27 15:02:11
 3     manual        2026-04-27 16:45:00   yes     before risky edit
 ```
+
+Use `--json` for machine-readable output; `--limit N` to cap the number of snapshots shown.
 
 ### tdx time week new
 
