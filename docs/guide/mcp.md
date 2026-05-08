@@ -53,7 +53,7 @@ Add tdx to your AI tool's MCP configuration:
 
 ## Available tools
 
-The MCP server exposes 57 tools (30 read-only, 27 mutating). All mutating
+The MCP server exposes 62 tools (35 read-only, 27 mutating). All mutating
 tools require `confirm: true`. Template applies require an `expectedDiffHash`
 from a prior preview call for race protection.
 
@@ -123,7 +123,7 @@ Requires `confirm: true`.
 | `list_accounts` | List TD accounts/departments, sorted by name |
 | `list_resource_pools` | List TD resource pools, sorted by name |
 
-#### Tickets (Phase D — read-only, 9 tools)
+#### Tickets (Phase D — read-only, 12 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -136,8 +136,11 @@ Requires `confirm: true`.
 | `get_ticket` | Get full detail for one ticket |
 | `get_ticket_feed` | Read feed entries for a ticket |
 | `list_ticket_groups` | List tenant responsibility groups (teams) |
+| `list_ticket_tasks` | List tasks on a ticket |
+| `get_ticket_task` | Get full detail for one ticket task |
+| `get_ticket_task_feed` | Read feed entries for a ticket task |
 
-#### Tickets (Phase D — mutating, 4 tools, all require `confirm: true`)
+#### Tickets (Phase D — mutating, 6 tools, all require `confirm: true`)
 
 | Tool | Description |
 |------|-------------|
@@ -145,6 +148,8 @@ Requires `confirm: true`.
 | `update_ticket_status` | Change a ticket's status (by name or id) |
 | `update_ticket_assignee` | Reassign a ticket by responsible UID |
 | `log_ticket_time` | Log time worked against a ticket (creates a time entry) |
+| `update_ticket_task` | Post a feed update to a task (percentComplete + comment + informational hoursWorked) |
+| `log_ticket_task_time` | Log time worked against a ticket task (creates a time entry) |
 
 ## Safety model
 
