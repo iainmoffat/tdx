@@ -13,6 +13,7 @@ import (
 // Mirrors the LookupPeople signature in internal/svc/peoplesvc.
 type peoplesvcAPI interface {
 	LookupPeople(ctx context.Context, profile string, q string, limit int) ([]domain.User, error)
+	SearchUsers(ctx context.Context, profile string, filter domain.UserFilter) ([]domain.User, error)
 }
 
 // resolvePrincipal maps a CLI argument to a UID.

@@ -125,10 +125,18 @@ func TestPartialResultBannerWithRows(t *testing.T) {
 
 // stubPeoplesvc satisfies peoplesvcAPI for tests.
 type stubPeoplesvc struct {
-	users []domain.User
-	err   error
+	users       []domain.User
+	err         error
+	searchUsers []domain.User
+	searchErr   error
+	lastFilter  domain.UserFilter
 }
 
 func (s *stubPeoplesvc) LookupPeople(_ context.Context, _ string, _ string, _ int) ([]domain.User, error) {
 	return s.users, s.err
+}
+
+func (s *stubPeoplesvc) SearchUsers(_ context.Context, _ string, filter domain.UserFilter) ([]domain.User, error) {
+	s.lastFilter = filter
+	return s.searchUsers, s.searchErr
 }
