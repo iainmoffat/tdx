@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/svc/peoplesvc"
 )
 
 // peoplesvcAPI is the subset of peoplesvc used by ticket helpers.
@@ -14,6 +15,7 @@ import (
 type peoplesvcAPI interface {
 	LookupPeople(ctx context.Context, profile string, q string, limit int) ([]domain.User, error)
 	SearchUsers(ctx context.Context, profile string, filter domain.UserFilter) ([]domain.User, error)
+	ResolveAccountByName(ctx context.Context, profile, name string) (peoplesvc.Account, error)
 }
 
 // resolvePrincipal maps a CLI argument to a UID.

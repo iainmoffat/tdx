@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/iainmoffat/tdx/internal/svc/peoplesvc"
 )
 
 func TestResolvePrincipalMe(t *testing.T) {
@@ -125,11 +126,13 @@ func TestPartialResultBannerWithRows(t *testing.T) {
 
 // stubPeoplesvc satisfies peoplesvcAPI for tests.
 type stubPeoplesvc struct {
-	users       []domain.User
-	err         error
-	searchUsers []domain.User
-	searchErr   error
-	lastFilter  domain.UserFilter
+	users           []domain.User
+	err             error
+	searchUsers     []domain.User
+	searchErr       error
+	lastFilter      domain.UserFilter
+	resolvedAccount peoplesvc.Account
+	accountErr      error
 }
 
 func (s *stubPeoplesvc) LookupPeople(_ context.Context, _ string, _ string, _ int) ([]domain.User, error) {
@@ -139,6 +142,10 @@ func (s *stubPeoplesvc) LookupPeople(_ context.Context, _ string, _ string, _ in
 func (s *stubPeoplesvc) SearchUsers(_ context.Context, _ string, filter domain.UserFilter) ([]domain.User, error) {
 	s.lastFilter = filter
 	return s.searchUsers, s.searchErr
+}
+
+func (s *stubPeoplesvc) ResolveAccountByName(_ context.Context, _, _ string) (peoplesvc.Account, error) {
+	return s.resolvedAccount, s.accountErr
 }
 
 func TestExpandManagersToReportsEmpty(t *testing.T) {
