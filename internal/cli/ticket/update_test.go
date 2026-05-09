@@ -1,8 +1,11 @@
 package ticket
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"io"
 	"strings"
 	"testing"
 
@@ -199,5 +202,107 @@ func TestChangedFieldsSummaryFallsBackToIDWhenNameMissing(t *testing.T) {
 	got := changedFieldsSummary(ticketUpdateFields{typeID: &tid}, domain.Ticket{})
 	if !strings.Contains(got, "type-id=7") {
 		t.Errorf("expected fallback to type-id=7: %s", got)
+	}
+}
+
+func TestRunTicketUpdateSuccess(t *testing.T) {
+	stub := &stubTicketsvc{patched: domain.Ticket{ID: 100, Title: "After", TypeName: "Incident"}}
+	people := &stubPeoplesvc{}
+	var buf bytes.Buffer
+	err := runTicketUpdate(context.Background(), &buf, stub, people, "default", "uid-me", 31, 100, rawUpdateFlags{
+		title: "After", titleSet: true,
+	}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "ticket #100 updated") {
+		t.Errorf("output: %s", buf.String())
+	}
+	if !strings.Contains(buf.String(), `title="After"`) {
+		t.Errorf("expected title in summary: %s", buf.String())
+	}
+	if len(stub.lastPatchOps) != 1 || stub.lastPatchOps[0].Path != "/Title" {
+		t.Errorf("patch ops: %+v", stub.lastPatchOps)
+	}
+}
+
+func TestRunTicketUpdateWithComment(t *testing.T) {
+	stub := &stubTicketsvc{
+		patched:     domain.Ticket{ID: 100, Title: "T"},
+		feedAddedID: 999,
+	}
+	people := &stubPeoplesvc{}
+	var buf bytes.Buffer
+	err := runTicketUpdate(context.Background(), &buf, stub, people, "default", "uid-me", 31, 100, rawUpdateFlags{
+		title: "T", titleSet: true, comment: "fyi",
+	}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stub.lastFeedBody != "fyi" {
+		t.Errorf("comment not posted: %q", stub.lastFeedBody)
+	}
+	if !strings.Contains(buf.String(), "feed entry 999") {
+		t.Errorf("expected feed-entry mention: %s", buf.String())
+	}
+}
+
+func TestRunTicketUpdateNothingToUpdate(t *testing.T) {
+	stub := &stubTicketsvc{}
+	people := &stubPeoplesvc{}
+	err := runTicketUpdate(context.Background(), io.Discard, stub, people, "default", "uid-me", 31, 100, rawUpdateFlags{}, false)
+	if err == nil || !strings.Contains(err.Error(), "nothing to update") {
+		t.Fatalf("want nothing-to-update error, got %v", err)
+	}
+}
+
+func TestRunTicketUpdateCommentOnlyDoesNotPatch(t *testing.T) {
+	stub := &stubTicketsvc{
+		ticket:      domain.Ticket{ID: 100, Title: "T"},
+		feedAddedID: 555,
+	}
+	people := &stubPeoplesvc{}
+	var buf bytes.Buffer
+	err := runTicketUpdate(context.Background(), &buf, stub, people, "default", "uid-me", 31, 100, rawUpdateFlags{
+		comment: "just a note",
+	}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stub.lastPatchOps) != 0 {
+		t.Errorf("PatchTicket should NOT have been called; got ops %+v", stub.lastPatchOps)
+	}
+	if stub.lastFeedBody != "just a note" {
+		t.Errorf("comment not posted: %q", stub.lastFeedBody)
+	}
+}
+
+func TestRunTicketUpdateJSON(t *testing.T) {
+	stub := &stubTicketsvc{patched: domain.Ticket{ID: 100, Title: "T"}}
+	people := &stubPeoplesvc{}
+	var buf bytes.Buffer
+	err := runTicketUpdate(context.Background(), &buf, stub, people, "default", "uid-me", 31, 100, rawUpdateFlags{
+		title: "T", titleSet: true,
+	}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]interface{}
+	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got["schema"] != "tdx.v1.ticket" {
+		t.Fatalf("schema: %v", got["schema"])
+	}
+}
+
+func TestNewUpdateCmdRequiresYes(t *testing.T) {
+	cmd := newUpdateCmd(&stubTicketsvc{})
+	cmd.SetArgs([]string{"100", "--title", "x"})
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&bytes.Buffer{})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "--yes") {
+		t.Fatalf("want --yes error, got %v", err)
 	}
 }
