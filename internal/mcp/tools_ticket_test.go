@@ -238,3 +238,15 @@ func TestListTicketGroups_SchemaName(t *testing.T) {
 	require.True(t, ok)
 	require.Len(t, groups, 2)
 }
+
+// TestUpdateTicket_RequiresConfirm verifies the confirm gate for update_ticket.
+func TestUpdateTicket_RequiresConfirm(t *testing.T) {
+	svcs := mcpTicketHarness(t, "http://localhost:0") // no requests expected
+	res, _, err := updateTicketHandler(svcs)(context.Background(), &sdkmcp.CallToolRequest{}, updateTicketArgs{
+		ID:      42,
+		Title:   "New Title",
+		Confirm: false,
+	})
+	require.NoError(t, err)
+	require.True(t, res.IsError)
+}

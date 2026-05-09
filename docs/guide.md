@@ -32,7 +32,7 @@ tdx
 │   ├── app              → list / use / show
 │   ├── search           → saved
 │   ├── show / feed
-│   ├── comment / status / assign / log
+│   ├── comment / status / assign / update / log
 │   ├── types / statuses / groups → list
 │   └── task             → list / show / feed / update / log
 ├── time

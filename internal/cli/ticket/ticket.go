@@ -18,6 +18,7 @@ type ticketsvcAPI interface {
 	ListStatuses(ctx context.Context, profile string, appID int) ([]domain.TicketStatus, error)
 	ListTypes(ctx context.Context, profile string, appID int) ([]domain.TicketType, error)
 	ResolveStatusByName(ctx context.Context, profile string, appID int, name string) (domain.TicketStatus, error)
+	ResolveTypeByName(ctx context.Context, profile string, appID int, name string) (domain.TicketType, error)
 	GetTicket(ctx context.Context, profile string, appID, id int) (domain.Ticket, error)
 	SearchTickets(ctx context.Context, profile string, filter domain.TicketSearchFilter) ([]domain.Ticket, error)
 	PatchTicket(ctx context.Context, profile string, appID, id int, ops []ticketsvc.PatchOp) (domain.Ticket, error)
@@ -51,6 +52,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(newCommentCmd(nil))
 	cmd.AddCommand(newStatusCmd(nil))
 	cmd.AddCommand(newAssignCmd(nil))
+	cmd.AddCommand(newUpdateCmd(nil))
 	cmd.AddCommand(newLogCmd(nil))
 	cmd.AddCommand(newTaskCmd(nil))
 	return cmd
