@@ -17,6 +17,7 @@ type stubTicketsvc struct {
 	statuses        []domain.TicketStatus
 	types           []domain.TicketType
 	resolvedStatus  domain.TicketStatus
+	resolvedType    domain.TicketType
 	tickets         []domain.Ticket
 	ticket          domain.Ticket
 	patched         domain.Ticket
@@ -61,6 +62,9 @@ func (s *stubTicketsvc) ListTypes(_ context.Context, _ string, _ int) ([]domain.
 }
 func (s *stubTicketsvc) ResolveStatusByName(_ context.Context, _ string, _ int, _ string) (domain.TicketStatus, error) {
 	return s.resolvedStatus, s.err
+}
+func (s *stubTicketsvc) ResolveTypeByName(_ context.Context, _ string, _ int, _ string) (domain.TicketType, error) {
+	return s.resolvedType, s.err
 }
 func (s *stubTicketsvc) GetTicket(_ context.Context, _ string, _ int, _ int) (domain.Ticket, error) {
 	return s.ticket, s.err
