@@ -85,7 +85,26 @@ type logTicketTaskTimeArgs struct {
 	Confirm     bool    `json:"confirm" jsonschema:"set true to actually log"`
 }
 
-// RegisterTicketMutatingTools registers the 6 mutating ticket MCP tools.
+type updateTicketArgs struct {
+	Profile               string `json:"profile,omitempty"`
+	AppID                 int    `json:"appID,omitempty"`
+	ID                    int    `json:"id"`
+	Title                 string `json:"title,omitempty"`
+	TitleSet              bool   `json:"titleSet,omitempty" jsonschema:"set true to send title even if empty (otherwise empty title means 'don't change')"`
+	Description           string `json:"description,omitempty"`
+	DescriptionSet        bool   `json:"descriptionSet,omitempty" jsonschema:"set true to send description even if empty"`
+	TypeID                int    `json:"typeID,omitempty"`
+	TypeName              string `json:"typeName,omitempty"`
+	AccountID             int    `json:"accountID,omitempty"`
+	AccountName           string `json:"accountName,omitempty"`
+	RequestorUID          string `json:"requestorUID,omitempty"`
+	ResponsibilityGroupID int    `json:"responsibilityGroupID,omitempty"`
+	PriorityID            int    `json:"priorityID,omitempty"`
+	Comment               string `json:"comment,omitempty"`
+	Confirm               bool   `json:"confirm" jsonschema:"set true to actually update"`
+}
+
+// RegisterTicketMutatingTools registers the 7 mutating ticket MCP tools.
 func RegisterTicketMutatingTools(srv *sdkmcp.Server, svcs Services) {
 	sdkmcp.AddTool(srv, &sdkmcp.Tool{
 		Name:        "add_ticket_comment",
@@ -116,6 +135,11 @@ func RegisterTicketMutatingTools(srv *sdkmcp.Server, svcs Services) {
 		Name:        "log_ticket_task_time",
 		Description: "Log time worked against a ticket task (creates a time entry). Requires confirm=true.",
 	}, logTicketTaskTimeHandler(svcs))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name:        "update_ticket",
+		Description: "Update a ticket's editable fields (title/description/type/account/requestor/group/priority). Excludes status (use update_ticket_status) and assignee (use update_ticket_assignee). Optional comment posted after the patch. Requires confirm=true.",
+	}, updateTicketHandler(svcs))
 }
 
 // --- Handlers ---
@@ -444,5 +468,123 @@ func logTicketTaskTimeHandler(svcs Services) func(context.Context, *sdkmcp.CallT
 			Entry:   entry,
 			Message: fmt.Sprintf("Logged %.2fh against task %d on ticket %d.", float64(mins)/60, args.TaskID, args.TicketID),
 		})
+	}
+}
+
+func updateTicketHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, updateTicketArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, args updateTicketArgs) (*sdkmcp.CallToolResult, any, error) {
+		if errResp, ok := confirmGate(args.Confirm, "set confirm=true to update the ticket"); !ok {
+			return errResp, nil, nil
+		}
+		profile := resolveProfile(svcs, args.Profile)
+
+		// Build the field set inline. Pointer types distinguish "set this
+		// to value X" (incl. empty strings) from "don't touch".
+		var (
+			titlePtr        *string
+			descPtr         *string
+			typeIDPtr       *int
+			accountIDPtr    *int
+			requestorUIDPtr *string
+			groupIDPtr      *int
+			priorityIDPtr   *int
+		)
+
+		if args.TitleSet || args.Title != "" {
+			v := args.Title
+			titlePtr = &v
+		}
+		if args.DescriptionSet || args.Description != "" {
+			v := args.Description
+			descPtr = &v
+		}
+		if args.TypeID > 0 {
+			v := args.TypeID
+			typeIDPtr = &v
+		} else if args.TypeName != "" {
+			tt, err := svcs.Tickets.ResolveTypeByName(ctx, profile, args.AppID, args.TypeName)
+			if err != nil {
+				return errorResult(fmt.Sprintf("update_ticket: typeName: %v", err)), nil, nil
+			}
+			v := tt.ID
+			typeIDPtr = &v
+		}
+		if args.AccountID > 0 {
+			v := args.AccountID
+			accountIDPtr = &v
+		} else if args.AccountName != "" {
+			acct, err := svcs.People.ResolveAccountByName(ctx, profile, args.AccountName)
+			if err != nil {
+				return errorResult(fmt.Sprintf("update_ticket: accountName: %v", err)), nil, nil
+			}
+			v := acct.ID
+			accountIDPtr = &v
+		}
+		if args.RequestorUID != "" {
+			v := args.RequestorUID
+			requestorUIDPtr = &v
+		}
+		if args.ResponsibilityGroupID > 0 {
+			v := args.ResponsibilityGroupID
+			groupIDPtr = &v
+		}
+		if args.PriorityID > 0 {
+			v := args.PriorityID
+			priorityIDPtr = &v
+		}
+
+		hasAny := titlePtr != nil || descPtr != nil || typeIDPtr != nil ||
+			accountIDPtr != nil || requestorUIDPtr != nil || groupIDPtr != nil || priorityIDPtr != nil
+
+		if !hasAny && args.Comment == "" {
+			return errorResult("update_ticket: nothing to update — pass at least one field or comment"), nil, nil
+		}
+
+		var updated domain.Ticket
+		var err error
+		if hasAny {
+			ops := []ticketsvc.PatchOp{}
+			if titlePtr != nil {
+				ops = append(ops, ticketsvc.PatchOp{Op: "replace", Path: "/Title", Value: *titlePtr})
+			}
+			if descPtr != nil {
+				ops = append(ops, ticketsvc.PatchOp{Op: "replace", Path: "/Description", Value: *descPtr})
+			}
+			if typeIDPtr != nil {
+				ops = append(ops, ticketsvc.PatchOp{Op: "replace", Path: "/TypeID", Value: *typeIDPtr})
+			}
+			if accountIDPtr != nil {
+				ops = append(ops, ticketsvc.PatchOp{Op: "replace", Path: "/AccountID", Value: *accountIDPtr})
+			}
+			if requestorUIDPtr != nil {
+				ops = append(ops, ticketsvc.PatchOp{Op: "replace", Path: "/RequestorUid", Value: *requestorUIDPtr})
+			}
+			if groupIDPtr != nil {
+				ops = append(ops, ticketsvc.PatchOp{Op: "replace", Path: "/ResponsibleGroupID", Value: *groupIDPtr})
+			}
+			if priorityIDPtr != nil {
+				ops = append(ops, ticketsvc.PatchOp{Op: "replace", Path: "/PriorityID", Value: *priorityIDPtr})
+			}
+			updated, err = svcs.Tickets.PatchTicket(ctx, profile, args.AppID, args.ID, ops)
+			if err != nil {
+				return errorResult(fmt.Sprintf("update_ticket: %v", err)), nil, nil
+			}
+		} else {
+			updated, err = svcs.Tickets.GetTicket(ctx, profile, args.AppID, args.ID)
+			if err != nil {
+				return errorResult(fmt.Sprintf("update_ticket: %v", err)), nil, nil
+			}
+		}
+
+		if args.Comment != "" {
+			if _, ferr := svcs.Tickets.AddFeed(ctx, profile, args.AppID, args.ID, args.Comment, false, nil); ferr != nil {
+				return errorResult(fmt.Sprintf("update_ticket: patch succeeded but comment failed: %v", ferr)), nil, nil
+			}
+		}
+
+		return jsonResult(struct {
+			Schema string        `json:"schema"`
+			Ticket domain.Ticket `json:"ticket"`
+		}{Schema: "tdx.v1.ticket", Ticket: updated})
 	}
 }
