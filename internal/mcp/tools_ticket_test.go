@@ -61,6 +61,13 @@ func TestRegisterTicketTools_NoPanic(t *testing.T) {
 	// If we get here, no panic.
 }
 
+// TestRegisterTicketTaskReadTools_NoPanic verifies that registering the ticket task
+// read tools does not panic.
+func TestRegisterTicketTaskReadTools_NoPanic(t *testing.T) {
+	srv := sdkmcp.NewServer(&sdkmcp.Implementation{Name: "test", Version: "0"}, nil)
+	RegisterTicketTools(srv, Services{})
+}
+
 // TestListTicketApps_SchemaName verifies the schema name and envelope shape.
 func TestListTicketApps_SchemaName(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

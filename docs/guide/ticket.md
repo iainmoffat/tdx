@@ -23,6 +23,7 @@ All commands accept `--profile <name>` to override the active profile.
 - [tdx ticket types](#tdx-ticket-types)
 - [tdx ticket statuses](#tdx-ticket-statuses)
 - [tdx ticket groups](#tdx-ticket-groups)
+- [tdx ticket task](#tdx-ticket-task)
 
 ---
 
@@ -354,3 +355,61 @@ Groups are tenant-wide — the same group can serve multiple ticket apps. Use `-
 **Flags:**
 
 - `--json` — emit JSON; schema: `tdx.v1.ticketGroupList`
+
+---
+
+## tdx ticket task
+
+Manage tasks on a ticket: list, view detail, read feed, update progress, and log time worked.
+
+### tdx ticket task list
+
+```bash
+tdx ticket task list <ticket-id>
+tdx ticket task list <ticket-id> --json
+```
+
+Output: `ID | TITLE | %COMPLETE | EST | ACT | RESPONSIBLE` table. JSON envelope: `tdx.v1.ticketTaskList`.
+
+### tdx ticket task show
+
+```bash
+tdx ticket task show <ticket-id> <task-id>
+```
+
+Pretty-printed sections: header, progress, responsible person/group, dates, time, description. JSON envelope: `tdx.v1.ticketTask`.
+
+### tdx ticket task feed
+
+```bash
+tdx ticket task feed <ticket-id> <task-id>
+tdx ticket task feed <ticket-id> <task-id> --limit 5
+```
+
+Reads task feed entries (comments + system events). JSON envelope: `tdx.v1.ticketTaskFeed`.
+
+### tdx ticket task update
+
+```bash
+tdx ticket task update <ticket-id> <task-id> --percent 50 --comment "halfway" --yes
+tdx ticket task update <ticket-id> <task-id> --complete --yes
+```
+
+Posts a feed update to the task. **Mutating** — `--yes` required.
+
+Flags:
+
+- `--percent N` (0-100) or `--complete` (shortcut for `--percent 100`); mutually exclusive
+- `--comment "..."` — comment body
+- `--hours-worked N` — informational only; does NOT create a time entry. Use `tdx ticket task log` for real time tracking.
+- `--private` — internal note (not visible to requestor)
+- `--notify <UID>` — additional notify recipients (repeatable)
+
+### tdx ticket task log
+
+```bash
+tdx ticket task log <ticket-id> <task-id> --hours 1.5 --type "Development" --yes
+tdx ticket task log <ticket-id> <task-id> --minutes 30 --type-id 7 --description "fixed bug" --yes
+```
+
+Creates a real time entry against the task. **Mutating** — `--yes` required. Wraps `tdx time entry add`. Same flag shape as `tdx ticket log`.

@@ -152,3 +152,51 @@ type wireGroup struct {
 	ExternalID           string        `json:"ExternalID,omitempty"`
 	PlatformApplications []interface{} `json:"PlatformApplications,omitempty"`
 }
+
+// wireTicketTask matches GET /TDWebApi/api/{appId}/tickets/{ticketID}/tasks
+// rows and GET /TDWebApi/api/{appId}/tickets/{ticketID}/tasks/{id}.
+//
+// Live-verified on UFL 2026-05-08: dates use TD's standard format and
+// CompletedDate may be "0001-01-01T00:00:00" when unset (parseTDTime
+// returns zero time for that). ResponsibleUid is null (empty string)
+// when unassigned at the individual level — group assignment uses
+// ResponsibleGroupID/Name instead.
+type wireTicketTask struct {
+	ID                   int    `json:"ID"`
+	TicketID             int    `json:"TicketID"`
+	Title                string `json:"Title"`
+	Description          string `json:"Description"`
+	IsActive             bool   `json:"IsActive"`
+	PercentComplete      int    `json:"PercentComplete"`
+	EstimatedMinutes     int    `json:"EstimatedMinutes"`
+	ActualMinutes        int    `json:"ActualMinutes"`
+	StartDate            string `json:"StartDate,omitempty"`
+	EndDate              string `json:"EndDate,omitempty"`
+	CreatedDate          string `json:"CreatedDate"`
+	CreatedFullName      string `json:"CreatedFullName"`
+	ModifiedDate         string `json:"ModifiedDate"`
+	CompletedDate        string `json:"CompletedDate"`
+	CompletedFullName    string `json:"CompletedFullName"`
+	ResponsibleUid       string `json:"ResponsibleUid"`
+	ResponsibleFullName  string `json:"ResponsibleFullName"`
+	ResponsibleGroupID   int    `json:"ResponsibleGroupID"`
+	ResponsibleGroupName string `json:"ResponsibleGroupName"`
+	Order                int    `json:"Order"`
+}
+
+// wireTaskFeedUpdate is the request body for
+// POST /TDWebApi/api/{appId}/tickets/{ticketID}/tasks/{taskID}/feed.
+//
+// HoursWorked is informational only — it does NOT create a time entry
+// or update the task's ActualMinutes. Use a separate time entry
+// (`tdx ticket task log`) for real time tracking.
+//
+// PercentComplete is *int because 0 is a valid value (means "set to 0%
+// complete"); nil means "don't send PercentComplete in the body."
+type wireTaskFeedUpdate struct {
+	Comments        string   `json:"Comments,omitempty"`
+	PercentComplete *int     `json:"PercentComplete,omitempty"`
+	HoursWorked     float64  `json:"HoursWorked,omitempty"`
+	IsPrivate       bool     `json:"IsPrivate,omitempty"`
+	Notify          []string `json:"Notify,omitempty"`
+}

@@ -13,20 +13,24 @@ import (
 //
 //nolint:unused // populated by Tasks 9-16
 type stubTicketsvc struct {
-	apps           []domain.TicketApp
-	statuses       []domain.TicketStatus
-	types          []domain.TicketType
-	resolvedStatus domain.TicketStatus
-	tickets        []domain.Ticket
-	ticket         domain.Ticket
-	patched        domain.Ticket
-	feed           []domain.TicketFeedEntry
-	feedAddedID    int
-	savedSearches  []domain.TicketSavedSearch
-	resolvedSaved  domain.TicketSavedSearch
-	savedResults   []domain.Ticket
-	groups         []domain.TicketGroup
-	resolvedGroup  domain.TicketGroup
+	apps            []domain.TicketApp
+	statuses        []domain.TicketStatus
+	types           []domain.TicketType
+	resolvedStatus  domain.TicketStatus
+	tickets         []domain.Ticket
+	ticket          domain.Ticket
+	patched         domain.Ticket
+	feed            []domain.TicketFeedEntry
+	feedAddedID     int
+	savedSearches   []domain.TicketSavedSearch
+	resolvedSaved   domain.TicketSavedSearch
+	savedResults    []domain.Ticket
+	groups          []domain.TicketGroup
+	resolvedGroup   domain.TicketGroup
+	tasks           []domain.TicketTask
+	task            domain.TicketTask
+	taskFeed        []domain.TicketFeedEntry
+	taskFeedAddedID int
 
 	// Capture last-call arguments for assertion in tests.
 	lastFilter      domain.TicketSearchFilter
@@ -34,6 +38,13 @@ type stubTicketsvc struct {
 	lastFeedBody    string
 	lastFeedPrivate bool
 	lastFeedNotify  []string
+	lastTaskUpdate  struct {
+		Body            string
+		PercentComplete *int
+		HoursWorked     float64
+		IsPrivate       bool
+		Notify          []string
+	}
 
 	// Inject errors for tests that need them.
 	err error
@@ -85,4 +96,21 @@ func (s *stubTicketsvc) ListGroups(_ context.Context, _ string) ([]domain.Ticket
 }
 func (s *stubTicketsvc) ResolveGroupByName(_ context.Context, _ string, _ string) (domain.TicketGroup, error) {
 	return s.resolvedGroup, s.err
+}
+func (s *stubTicketsvc) ListTasks(_ context.Context, _ string, _, _ int) ([]domain.TicketTask, error) {
+	return s.tasks, s.err
+}
+func (s *stubTicketsvc) GetTask(_ context.Context, _ string, _, _, _ int) (domain.TicketTask, error) {
+	return s.task, s.err
+}
+func (s *stubTicketsvc) GetTaskFeed(_ context.Context, _ string, _, _, _ int) ([]domain.TicketFeedEntry, error) {
+	return s.taskFeed, s.err
+}
+func (s *stubTicketsvc) UpdateTaskFeed(_ context.Context, _ string, _, _, _ int, body string, pc *int, hw float64, isPrivate bool, notify []string) (int, error) {
+	s.lastTaskUpdate.Body = body
+	s.lastTaskUpdate.PercentComplete = pc
+	s.lastTaskUpdate.HoursWorked = hw
+	s.lastTaskUpdate.IsPrivate = isPrivate
+	s.lastTaskUpdate.Notify = notify
+	return s.taskFeedAddedID, s.err
 }

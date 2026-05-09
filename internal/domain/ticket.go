@@ -98,3 +98,30 @@ type TicketSavedSearch struct {
 	OwnerName   string
 	Description string
 }
+
+// TicketTask is one task on a ticket. Tasks track sub-work with their own
+// PercentComplete and (optionally) ResponsibleUid/Group. Time entries can
+// target a ticket task via Target{Kind: TargetTicketTask, ItemID: ticketID,
+// TaskID: taskID}.
+type TicketTask struct {
+	ID                   int
+	TicketID             int
+	Title                string
+	Description          string
+	Active               bool
+	PercentComplete      int
+	EstimatedMinutes     int
+	ActualMinutes        int
+	StartDate            time.Time
+	EndDate              time.Time
+	CreatedDate          time.Time
+	CreatedName          string
+	ModifiedDate         time.Time
+	CompletedDate        time.Time
+	CompletedName        string
+	ResponsibleUID       string
+	ResponsibleName      string
+	ResponsibleGroupID   int
+	ResponsibleGroupName string
+	Order                int
+}
