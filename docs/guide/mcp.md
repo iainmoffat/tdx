@@ -53,7 +53,7 @@ Add tdx to your AI tool's MCP configuration:
 
 ## Available tools
 
-The MCP server exposes 62 tools (35 read-only, 27 mutating). All mutating
+The MCP server exposes 63 tools (35 read-only, 28 mutating). All mutating
 tools require `confirm: true`. Template applies require an `expectedDiffHash`
 from a prior preview call for race protection.
 
@@ -140,13 +140,14 @@ Requires `confirm: true`.
 | `get_ticket_task` | Get full detail for one ticket task |
 | `get_ticket_task_feed` | Read feed entries for a ticket task |
 
-#### Tickets (Phase D — mutating, 6 tools, all require `confirm: true`)
+#### Tickets (Phase D — mutating, 7 tools, all require `confirm: true`)
 
 | Tool | Description |
 |------|-------------|
 | `add_ticket_comment` | Post a feed comment to a ticket |
 | `update_ticket_status` | Change a ticket's status (by name or id) |
 | `update_ticket_assignee` | Reassign a ticket by responsible UID |
+| `update_ticket` | Update editable ticket fields (title/description/type/account/requestor/group/priority + optional comment) |
 | `log_ticket_time` | Log time worked against a ticket (creates a time entry) |
 | `update_ticket_task` | Post a feed update to a task (percentComplete + comment + informational hoursWorked) |
 | `log_ticket_task_time` | Log time worked against a ticket task (creates a time entry) |

@@ -19,6 +19,7 @@ All commands accept `--profile <name>` to override the active profile.
 - [tdx ticket comment](#tdx-ticket-comment)
 - [tdx ticket status](#tdx-ticket-status)
 - [tdx ticket assign](#tdx-ticket-assign)
+- [tdx ticket update](#tdx-ticket-update)
 - [tdx ticket log](#tdx-ticket-log)
 - [tdx ticket types](#tdx-ticket-types)
 - [tdx ticket statuses](#tdx-ticket-statuses)
@@ -259,6 +260,33 @@ tdx ticket assign 12345 d44687e1-0000-0000-0000-000000000001 \
 - `--app <id>` — override the profile default ticket app
 - `--comment <text>` — optional comment posted with the assignment change
 - `--yes` — **required** to write
+
+---
+
+## tdx ticket update
+
+Update editable ticket fields. **Mutating** — `--yes` required. Excludes status (use `tdx ticket status`) and assignee (use `tdx ticket assign`).
+
+```bash
+tdx ticket update <id> --title "New title" --yes
+tdx ticket update <id> --description "..." --comment "rolled back" --yes
+tdx ticket update <id> --type "Incident" --priority-id 3 --yes
+tdx ticket update <id> --requestor alice@uf.edu --yes
+tdx ticket update <id> --responsibility-group "Linux Team" --yes
+```
+
+Flags:
+
+- `--title "<text>"` — replace ticket title
+- `--description "<text>"` — replace ticket description (full replacement; `--description ""` clears it)
+- `--type <name|id>` — set ticket type by name (case-insensitive exact match) or numeric id
+- `--account <name|id>` — set account by name (resolved via `tdx people accounts list`) or numeric id
+- `--requestor <uid|email|me>` — set requestor; `me` = the authenticated user
+- `--responsibility-group <name|id>` — set responsibility group by name or id (use `tdx ticket groups list` to discover names)
+- `--priority-id <int>` — set priority by numeric id (priority-name resolution not supported in v0.16.3)
+- `--comment "<text>"` — optional accompanying feed comment posted after the PATCH succeeds; comment-only invocations (no field flags) are valid and just post the comment
+
+At least one of the field flags or `--comment` must be set. The PATCH is sent as a single TD call; if any field is rejected, nothing applies. JSON output is the full updated ticket (`tdx.v1.ticket` envelope).
 
 ---
 
