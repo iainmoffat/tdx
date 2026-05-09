@@ -330,22 +330,12 @@ func newTaskUpdateCmd(svc ticketsvcAPI) *cobra.Command {
 			if !yesFlag {
 				return fmt.Errorf("pass --yes to update the task")
 			}
-			if percentSet && completeFlag {
-				return fmt.Errorf("--percent and --complete are mutually exclusive")
+			pc, err := resolveTaskUpdatePercent(percentSet, completeFlag, percentFlag)
+			if err != nil {
+				return err
 			}
-			if !percentSet && !completeFlag && commentFlag == "" && hoursWorked == 0 {
+			if pc == nil && commentFlag == "" && hoursWorked == 0 {
 				return fmt.Errorf("nothing to update — pass at least one of --percent / --complete / --comment / --hours-worked")
-			}
-			var pc *int
-			if completeFlag {
-				v := 100
-				pc = &v
-			} else if percentSet {
-				if percentFlag < 0 || percentFlag > 100 {
-					return fmt.Errorf("--percent must be 0-100, got %d", percentFlag)
-				}
-				v := percentFlag
-				pc = &v
 			}
 			paths, err := config.ResolvePaths()
 			if err != nil {
@@ -556,4 +546,26 @@ func parseTaskIDs(args []string) (int, int, error) {
 		return 0, 0, fmt.Errorf("task id must be a positive integer, got %q", args[1])
 	}
 	return ticketID, taskID, nil
+}
+
+// resolveTaskUpdatePercent maps the --percent / --complete cobra flags to a
+// PercentComplete value for the feed POST. Returns nil pointer when neither
+// flag is set; (--percent N) for explicit, (--complete) is sugar for 100.
+// The two flags are mutually exclusive; --percent must be 0-100.
+func resolveTaskUpdatePercent(percentSet, completeFlag bool, percentFlag int) (*int, error) {
+	if percentSet && completeFlag {
+		return nil, fmt.Errorf("--percent and --complete are mutually exclusive")
+	}
+	if completeFlag {
+		v := 100
+		return &v, nil
+	}
+	if percentSet {
+		if percentFlag < 0 || percentFlag > 100 {
+			return nil, fmt.Errorf("--percent must be 0-100, got %d", percentFlag)
+		}
+		v := percentFlag
+		return &v, nil
+	}
+	return nil, nil
 }

@@ -174,17 +174,59 @@ func TestNewTaskUpdateCmdRejectsAllEmpty(t *testing.T) {
 	}
 }
 
-func TestNewTaskUpdateCmdCompleteSetsHundred(t *testing.T) {
-	stub := &stubTicketsvc{taskFeedAddedID: 1}
-	cmd := newTaskUpdateCmd(stub)
-	cmd.SetArgs([]string{"100", "5", "--complete", "--yes"})
-	cmd.SetOut(&bytes.Buffer{})
-	cmd.SetErr(&bytes.Buffer{})
-	if err := cmd.Execute(); err != nil {
+func TestResolveTaskUpdatePercentComplete(t *testing.T) {
+	pc, err := resolveTaskUpdatePercent(false, true, 0)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if stub.lastTaskUpdate.PercentComplete == nil || *stub.lastTaskUpdate.PercentComplete != 100 {
-		t.Errorf("--complete should set percent=100; got %v", stub.lastTaskUpdate.PercentComplete)
+	if pc == nil || *pc != 100 {
+		t.Errorf("--complete should map to pc=100; got %v", pc)
+	}
+}
+
+func TestResolveTaskUpdatePercentExplicit(t *testing.T) {
+	pc, err := resolveTaskUpdatePercent(true, false, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pc == nil || *pc != 50 {
+		t.Errorf("--percent 50 should map to pc=50; got %v", pc)
+	}
+}
+
+func TestResolveTaskUpdatePercentZeroExplicit(t *testing.T) {
+	pc, err := resolveTaskUpdatePercent(true, false, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pc == nil || *pc != 0 {
+		t.Errorf("--percent 0 should map to pc=&0 (NOT nil); got %v", pc)
+	}
+}
+
+func TestResolveTaskUpdatePercentNeitherSet(t *testing.T) {
+	pc, err := resolveTaskUpdatePercent(false, false, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pc != nil {
+		t.Errorf("neither flag set should return nil; got %v", pc)
+	}
+}
+
+func TestResolveTaskUpdatePercentMutex(t *testing.T) {
+	_, err := resolveTaskUpdatePercent(true, true, 50)
+	if err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
+		t.Fatalf("want mutex error, got %v", err)
+	}
+}
+
+func TestResolveTaskUpdatePercentOutOfRange(t *testing.T) {
+	for _, v := range []int{-1, 101, 200} {
+		_, err := resolveTaskUpdatePercent(true, false, v)
+		if err == nil || !strings.Contains(err.Error(), "0-100") {
+			t.Errorf("--percent %d should error; got %v", v, err)
+		}
 	}
 }
 
