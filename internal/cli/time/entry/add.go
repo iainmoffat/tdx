@@ -55,7 +55,7 @@ func newAddCmd() *cobra.Command {
 	cmd.Flags().StringVar(&f.typeName, "type", "", "time type name (case-insensitive)")
 	cmd.Flags().StringVarP(&f.description, "description", "d", "", "description of work performed")
 	cmd.Flags().IntVar(&f.ticket, "ticket", 0, "ticket ID (uses profile's default app if --app not set)")
-	cmd.Flags().IntVar(&f.app, "app", 0, "application ID (required with --ticket)")
+	cmd.Flags().IntVar(&f.app, "app", 0, "application ID (overrides profile default with --ticket; required with --workspace)")
 	cmd.Flags().IntVar(&f.project, "project", 0, "project ID")
 	cmd.Flags().IntVar(&f.plan, "plan", 0, "plan ID (requires --project and --task)")
 	cmd.Flags().IntVar(&f.task, "task", 0, "task ID (requires --ticket, or --project with --plan)")
