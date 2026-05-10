@@ -310,3 +310,24 @@ func TestAddCmd_DryRun(t *testing.T) {
 	got := out.String()
 	require.Contains(t, got, "dry run")
 }
+
+func TestResolveTicketAppIDExplicitWins(t *testing.T) {
+	got := resolveTicketAppID(71, 34)
+	if got != 71 {
+		t.Errorf("explicit should win over profile default; got %d, want 71", got)
+	}
+}
+
+func TestResolveTicketAppIDFallsBackToProfile(t *testing.T) {
+	got := resolveTicketAppID(0, 34)
+	if got != 34 {
+		t.Errorf("should fall back to profile default; got %d, want 34", got)
+	}
+}
+
+func TestResolveTicketAppIDZeroWhenNeitherSet(t *testing.T) {
+	got := resolveTicketAppID(0, 0)
+	if got != 0 {
+		t.Errorf("should return 0 when neither is set; got %d", got)
+	}
+}

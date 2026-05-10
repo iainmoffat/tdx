@@ -54,8 +54,8 @@ func newAddCmd() *cobra.Command {
 	cmd.Flags().IntVar(&f.minutes, "minutes", 0, "duration in minutes (mutually exclusive with --hours)")
 	cmd.Flags().StringVar(&f.typeName, "type", "", "time type name (case-insensitive)")
 	cmd.Flags().StringVarP(&f.description, "description", "d", "", "description of work performed")
-	cmd.Flags().IntVar(&f.ticket, "ticket", 0, "ticket ID (requires --app)")
-	cmd.Flags().IntVar(&f.app, "app", 0, "application ID (required with --ticket)")
+	cmd.Flags().IntVar(&f.ticket, "ticket", 0, "ticket ID (uses profile's default app if --app not set)")
+	cmd.Flags().IntVar(&f.app, "app", 0, "application ID (overrides profile default with --ticket; required with --workspace)")
 	cmd.Flags().IntVar(&f.project, "project", 0, "project ID")
 	cmd.Flags().IntVar(&f.plan, "plan", 0, "plan ID (requires --project and --task)")
 	cmd.Flags().IntVar(&f.task, "task", 0, "task ID (requires --ticket, or --project with --plan)")
@@ -116,7 +116,21 @@ func runAdd(cmd *cobra.Command, f addFlags) error {
 
 	// Companion flag validation.
 	if f.ticket > 0 && f.app <= 0 {
-		return fmt.Errorf("--app is required with --ticket")
+		// Fall back to the profile's default TicketAppID (set via
+		// `tdx ticket app use <id>`) before erroring out.
+		profileDefault := 0
+		if paths, perr := config.ResolvePaths(); perr == nil {
+			auth := authsvc.New(paths)
+			if pname, rerr := auth.ResolveProfile(f.profile); rerr == nil {
+				if prof, gerr := config.NewProfileStore(paths).GetProfile(pname); gerr == nil {
+					profileDefault = prof.TicketAppID
+				}
+			}
+		}
+		f.app = resolveTicketAppID(f.app, profileDefault)
+		if f.app <= 0 {
+			return fmt.Errorf("--app is required with --ticket (or run `tdx ticket app use <id>` to set a profile default)")
+		}
 	}
 	if f.plan > 0 && (f.project <= 0 || f.task <= 0) {
 		return fmt.Errorf("--plan requires both --project and --task")
@@ -299,4 +313,23 @@ func targetSummary(t domain.Target) string {
 	default:
 		return fmt.Sprintf("item %d", t.ItemID)
 	}
+}
+
+// resolveTicketAppID returns the appID to use for a --ticket invocation:
+//   - if explicit > 0, use that (caller-provided --app)
+//   - else if profileTicketAppID > 0, use the profile default
+//   - else 0 (caller treats as "no appID resolved" and errors out)
+//
+// Pure helper for testability. The cobra glue reads the profile from disk
+// and passes prof.TicketAppID as the second argument; profile-load failures
+// surface as profileTicketAppID=0 (no propagation), matching the silent-
+// fallback pattern used elsewhere in the ticket commands.
+func resolveTicketAppID(explicit, profileTicketAppID int) int {
+	if explicit > 0 {
+		return explicit
+	}
+	if profileTicketAppID > 0 {
+		return profileTicketAppID
+	}
+	return 0
 }
