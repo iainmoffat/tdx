@@ -300,3 +300,22 @@ func targetSummary(t domain.Target) string {
 		return fmt.Sprintf("item %d", t.ItemID)
 	}
 }
+
+// resolveTicketAppID returns the appID to use for a --ticket invocation:
+//   - if explicit > 0, use that (caller-provided --app)
+//   - else if profileTicketAppID > 0, use the profile default
+//   - else 0 (caller treats as "no appID resolved" and errors out)
+//
+// Pure helper for testability. The cobra glue reads the profile from disk
+// and passes prof.TicketAppID as the second argument; profile-load failures
+// surface as profileTicketAppID=0 (no propagation), matching the silent-
+// fallback pattern used elsewhere in the ticket commands.
+func resolveTicketAppID(explicit, profileTicketAppID int) int {
+	if explicit > 0 {
+		return explicit
+	}
+	if profileTicketAppID > 0 {
+		return profileTicketAppID
+	}
+	return 0
+}
