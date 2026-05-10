@@ -70,9 +70,15 @@ tdx time entry add \
 **Duration** must be exactly one of `--hours` or `--minutes`.
 
 **Target** must be exactly one of:
-- `--ticket <id> --app <id>` (ticket requires app)
+- `--ticket <id>` and optionally `--app <id>` (if no profile default app is set, `--app` is required; see `tdx ticket app use`)
 - `--project <id>` (optionally with `--plan <id> --task <id>`)
 - `--workspace <id> --app <id>`
+
+With a profile default ticket app (set via `tdx ticket app use <id>`), `--app` is no longer needed:
+
+```bash
+tdx time entry add --date 2026-04-07 --hours 2 --type "Development" --ticket 12345 -d "ticket work"
+```
 
 Preview without creating:
 
