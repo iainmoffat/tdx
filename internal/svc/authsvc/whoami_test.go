@@ -44,8 +44,8 @@ func TestWhoAmI_DecodesUser(t *testing.T) {
 		_, _ = w.Write([]byte(`{
 			"ReferenceID": 42,
 			"UID": "abcd-1234",
-			"FullName": "Iain Moffat",
-			"PrimaryEmail": "ipm@ufl.edu"
+			"FullName": "Sample User",
+			"PrimaryEmail": "sample@example.com"
 		}`))
 	})
 
@@ -53,8 +53,8 @@ func TestWhoAmI_DecodesUser(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 42, user.ID)
 	require.Equal(t, "abcd-1234", user.UID)
-	require.Equal(t, "Iain Moffat", user.FullName)
-	require.Equal(t, "ipm@ufl.edu", user.Email)
+	require.Equal(t, "Sample User", user.FullName)
+	require.Equal(t, "sample@example.com", user.Email)
 }
 
 func TestWhoAmI_Unauthorized(t *testing.T) {

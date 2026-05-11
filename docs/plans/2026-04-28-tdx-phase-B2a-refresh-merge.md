@@ -2313,9 +2313,9 @@ Write `docs/manual-tests/phase-B2a-week-drafts-refresh-walkthrough.md`:
 ````markdown
 # Phase B.2a Walkthrough — Refresh / Rebase Three-Way Merge
 
-**Tenant:** UFL
+**Tenant:** Sample
 **Profile:** `ufl` (or whatever profile is active for live-tenant tests)
-**Goal:** End-to-end exercise of `tdx time week refresh` against the live UFL
+**Goal:** End-to-end exercise of `tdx time week refresh` against the live Sample
 TeamDynamix tenant.
 
 > ⚠️ This walkthrough creates and modifies real time entries in TD. Use a week

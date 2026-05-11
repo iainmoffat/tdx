@@ -63,20 +63,20 @@ func TestPeopleSearch_IncludeClientsNoResults(t *testing.T) {
 func TestPeopleSearch_PassesQueryAndLimit_LookupPath(t *testing.T) {
 	stub := &stubPeoplesvc{}
 	var out bytes.Buffer
-	require.NoError(t, runPeopleSearch(context.Background(), &out, stub, "default", "Iain Mof", 7, true, false))
-	require.Equal(t, "Iain Mof", stub.lastLookupQuery)
+	require.NoError(t, runPeopleSearch(context.Background(), &out, stub, "default", "Sample U", 7, true, false))
+	require.Equal(t, "Sample U", stub.lastLookupQuery)
 	require.Equal(t, 7, stub.lastLookupMax)
 }
 
 func TestPeopleSearch_StaffPathSubstringMatch(t *testing.T) {
 	stub := &stubPeoplesvc{searchUsers: []domain.User{
-		{UID: "u1", FullName: "Iain Moffat", Email: "ipm@ufl.edu", IsEmployee: true},
-		{UID: "u2", FullName: "Aaron Lamotte", Email: "aaron@ufl.edu", IsEmployee: true},
+		{UID: "u1", FullName: "Sample User", Email: "sample@example.com", IsEmployee: true},
+		{UID: "u2", FullName: "Aaron Lamotte", Email: "aaron@example.com", IsEmployee: true},
 	}}
 	var out bytes.Buffer
-	require.NoError(t, runPeopleSearch(context.Background(), &out, stub, "default", "iain", 25, false, false))
+	require.NoError(t, runPeopleSearch(context.Background(), &out, stub, "default", "sample", 25, false, false))
 	got := out.String()
-	require.Contains(t, got, "Iain Moffat")
+	require.Contains(t, got, "Sample User")
 	require.NotContains(t, got, "Aaron Lamotte")
 }
 

@@ -12,8 +12,8 @@
 
 | # | Decision |
 |---|---|
-| Q1 | TD's `POST /api/accounts/search` returns all accounts when sent `{}`. `NameLike` is silently ignored (same anti-pattern as people/resource-pool search). UFL has 6404 accounts; payload is ~3 MB and sub-second. |
-| Q2 | TD's `POST /api/people/search` **does** honor `AccountIDs`. Probe: 168 vs 1077 employees with vs without on UFL. So `--account` becomes server-side once we have the ID. |
+| Q1 | TD's `POST /api/accounts/search` returns all accounts when sent `{}`. `NameLike` is silently ignored (same anti-pattern as people/resource-pool search). Sample has 6404 accounts; payload is ~3 MB and sub-second. |
+| Q2 | TD's `POST /api/people/search` **does** honor `AccountIDs`. Probe: 168 vs 1077 employees with vs without on the test tenant. So `--account` becomes server-side once we have the ID. |
 | Q3 | Account resolution is client-side (fetch all 6404, exact case-insensitive match on `Name`). Exact match preserves existing UX semantics; ambiguous names error out. |
 | Q4 | Accounts live in `peoplesvc` package alongside pools. They're TD entities related to the `/api/people` surface (each user has `DefaultAccountID`/`Name`); keeping them in one package mirrors the pools layout shipped in v0.9.1. |
 | Q5 | Add new `tdx people` parent command. v0.9.1 introduced `peoplesvc` as plumbing only; this surfaces it as a discoverable command surface. First (and currently only) subcommand: `pools list`. |
@@ -30,10 +30,10 @@
 
 ## 2. Findings (TD API probe, 2026-05-01)
 
-- `POST /api/accounts/search` with `{}` returns 6404 rows on UFL. `NameLike` filter ignored.
+- `POST /api/accounts/search` with `{}` returns 6404 rows on the test tenant. `NameLike` filter ignored.
 - Single-account GET `/api/accounts/{id}` works but isn't useful for our flow (we have a name, not an ID).
-- People-search `AccountIDs: [N]` IS honored (168 results when set, 1077 without on UFL — confirms server-side filtering works).
-- Account names on UFL are like `"14300000 (IT-ICT INFRA COMM TECHNOLOGY)"` — numeric prefix + parenthesized human name. No trailing whitespace quirks observed (unlike resource pools).
+- People-search `AccountIDs: [N]` IS honored (168 results when set, 1077 without on the test tenant — confirms server-side filtering works).
+- Account names on the test tenant are like `"999999 (Sample Department)"` — numeric prefix + parenthesized human name. No trailing whitespace quirks observed (unlike resource pools).
 
 ---
 
@@ -173,7 +173,7 @@ rootCmd.AddCommand(people.NewCmd())
 | Existing `--account NAME` callers | Same UX. Lookup is still exact-match by name, just server-side now. Error messages get more specific (cite the account count, say "ambiguous" if applicable). |
 | `domain.UserFilter.AccountName` removal | `grep` confirmed no other callers. Safe to drop. |
 | Other `peoplesvc.SearchUsers` callers | None today (only the report runner uses it). |
-| Account-search payload size | ~3 MB on UFL. One sub-second call per `--account` invocation. Negligible vs the per-user weekly report fan-out that follows. |
+| Account-search payload size | ~3 MB on the test tenant. One sub-second call per `--account` invocation. Negligible vs the per-user weekly report fan-out that follows. |
 | MCP `get_time_status_report` | Unchanged surface — `account` input still takes a string name. Internal resolution happens transparently. |
 | `tdx people` parent | New top-level verb. No collision with existing subcommands (`auth`, `completion`, `config`, `mcp`, `time`, `version`). |
 
@@ -184,7 +184,7 @@ rootCmd.AddCommand(people.NewCmd())
 - `tdx people accounts list` (6404 rows; `--account` is exact-match-only, so discoverability adds little value today).
 - `tdx people users search` or similar people-discovery commands.
 - Caching the accounts/pools list across invocations. Each `--account` run does one fresh fetch; under a second.
-- Pagination for very large tenants. UFL has 6404 accounts in one shot; if a tenant ever returns truncated data we'll add `MaxResults` then.
+- Pagination for very large tenants. Sample has 6404 accounts in one shot; if a tenant ever returns truncated data we'll add `MaxResults` then.
 - Refactoring `peoplesvc` into smaller packages (per-entity). Keep one package; entities are small and related.
 
 ---
@@ -196,6 +196,6 @@ rootCmd.AddCommand(people.NewCmd())
 2. Runner: switch `--account` to server-side ID lookup; drop client-side `AccountName` filter; drop `domain.UserFilter.AccountName`.
 3. CLI: new `tdx people` parent + `pools list` subcommand + tests.
 4. Docs: README + guide updates.
-5. Live verification on UFL; PR; merge; tag v0.10.0.
+5. Live verification on the test tenant; PR; merge; tag v0.10.0.
 
 Inline execution.

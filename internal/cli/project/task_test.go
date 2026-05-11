@@ -30,7 +30,7 @@ func TestTaskList_SinglePlan_RendersTable(t *testing.T) {
 }
 
 func TestTaskList_Mine_FansOutAcrossProjects(t *testing.T) {
-	myUID := "61fc4d29-1a09-ef11-86d4-df13b8e4e655"
+	myUID := "aaaaaaaa-1234-5678-9abc-def012345678"
 	// 3 plans: one with MyTaskCount=0 (should be skipped), two with tasks assigned to me.
 	plans := []domain.ProjectPlan{
 		{ID: 100, ProjectID: 10, ProjectName: "Proj A", Title: "Plan 1", MyTaskCount: 0},
@@ -76,7 +76,7 @@ func TestTaskList_Mine_FansOutAcrossProjects(t *testing.T) {
 }
 
 func TestTaskList_Mine_UpperCaseUIDMatch(t *testing.T) {
-	myUID := "61fc4d29-1a09-ef11-86d4-df13b8e4e655"
+	myUID := "aaaaaaaa-1234-5678-9abc-def012345678"
 	plans := []domain.ProjectPlan{
 		{ID: 101, ProjectID: 10, MyTaskCount: 1},
 	}
@@ -85,7 +85,7 @@ func TestTaskList_Mine_UpperCaseUIDMatch(t *testing.T) {
 			{ProjectID: 10, PlanID: 101, ID: 200, Title: "My Task",
 				// Resource UID is UPPERCASE — common in TD API responses.
 				Resources: []domain.ProjectTaskResource{
-					{UID: "61FC4D29-1A09-EF11-86D4-DF13B8E4E655", FullName: "Me"},
+					{UID: "AAAAAAAA-1234-5678-9ABC-DEF012345678", FullName: "Me"},
 				}},
 		},
 	}

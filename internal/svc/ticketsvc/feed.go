@@ -64,7 +64,7 @@ func (s *Service) AddFeed(ctx context.Context, profileName string, appID, ticket
 
 // classifyFeedKind maps TD's UpdateType integer to a human label.
 //
-// Live-verified on UFL 2026-05-08: comments come through as UpdateType=1;
+// Live-verified 2026-05-08: comments come through as UpdateType=1;
 // system events (status changes, assignment changes, attachments, etc.)
 // all come through as UpdateType=3. The body text already describes what
 // the event is, so we label class 3 generically as "event" rather than

@@ -25,14 +25,14 @@ func TestTruncate(t *testing.T) {
 func TestPrintProjectList_Table(t *testing.T) {
 	var buf bytes.Buffer
 	projects := []domain.Project{
-		{ID: 259, Name: "Disaster Recovery", StatusName: "Executing", ManagerName: "Charlotte", PercentComplete: 96.0},
+		{ID: 259, Name: "Sample Recovery", StatusName: "Executing", ManagerName: "Pat", PercentComplete: 96.0},
 	}
 	err := printProjectList(&buf, projects, false, "tdx.v1.projectList")
 	require.NoError(t, err)
 	out := buf.String()
 	require.Contains(t, out, "259")
-	require.Contains(t, out, "Disaster Recovery")
-	require.Contains(t, out, "Charlotte")
+	require.Contains(t, out, "Sample Recovery")
+	require.Contains(t, out, "Pat")
 }
 
 func TestPrintProjectList_JSON(t *testing.T) {

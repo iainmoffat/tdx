@@ -8,13 +8,13 @@ import (
 )
 
 func TestUser_DisplayName(t *testing.T) {
-	u := User{FullName: "Iain Moffat", Email: "ipm@ufl.edu"}
-	require.Equal(t, "Iain Moffat", u.DisplayName())
+	u := User{FullName: "Sample User", Email: "sample@example.com"}
+	require.Equal(t, "Sample User", u.DisplayName())
 }
 
 func TestUser_DisplayName_FallsBackToEmail(t *testing.T) {
-	u := User{Email: "ipm@ufl.edu"}
-	require.Equal(t, "ipm@ufl.edu", u.DisplayName())
+	u := User{Email: "sample@example.com"}
+	require.Equal(t, "sample@example.com", u.DisplayName())
 }
 
 func TestUser_DisplayName_FallsBackToUID(t *testing.T) {
@@ -35,22 +35,22 @@ func TestUser_IsZero(t *testing.T) {
 func TestUser_HasManagerFields(t *testing.T) {
 	u := User{
 		UID:            "user-1",
-		FullName:       "Iain Moffat",
-		Email:          "ipm@ufl.edu",
+		FullName:       "Sample User",
+		Email:          "sample@example.com",
 		Active:         true,
-		AccountName:    "UFIT Operations",
+		AccountName:    "Sample Operations",
 		ReportsToUID:   "mgr-uid",
 		ReportsToID:    42,
 		ReportsToName:  "Manager Name",
-		ReportsToEmail: "mgr@ufl.edu",
+		ReportsToEmail: "mgr@example.com",
 	}
 	require.Equal(t, "user-1", u.UID)
 	require.Equal(t, "mgr-uid", u.ReportsToUID)
 	require.Equal(t, 42, u.ReportsToID)
 	require.Equal(t, "Manager Name", u.ReportsToName)
-	require.Equal(t, "mgr@ufl.edu", u.ReportsToEmail)
+	require.Equal(t, "mgr@example.com", u.ReportsToEmail)
 	require.True(t, u.Active)
-	require.Equal(t, "UFIT Operations", u.AccountName)
+	require.Equal(t, "Sample Operations", u.AccountName)
 }
 
 func TestUserWorkableHoursZeroValue(t *testing.T) {

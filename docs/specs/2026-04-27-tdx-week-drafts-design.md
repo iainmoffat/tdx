@@ -293,7 +293,7 @@ A draft is exactly one of these states. Visible across all output forms.
 
 **Pull (no existing draft):**
 ```
-Pulling week 2026-05-04 from work (ufl.teamdynamix.com)... done
+Pulling week 2026-05-04 from work (demotemplate.teamdynamix.com)... done
 Created draft 2026-05-04/default (3 rows, 12 cells, 40h00m, status: open)
 
   tdx time week show 2026-05-04 --draft     # view the draft
@@ -1081,7 +1081,7 @@ The Phase A slice in §14.1.
 **Verification & release**
 
 35. Reconcile-engine test pass: `ActionDelete` × all three modes × all blockers × hash-protection.
-36. Manual walkthrough on `iainmoffat`'s real UFL tenant, signed off in the walkthrough doc.
+36. Manual walkthrough on `iainmoffat`'s real sample tenant, signed off in the walkthrough doc.
 37. README/release-note pass for the version bump.
 
 (Expected to compress when written into a real plan; some items will fold during `writing-plans`.)

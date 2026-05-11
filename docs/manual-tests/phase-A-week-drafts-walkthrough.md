@@ -229,7 +229,7 @@ Verify: both actions show `✓` and final line reads `draft status: clean`.
 
 Goal: confirm live entries match the pushed draft.
 
-Open `https://ufl.teamdynamix.com/` and navigate to your timesheet for the
+Open `https://demotemplate.teamdynamix.com/` and navigate to your timesheet for the
 week of 2026-04-20.
 
 Verify:
@@ -417,10 +417,10 @@ Fill in after completing all steps.
 
 ```
 Date run:     2026-04-27
-Tenant:       https://ufl.teamdynamix.com/
+Tenant:       https://demotemplate.teamdynamix.com/
 tdx version:  0.1.0-dev (branch phase-A-week-drafts @ bf2f78d)
 Tester:       Claude (subagent-driven dispatcher) on behalf of ipm
-Week used:    2026-04-12 (open, 24 entries, 20h, UFIT Administration row only)
+Week used:    2026-04-12 (open, 24 entries, 20h, Sample Department Administration row only)
 
 Passed steps: 1 2 3 4 5 6 7 8 9 10 13 14 15 16 17 18
 Variations:   - Step 6 / 7 used `tdx time week set` instead of the interactive

@@ -14,12 +14,12 @@ import (
 
 func showFixture() domain.User {
 	return domain.User{
-		UID: "d44687e1-1a09-ef11-86d4-df13b8e4e655", FullName: "Iain Moffat",
-		Email: "ipm@ufl.edu", Active: true, IsEmployee: true,
-		AccountName:      "14300000 (IT-ICT INFRA COMM TECHNOLOGY)",
+		UID: "aaaaaaaa-1234-5678-9abc-def012345678", FullName: "Sample User",
+		Email: "sample@example.com", Active: true, IsEmployee: true,
+		AccountName:      "999999 (Sample Department)",
 		ReportsToName:    "John Toner",
-		ReportsToEmail:   "john.toner@ufl.edu",
-		ResourcePoolName: "UFIT Leaders",
+		ReportsToEmail:   "john.toner@example.com",
+		ResourcePoolName: "Sample Leaders",
 		Title:            "Director",
 	}
 }
@@ -30,14 +30,14 @@ func TestPeopleShow_Text(t *testing.T) {
 	require.NoError(t, runPeopleShow(context.Background(), &out, stub, "default", showFixture().UID, false))
 	s := out.String()
 	require.Contains(t, s, "UID:")
-	require.Contains(t, s, "Iain Moffat")
-	require.Contains(t, s, "ipm@ufl.edu")
+	require.Contains(t, s, "Sample User")
+	require.Contains(t, s, "sample@example.com")
 	require.Contains(t, s, "Active:        yes")
 	require.Contains(t, s, "Employee:      yes")
 	require.Contains(t, s, "Title:         Director")
-	require.Contains(t, s, "Account:       14300000")
-	require.Contains(t, s, "Resource pool: UFIT Leaders")
-	require.Contains(t, s, "Manager:       John Toner <john.toner@ufl.edu>")
+	require.Contains(t, s, "Account:       999999")
+	require.Contains(t, s, "Resource pool: Sample Leaders")
+	require.Contains(t, s, "Manager:       John Toner <john.toner@example.com>")
 }
 
 func TestPeopleShow_JSON(t *testing.T) {
@@ -49,7 +49,7 @@ func TestPeopleShow_JSON(t *testing.T) {
 	require.Equal(t, "tdx.v1.person", got["schema"])
 	person, ok := got["person"].(map[string]any)
 	require.True(t, ok)
-	require.Equal(t, "Iain Moffat", person["fullName"])
+	require.Equal(t, "Sample User", person["fullName"])
 }
 
 func TestPeopleShow_NotFound(t *testing.T) {

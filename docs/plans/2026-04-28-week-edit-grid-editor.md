@@ -45,7 +45,7 @@ func TestSheet_StructHasExpectedFields(t *testing.T) {
 			{
 				ID:         "row-01",
 				Label:      "Admin",
-				GroupName:  "UFIT Administration",
+				GroupName:  "Sample Department Administration",
 				DisplayRef: "plan/2075/task/2076",
 				TypeName:   "Standard Activities",
 				Hours:      domain.WeekHours{Mon: 4.0},
@@ -56,7 +56,7 @@ func TestSheet_StructHasExpectedFields(t *testing.T) {
 	require.Len(t, s.Rows, 1)
 	require.Equal(t, "row-01", s.Rows[0].ID)
 	require.Equal(t, "Admin", s.Rows[0].Label)
-	require.Equal(t, "UFIT Administration", s.Rows[0].GroupName)
+	require.Equal(t, "Sample Department Administration", s.Rows[0].GroupName)
 	require.Equal(t, "plan/2075/task/2076", s.Rows[0].DisplayRef)
 	require.Equal(t, "Standard Activities", s.Rows[0].TypeName)
 	require.InDelta(t, 4.0, s.Rows[0].Hours.Mon, 0.001)
@@ -834,10 +834,10 @@ func testGroupedSheet() Sheet {
 	return Sheet{
 		Name: "test",
 		Rows: []SheetRow{
-			{ID: "row-01", Label: "Admin Task", GroupName: "UFIT Administration", TypeName: "Standard", Hours: domain.WeekHours{Mon: 8.0}},
-			{ID: "row-03", Label: "Prof Dev", GroupName: "UFIT Administration", TypeName: "Training"},
-			{ID: "row-04", Label: "Docker", GroupName: "UFIT Operations", TypeName: "Standard", Hours: domain.WeekHours{Tue: 1.0}},
-			{ID: "row-02", Label: "Linux", GroupName: "UFIT Operations", TypeName: "Standard", Hours: domain.WeekHours{Mon: 1.0}},
+			{ID: "row-01", Label: "Admin Task", GroupName: "Sample Department Administration", TypeName: "Standard", Hours: domain.WeekHours{Mon: 8.0}},
+			{ID: "row-03", Label: "Prof Dev", GroupName: "Sample Department Administration", TypeName: "Training"},
+			{ID: "row-04", Label: "Docker", GroupName: "Sample Operations", TypeName: "Standard", Hours: domain.WeekHours{Tue: 1.0}},
+			{ID: "row-02", Label: "Linux", GroupName: "Sample Operations", TypeName: "Standard", Hours: domain.WeekHours{Mon: 1.0}},
 		},
 	}
 }
@@ -1415,7 +1415,7 @@ func TestDraftToSheet_DenseHoursFromSparseCells(t *testing.T) {
 				ID:    "row-01",
 				Label: "Admin",
 				Target: domain.Target{
-					GroupName: "UFIT Administration", DisplayRef: "plan/2075/task/2076",
+					GroupName: "Sample Department Administration", DisplayRef: "plan/2075/task/2076",
 				},
 				TimeType: domain.TimeType{Name: "Standard Activities"},
 				Cells: []domain.DraftCell{
@@ -1431,7 +1431,7 @@ func TestDraftToSheet_DenseHoursFromSparseCells(t *testing.T) {
 	require.Len(t, sheet.Rows, 1)
 	require.Equal(t, "row-01", sheet.Rows[0].ID)
 	require.Equal(t, "Admin", sheet.Rows[0].Label)
-	require.Equal(t, "UFIT Administration", sheet.Rows[0].GroupName)
+	require.Equal(t, "Sample Department Administration", sheet.Rows[0].GroupName)
 	require.Equal(t, "Standard Activities", sheet.Rows[0].TypeName)
 	require.InDelta(t, 4.0, sheet.Rows[0].Hours.Mon, 0.001)
 	require.InDelta(t, 2.0, sheet.Rows[0].Hours.Tue, 0.001)

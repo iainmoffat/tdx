@@ -107,7 +107,7 @@ func TestTimeTypesForTarget_ProjectTask(t *testing.T) {
 	svc, profile := harness(t, srv.URL)
 	// For projectTask: Target.ProjectID is the project ID, Target.ItemID
 	// is the plan ID (set by decodeTarget for componentTaskTime), and
-	// Target.TaskID is the task ID. Verified against UFL tenant 2026-04-29.
+	// Target.TaskID is the task ID. Verified against sample tenant 2026-04-29.
 	target := domain.Target{Kind: domain.TargetProjectTask, ProjectID: 259, ItemID: 1292, TaskID: 4938}
 	types, err := svc.TimeTypesForTarget(context.Background(), profile, target)
 	require.NoError(t, err)

@@ -3,7 +3,7 @@
 - **Date:** 2026-04-10
 - **Status:** Approved for implementation planning
 - **Scope:** Product shape, capability surface, CLI/MCP design, domain model, project layout, phased build plan. This is a *framework-level* spec. Each numbered phase below will get its own follow-up brainstorm and implementation plan at execution time.
-- **Target tenant:** `https://ufl.teamdynamix.com/` (initial); profile system keeps the tool tenant-agnostic.
+- **Target tenant:** `https://demotemplate.teamdynamix.com/` (initial); profile system keeps the tool tenant-agnostic.
 
 ---
 
@@ -11,7 +11,7 @@
 
 **`tdx`** is a Go CLI — with an embedded MCP server — for managing TeamDynamix time entries without touching the web UI. v1 is scoped strictly to time-entry management; the architecture is designed so future TD domains (`tdx ticket …`, `tdx project …`) slot in as sibling command namespaces without refactoring the existing code.
 
-**Who it's for.** Individual TD users at UFL who log time regularly, and AI agents operating on behalf of those users via MCP. An agent needs to be able to do things like "log 2 hours against a ticket today" or "apply my default workweek to next week" as discrete, auditable, previewable actions.
+**Who it's for.** Individual TD users at Sample who log time regularly, and AI agents operating on behalf of those users via MCP. An agent needs to be able to do things like "log 2 hours against a ticket today" or "apply my default workweek to next week" as discrete, auditable, previewable actions.
 
 **Problems solved.**
 
@@ -28,7 +28,7 @@
 
 ### 2.1 Auth & session
 
-- Interactive browser SSO login (UFL TD SSO).
+- Interactive browser SSO login (Sample TD SSO).
 - Token persisted to a config file (`~/.config/tdx/credentials.yaml`, `0600`). No OS keychain in v1.
 - `auth status` — active profile, tenant, identity, token expiry.
 - `auth logout` — clear token for a profile.
@@ -624,10 +624,10 @@ This document.
 
 ### Phase 1 — Auth & environment/profile foundation
 
-- **Goals:** working `tdx auth login` against UFL SSO; persistent session; profile/config layer; TD client wiring with token threaded through.
+- **Goals:** working `tdx auth login` against Sample SSO; persistent session; profile/config layer; TD client wiring with token threaded through.
 - **Deliverables:** `tdx auth login | status | logout`, `tdx auth profile list | add | remove | use`, `internal/config/`, `internal/svc/authsvc/`, HTTP client scaffolding.
-- **Risks/questions:** exact UFL SSO callback mechanism — loopback vs paste-token vs device-code polling. This deserves its own focused brainstorm at the start of the phase.
-- **Milestone:** end-to-end login on a real UFL laptop; `auth status` shows identity + tenant + expiry; a manual API call succeeds using the stored token.
+- **Risks/questions:** exact Sample SSO callback mechanism — loopback vs paste-token vs device-code polling. This deserves its own focused brainstorm at the start of the phase.
+- **Milestone:** end-to-end login on a real Sample laptop; `auth status` shows identity + tenant + expiry; a manual API call succeeds using the stored token.
 
 ### Phase 2 — Read-only time operations
 
@@ -708,7 +708,7 @@ These are deliberately unresolved. Each will be addressed in the brainstorm for 
    - *Loopback HTTP listener*: tdx spins up `http://127.0.0.1:<port>/callback`, opens the browser at the TD SSO endpoint with that URL as the redirect, TD returns a token after SSO. Best UX. Requires TD to support arbitrary localhost redirects.
    - *Paste-token fallback*: TD shows a token after login; user pastes into the CLI prompt. Ugly but bulletproof; should exist as a universal fallback regardless of primary mechanism.
    - *Polling endpoint*: the "every 60 seconds" URL fragment from the Auth docs hints at a device-code-style polling pattern. Would be ideal for CLI + MCP — no local server, no paste, survives headless environments.
-   - **Action:** dedicated Phase 1 auth brainstorm to verify what UFL's instance actually supports before committing code.
+   - **Action:** dedicated Phase 1 auth brainstorm to verify what Sample's instance actually supports before committing code.
 
 2. **Native TD batch/weekly write model.** Confirmed: there is no timesheet-level write endpoint. `POST /api/time` is the batched add/edit endpoint with a 50-item cap and per-item result arrays. Templates are unambiguously a tdx-side abstraction that compiles to many `POST /api/time` rows. No changes to design.
 
@@ -720,7 +720,7 @@ These are deliberately unresolved. Each will be addressed in the brainstorm for 
 
 6. **Time granularity.** The API uses minutes. Templates store decimal hours. The engine rejects fractions that don't resolve to integer minutes by default; `--round` opts into nearest-minute rounding with an explicit notice in the preview.
 
-7. **Profile-less first run.** On `tdx auth login` with no profile configured, auto-create a `default` profile pointing at `https://ufl.teamdynamix.com/`. First-run ergonomics should not require knowing the term "profile."
+7. **Profile-less first run.** On `tdx auth login` with no profile configured, auto-create a `default` profile pointing at `https://demotemplate.teamdynamix.com/`. First-run ergonomics should not require knowing the term "profile."
 
 8. **Go MCP library choice.** Pin in Phase 5 brainstorm.
 
@@ -733,7 +733,7 @@ Key decisions locked during brainstorming, for quick reference.
 - **A1 — Apply-mode default: always preview + confirm.** Every `template apply` runs a dry-run first, prints a diff, requires confirmation. `--yes` skips the prompt but the diff still prints.
 - **B2 — Template row identity: fixed refs + resolver hints + re-validation.** Templates store raw `(AppID, ItemID, TimeTypeID)` tuples plus human-readable hints; at apply time tdx re-validates each row and warns on drift.
 - **Token storage: config file at `~/.config/tdx/credentials.yaml`, `0600`.** No OS keychain in v1.
-- **Tenant: `https://ufl.teamdynamix.com/`** is the default, but profile system keeps the tool generic.
+- **Tenant: `https://demotemplate.teamdynamix.com/`** is the default, but profile system keeps the tool generic.
 - **MCP race protection.** `apply_time_template_to_week` requires an `expectedDiffHash` on confirm; mismatch aborts.
 - **Ownership tracking: description marker by default**, journal mode opt-in via config.
 - **Output auto-detection: `gh`-style.** TTY → human; pipe → JSON.

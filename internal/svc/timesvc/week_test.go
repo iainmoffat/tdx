@@ -21,7 +21,7 @@ func TestGetWeekReport_DecodesAndComputesDays(t *testing.T) {
 			"PeriodEndDate": "2026-04-11T00:00:00Z",
 			"Status": 0,
 			"TimeReportUid": "abcd-1234",
-			"UserFullName": "Iain Moffat",
+			"UserFullName": "Sample User",
 			"MinutesBillable": 0,
 			"MinutesNonBillable": 1200,
 			"MinutesTotal": 1200,

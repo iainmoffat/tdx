@@ -1604,7 +1604,7 @@ git commit -m "docs: add team-scope filter docs + tdx ticket groups list referen
 
 **Files:** none modified — verification only, then push + tag.
 
-### Live verification (run on UFL)
+### Live verification (run on the test tenant)
 
 - [ ] **Step 1: Pre-flight**
 

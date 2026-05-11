@@ -7,7 +7,7 @@
 
 After v0.16.2, `tdx ticket` covers the daily read-heavy flows plus four targeted mutations (`comment`, `status`, `assign`, `log`). What's still missing: changing other fields on an existing ticket — title, description, type, priority, account, requestor, responsibility group. Today these require leaving the CLI for the web UI. This patch closes that gap with a single thin PATCH wrapper.
 
-`tdx ticket create` (the other half of "Phase D.2") is split out and deferred — UFL probing on 2026-05-09 confirmed the canonical IT Tickets app gates `POST /tickets` and `GET /tickets/forms` for typical (non-admin) API users. Shipping the safer half first preserves momentum while the create-permission question gets sorted.
+`tdx ticket create` (the other half of "Phase D.2") is split out and deferred — Sample probing on 2026-05-09 confirmed the canonical IT Tickets app gates `POST /tickets` and `GET /tickets/forms` for typical (non-admin) API users. Shipping the safer half first preserves momentum while the create-permission question gets sorted.
 
 ## Decisions
 
@@ -209,7 +209,7 @@ If any wire-format issue surfaces (e.g. PATCH op path differs from `/Title`), fi
 7. New MCP tool `update_ticket` registered; requires `confirm:true`; tool count = 63.
 8. Docs updated: ASCII tree (byte-identical between guide.md and README.md), `## tdx ticket update` section in guide/ticket.md, mcp.md tool table.
 9. `go test ./... && go vet ./... && gofmt -l . && golangci-lint run ./...` all green.
-10. Live-verified against UFL on ticket 542034 (title + description + comment + at least one of type/priority).
+10. Live-verified against the test tenant on ticket 542034 (title + description + comment + at least one of type/priority).
 11. Released as v0.16.3 (PR + squash + tag + Goreleaser).
 
 ## Risks and mitigations

@@ -12,7 +12,7 @@
 
 | # | Decision |
 |---|---|
-| Q1 | TD's `/api/people/search` returns mostly Clients (portal end-users — 92K of 100K records on UFL), not staff. The `MustReportTime`, `ShouldReportTime`, and `ResourcePoolIDs` filters are silently ignored in the request body. Only `IsEmployee` is honored — and using it returns ~1080 records on UFL, matching the count visible in the TD UI's user filter. |
+| Q1 | TD's `/api/people/search` returns mostly Clients (portal end-users — 92K of 100K records on the test tenant), not staff. The `MustReportTime`, `ShouldReportTime`, and `ResourcePoolIDs` filters are silently ignored in the request body. Only `IsEmployee` is honored — and using it returns ~1080 records on the test tenant, matching the count visible in the TD UI's user filter. |
 | Q2 | All four staff selectors (`--manager`, `--account`, `--all`, new `--resource-pool`) target time-reporting staff, not portal Clients. Hardcode `IsEmployee=true` on the search call for those paths. |
 | Q3 | Bump default `MaxResults` for these paths to 5000 (1080 + headroom). Stays well under the 10K behavior cap and finishes in <1s. |
 | Q4 | Expose `Employee *bool` on `domain.UserFilter` for caller control. Default behavior (`Employee == nil`) keeps the current "no filter" semantics, so external callers of `peoplesvc.SearchUsers` aren't surprised. |
@@ -24,7 +24,7 @@
 
 ## 1. Goal
 
-1. Make `tdx time report status --manager me --week ...` return your actual direct reports (12 on UFL), not zero. Same fix applies to `--account NAME` and `--all`.
+1. Make `tdx time report status --manager me --week ...` return your actual direct reports (12 on the test tenant), not zero. Same fix applies to `--account NAME` and `--all`.
 2. Add `--resource-pool NAME` as a new selector so users can run the report against a TD resource pool (mirroring the TD UI's filter dropdown).
 
 ---
@@ -38,7 +38,7 @@ all, err := deps.People.SearchUsers(ctx, deps.Profile, domain.UserFilter{Limit: 
 // filter all by ReportsToUID == mgrUID
 ```
 
-`peoplesvc.SearchUsers` defaults `IsActive=true, UserType=User, MaxResults=100`. TD's "User" type includes Clients (92% of UFL's user records), so the alphabetical-first-100 are almost all Clients with self-referential `ReportsToUID` — and none of them match the user's UID.
+`peoplesvc.SearchUsers` defaults `IsActive=true, UserType=User, MaxResults=100`. TD's "User" type includes Clients (92% of Sample's user records), so the alphabetical-first-100 are almost all Clients with self-referential `ReportsToUID` — and none of them match the user's UID.
 
 Even bumping `MaxResults` to 100K returns only 5 of the user's 12 actual direct reports because TD caps the response and the alphabetical order can split direct reports across the cap.
 
@@ -48,7 +48,7 @@ Even bumping `MaxResults` to 100K returns only 5 of the user's 12 actual direct 
 
 ## 3. Findings (TD API probe, 2026-04-30)
 
-- `POST /api/resourcepools/search` with `{}` body returns all pools (76 on UFL). Each row: `ID`, `Name`, `IsActive`, `RequiresApproval`, `ManagerUID`, `ManagerFullName`, `CreatedDate`, `ModifiedDate`, `ResourceCount` (often -1).
+- `POST /api/resourcepools/search` with `{}` body returns all pools (76 on the test tenant). Each row: `ID`, `Name`, `IsActive`, `RequiresApproval`, `ManagerUID`, `ManagerFullName`, `CreatedDate`, `ModifiedDate`, `ResourceCount` (often -1).
 - `GET /api/resourcepools/{id}` returns `405` (method not allowed). No per-pool members endpoint.
 - `POST /api/people/search` with `ResourcePoolIDs: [N]` returns the **same** 1080 employees regardless of pool — silently ignored.
 - People search response includes `ResourcePoolID int` and `ResourcePoolName string` for each user.
@@ -238,7 +238,7 @@ Add `resource_pool` input parameter (string, optional). Pipe through `MCPInputs.
 ### 4.10 Docs
 
 - `README.md`: add `--resource-pool` to the status command flag list.
-- `docs/USER_GUIDE.md` (or equivalent): example invocation `tdx time report status --resource-pool "ICT - DBP - Linux Platform Services LPS" --week 2026-04-12`.
+- `docs/USER_GUIDE.md` (or equivalent): example invocation `tdx time report status --resource-pool "Sample Pool - Platform Engineering" --week 2026-04-12`.
 - `CHANGELOG.md`: v0.9.1 entry covering both fixes.
 
 ---
@@ -262,9 +262,9 @@ Add `resource_pool` input parameter (string, optional). Pipe through `MCPInputs.
 |---|---|
 | `--user UID` flow | Unchanged; doesn't use search. |
 | Other peoplesvc callers | None today — peoplesvc was added in v0.9.0 only for this feature. |
-| `MaxResults=5000` cost | ~1080 results on UFL. Under 1 second. Negligible. |
+| `MaxResults=5000` cost | ~1080 results on the test tenant. Under 1 second. Negligible. |
 | Account-name client-side filter | Still applies after `Employee=true` filters server-side. Combined behavior is what we want. |
-| Pool-name lookup cost | One extra HTTP call (returns 76 rows on UFL). Single-digit ms. |
+| Pool-name lookup cost | One extra HTTP call (returns 76 rows on the test tenant). Single-digit ms. |
 | Pool name trailing tabs | Trimmed on decode in both `wireUser.ResourcePoolName` and `wireResourcePool.Name`, so user-facing names are clean. |
 | MCP backwards compat | New optional `resource_pool` input. Existing callers unaffected. |
 | JSON envelope shape | Adds optional `filter.resourcePool` and a new selector value `"resource-pool"`. Schema name `tdx.v1.timeStatusReport` unchanged (additive). |
@@ -275,7 +275,7 @@ Add `resource_pool` input parameter (string, optional). Pipe through `MCPInputs.
 
 - `tdx people pools list` discovery command. Useful but the user can paste names from the TD UI.
 - Looking up account ID by name to pass `AccountIDs` to TD (would make `--account` server-side). Useful follow-up but not blocking.
-- Pagination for tenants larger than 5000 employees. UFL has 1080 — well under cap.
+- Pagination for tenants larger than 5000 employees. Sample has 1080 — well under cap.
 - Per-profile saved team list (the v0.9.0 fallback option B). Not needed once `--manager` works.
 - Multi-pool support (TD models one pool per user; nothing to do).
 
@@ -289,6 +289,6 @@ Add `resource_pool` input parameter (string, optional). Pipe through `MCPInputs.
 3. peoplesvc: new `pools.go` (SearchPools + ResolvePoolByName) + tests.
 4. Runner: set `Employee=&true` on existing selector searches + tests.
 5. CLI/MCP: `--resource-pool` flag, validation, runner branch, JSON envelope, MCP input + tests.
-6. Docs: README, USER_GUIDE, CHANGELOG; live verification on UFL; tag v0.9.1.
+6. Docs: README, USER_GUIDE, CHANGELOG; live verification on the test tenant; tag v0.9.1.
 
 Inline execution.

@@ -15,7 +15,7 @@ func TestProfileAdd_AddsAndPersists(t *testing.T) {
 	cmd := NewCmd()
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
-	cmd.SetArgs([]string{"profile", "add", "default", "--url", "https://ufl.teamdynamix.com/"})
+	cmd.SetArgs([]string{"profile", "add", "default", "--url", "https://demotemplate.teamdynamix.com/"})
 	require.NoError(t, cmd.Execute())
 	require.Contains(t, out.String(), "added profile \"default\"")
 }
@@ -25,7 +25,7 @@ func TestProfileList_ShowsAddedProfile(t *testing.T) {
 	t.Setenv("TDX_CONFIG_HOME", dir)
 
 	cmd := NewCmd()
-	cmd.SetArgs([]string{"profile", "add", "default", "--url", "https://ufl.teamdynamix.com/"})
+	cmd.SetArgs([]string{"profile", "add", "default", "--url", "https://demotemplate.teamdynamix.com/"})
 	require.NoError(t, cmd.Execute())
 
 	var out bytes.Buffer
@@ -34,7 +34,7 @@ func TestProfileList_ShowsAddedProfile(t *testing.T) {
 	cmd.SetArgs([]string{"profile", "list"})
 	require.NoError(t, cmd.Execute())
 	require.Contains(t, out.String(), "default")
-	require.Contains(t, out.String(), "ufl.teamdynamix.com")
+	require.Contains(t, out.String(), "demotemplate.teamdynamix.com")
 	require.Contains(t, out.String(), "*") // default marker
 }
 

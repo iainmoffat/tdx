@@ -488,7 +488,7 @@ git add internal/svc/timesvc/types.go
 git commit -m "feat(timesvc): add wire write types for Phase 3
 
 wireTimeEntryWrite, wireBulkResult, wireBulkSuccess, wireBulkFailure.
-Shapes verified against live UFL tenant during Step 0 probing.
+Shapes verified against live sample tenant during Step 0 probing.
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>"
 ```
@@ -1595,7 +1595,7 @@ func addTestServer(t *testing.T) *httptest.Server {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@ufl.edu","ReferenceID":1,"AlternateEmail":""}`))
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@example.com","ReferenceID":1,"AlternateEmail":""}`))
 
 		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/time/types":
 			w.WriteHeader(http.StatusOK)
@@ -1671,7 +1671,7 @@ func TestAddCmdProjectTaskSuccess(t *testing.T) {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@ufl.edu","ReferenceID":1,"AlternateEmail":""}`))
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@example.com","ReferenceID":1,"AlternateEmail":""}`))
 
 		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/time/types":
 			w.WriteHeader(http.StatusOK)
@@ -1820,7 +1820,7 @@ func TestAddCmdDryRun(t *testing.T) {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@ufl.edu","ReferenceID":1,"AlternateEmail":""}`))
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@example.com","ReferenceID":1,"AlternateEmail":""}`))
 
 		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/time/types":
 			w.WriteHeader(http.StatusOK)
@@ -2203,7 +2203,7 @@ func updateTestServer(t *testing.T) *httptest.Server {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@ufl.edu","ReferenceID":1,"AlternateEmail":""}`))
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@example.com","ReferenceID":1,"AlternateEmail":""}`))
 
 		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/time/types":
 			w.WriteHeader(http.StatusOK)
@@ -2297,7 +2297,7 @@ func TestUpdateCmdDryRun(t *testing.T) {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@ufl.edu","ReferenceID":1,"AlternateEmail":""}`))
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@example.com","ReferenceID":1,"AlternateEmail":""}`))
 
 		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/time/types":
 			w.WriteHeader(http.StatusOK)
@@ -2624,7 +2624,7 @@ func TestDeleteCmdSingleSuccess(t *testing.T) {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@ufl.edu","ReferenceID":1,"AlternateEmail":""}`))
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@example.com","ReferenceID":1,"AlternateEmail":""}`))
 
 		case r.Method == http.MethodDelete && r.URL.Path == "/TDWebApi/api/time/999":
 			w.WriteHeader(http.StatusOK)
@@ -2660,7 +2660,7 @@ func TestDeleteCmdSingleNotFound(t *testing.T) {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@ufl.edu","ReferenceID":1,"AlternateEmail":""}`))
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@example.com","ReferenceID":1,"AlternateEmail":""}`))
 
 		case r.Method == http.MethodDelete:
 			w.WriteHeader(http.StatusNotFound)
@@ -2692,7 +2692,7 @@ func TestDeleteCmdMultiSuccess(t *testing.T) {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@ufl.edu","ReferenceID":1,"AlternateEmail":""}`))
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@example.com","ReferenceID":1,"AlternateEmail":""}`))
 
 		case r.Method == http.MethodPost && r.URL.Path == "/TDWebApi/api/time/delete":
 			w.WriteHeader(http.StatusOK)
@@ -2729,7 +2729,7 @@ func TestDeleteCmdMultiPartialFailure(t *testing.T) {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@ufl.edu","ReferenceID":1,"AlternateEmail":""}`))
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@example.com","ReferenceID":1,"AlternateEmail":""}`))
 
 		case r.Method == http.MethodPost && r.URL.Path == "/TDWebApi/api/time/delete":
 			w.WriteHeader(http.StatusOK)
@@ -2767,7 +2767,7 @@ func TestDeleteCmdDryRunSingle(t *testing.T) {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@ufl.edu","ReferenceID":1,"AlternateEmail":""}`))
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@example.com","ReferenceID":1,"AlternateEmail":""}`))
 
 		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/time/999":
 			w.WriteHeader(http.StatusOK)
@@ -3135,7 +3135,7 @@ git commit -m "test(walkthrough): add Phase 3 write operation steps
 
 Create -> show -> update -> show -> delete -> verify-gone lifecycle.
 Cleanup trap ensures test entry is deleted even on failure.
-Uses TDX_WALKTHROUGH_PROJECT/PLAN/TASK env vars (defaults to UFL tenant).
+Uses TDX_WALKTHROUGH_PROJECT/PLAN/TASK env vars (defaults to sample tenant).
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>"
 ```
@@ -3174,7 +3174,7 @@ Expected: no changes (or only the module line if the branch diverges). No new
 
 ```bash
 export TDX_WALKTHROUGH_TOKEN="<your-token>"
-export TDX_WALKTHROUGH_URL="https://ufl.teamdynamix.com"
+export TDX_WALKTHROUGH_URL="https://demotemplate.teamdynamix.com"
 bash scripts/walkthrough.sh
 ```
 
@@ -3203,7 +3203,7 @@ gh pr create \
 - [ ] `go vet ./...` -- clean
 - [ ] `go build` -- no errors
 - [ ] `git diff main -- go.mod go.sum` -- no new deps
-- [ ] `scripts/walkthrough.sh` against live UFL tenant -- all steps pass
+- [ ] `scripts/walkthrough.sh` against live sample tenant -- all steps pass
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF

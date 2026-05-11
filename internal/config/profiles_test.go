@@ -36,7 +36,7 @@ func TestProfileStore_RoundTrip(t *testing.T) {
 	in := ProfileConfig{
 		DefaultProfile: "ufl",
 		Profiles: []domain.Profile{
-			{Name: "ufl", TenantBaseURL: "https://ufl.teamdynamix.com/"},
+			{Name: "ufl", TenantBaseURL: "https://demotemplate.teamdynamix.com/"},
 			{Name: "sandbox", TenantBaseURL: "https://sandbox.teamdynamix.com/"},
 		},
 	}
@@ -51,7 +51,7 @@ func TestProfileStore_AddProfile(t *testing.T) {
 	p := writablePaths(t)
 	s := NewProfileStore(p)
 
-	err := s.AddProfile(domain.Profile{Name: "ufl", TenantBaseURL: "https://ufl.teamdynamix.com/"})
+	err := s.AddProfile(domain.Profile{Name: "ufl", TenantBaseURL: "https://demotemplate.teamdynamix.com/"})
 	require.NoError(t, err)
 
 	cfg, err := s.Load()
@@ -64,7 +64,7 @@ func TestProfileStore_AddDuplicateRejected(t *testing.T) {
 	p := writablePaths(t)
 	s := NewProfileStore(p)
 
-	prof := domain.Profile{Name: "ufl", TenantBaseURL: "https://ufl.teamdynamix.com/"}
+	prof := domain.Profile{Name: "ufl", TenantBaseURL: "https://demotemplate.teamdynamix.com/"}
 	require.NoError(t, s.AddProfile(prof))
 	err := s.AddProfile(prof)
 	require.ErrorIs(t, err, domain.ErrProfileExists)
@@ -99,7 +99,7 @@ func TestProfileStore_GetProfile(t *testing.T) {
 	p := writablePaths(t)
 	s := NewProfileStore(p)
 
-	prof := domain.Profile{Name: "ufl", TenantBaseURL: "https://ufl.teamdynamix.com/"}
+	prof := domain.Profile{Name: "ufl", TenantBaseURL: "https://demotemplate.teamdynamix.com/"}
 	require.NoError(t, s.AddProfile(prof))
 
 	got, err := s.GetProfile("ufl")

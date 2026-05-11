@@ -19,7 +19,7 @@ func testSheet() editor.Sheet {
 			{
 				ID:        "row-01",
 				Label:     "Admin",
-				GroupName: "UFIT",
+				GroupName: "Sample Dept",
 				TypeName:  "Standard",
 				Hours:     domain.WeekHours{Mon: 8.0, Tue: 8.0, Wed: 8.0, Thu: 8.0, Fri: 8.0},
 			},

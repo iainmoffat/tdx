@@ -74,23 +74,23 @@ func (s *stubPeoplesvc) SearchUsers(_ context.Context, _ string, filter domain.U
 
 func TestPoolsList_TextOutput(t *testing.T) {
 	stub := &stubPeoplesvc{pools: []peoplesvc.ResourcePool{
-		{ID: 46, Name: "ICT - DBP - LPS", IsActive: true, RequiresApproval: true, ManagerFullName: "Iain Moffat"},
+		{ID: 46, Name: "Sample Pool - PE", IsActive: true, RequiresApproval: true, ManagerFullName: "Sample User"},
 		{ID: 2, Name: "ADI - Business", IsActive: true, RequiresApproval: false, ManagerFullName: ""},
 	}}
 	var out bytes.Buffer
 	require.NoError(t, runPoolsList(context.Background(), &out, stub, "default", false))
 	s := out.String()
 	idxADI := strings.Index(s, "ADI - Business")
-	idxICT := strings.Index(s, "ICT - DBP - LPS")
+	idxICT := strings.Index(s, "Sample Pool - PE")
 	require.True(t, idxADI >= 0 && idxICT > idxADI, "expected sorted-by-name output")
-	require.Contains(t, s, "Iain Moffat")
+	require.Contains(t, s, "Sample User")
 	require.Contains(t, s, "yes")
 	require.Contains(t, s, "no")
 }
 
 func TestPoolsList_JSONEnvelope(t *testing.T) {
 	stub := &stubPeoplesvc{pools: []peoplesvc.ResourcePool{
-		{ID: 46, Name: "ICT - DBP - LPS", IsActive: true, RequiresApproval: true, ManagerUID: "u1", ManagerFullName: "Iain"},
+		{ID: 46, Name: "Sample Pool - PE", IsActive: true, RequiresApproval: true, ManagerUID: "u1", ManagerFullName: "Iain"},
 	}}
 	var out bytes.Buffer
 	require.NoError(t, runPoolsList(context.Background(), &out, stub, "default", true))
@@ -106,7 +106,7 @@ func TestPoolsList_JSONEnvelope(t *testing.T) {
 	require.Equal(t, "tdx.v1.resourcePoolList", parsed.Schema)
 	require.Len(t, parsed.Pools, 1)
 	require.Equal(t, 46, parsed.Pools[0].ID)
-	require.Equal(t, "ICT - DBP - LPS", parsed.Pools[0].Name)
+	require.Equal(t, "Sample Pool - PE", parsed.Pools[0].Name)
 }
 
 func TestPoolsList_EmptyResult(t *testing.T) {

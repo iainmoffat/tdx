@@ -151,7 +151,7 @@ func TestRunner_ManagerMeUsesAuthenticatedUID(t *testing.T) {
 func TestRunner_AccountSelectorResolvesToServerSideID(t *testing.T) {
 	people := &mockPeoplesvc{
 		search:  []domain.User{},
-		account: peoplesvc.Account{ID: 866, Name: "14300000 (IT-ICT INFRA COMM TECHNOLOGY)"},
+		account: peoplesvc.Account{ID: 866, Name: "999999 (Sample Department)"},
 	}
 	deps := runnerDeps{
 		Time:   &mockTimesvc{},
@@ -159,7 +159,7 @@ func TestRunner_AccountSelectorResolvesToServerSideID(t *testing.T) {
 		Auth:   &mockAuthsvc{},
 	}
 	_, err := assembleReport(context.Background(), deps, statusFlags{
-		accounts:    []string{"14300000 (IT-ICT INFRA COMM TECHNOLOGY)"},
+		accounts:    []string{"999999 (Sample Department)"},
 		week:        "2026-04-14",
 		includeZero: true,
 		limit:       100,

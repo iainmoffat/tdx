@@ -400,6 +400,6 @@ MCP count: 39 → 40.
 3. **Refresh CLI + Push refusal + status/show updates:** wire `--strategy surface` flag help, refuse push on conflicted draft, update `recommendedAction`, add show CONFLICTS footer.
 4. **Resolve CLI:** new `tdx time week resolve` command (status + bulk + per-cell + JSON envelope + delete-on-pick safety + tests).
 5. **Snapshot Op + Editor banner:** new `OpResolve` snapshot reason; pre-edit banner for conflicted drafts.
-6. **MCP + docs:** `refresh_week_draft` accepts surface; new `resolve_week_draft` tool; README + guide updates; live verification on UFL; PR; merge; tag v0.11.0.
+6. **MCP + docs:** `refresh_week_draft` accepts surface; new `resolve_week_draft` tool; README + guide updates; live verification on the test tenant; PR; merge; tag v0.11.0.
 
 Inline execution.

@@ -13,7 +13,7 @@
 | # | Decision |
 |---|---|
 | Q1 | Ship all four components together: `tdx people search`, `tdx people show <UID>`, `tdx people accounts list`, plus MCP `search_people` / `get_person` / `list_accounts` / `list_resource_pools`. |
-| Q2 | `tdx people search` defaults to **staff-only** (`IsEmployee=true` client-side filter). `--include-clients` adds portal users back. Reasoning: same as v0.9.0's report-status fix — UFL is 92% portal clients, the typical "find a coworker" workflow doesn't want them in the result. |
+| Q2 | `tdx people search` defaults to **staff-only** (`IsEmployee=true` client-side filter). `--include-clients` adds portal users back. Reasoning: same as v0.9.0's report-status fix — Sample is 92% portal clients, the typical "find a coworker" workflow doesn't want them in the result. |
 | Q3 | Use `GET /api/people/lookup?searchText=&maxResults=` for partial-name search. The `NameLike` field on `POST /api/people/search` is silently ignored (existing reference memory). `/lookup` honors searchText and returns the same row shape. |
 | Q4 | `tdx people show <UID>` reuses the existing `peoplesvc.GetUser`. No new endpoint. |
 | Q5 | `tdx people accounts list` was deferred in v0.10.0 (spec §6, "out of scope: 6404 rows is a lot to scroll, --account is exact-match-only"). Ship it now since the same pattern works for pools and the inventory of `tdx people` is growing. |
@@ -165,14 +165,14 @@ func runPeopleShow(ctx context.Context, w io.Writer, svc peoplesvcAPI,
 Text output (key:value pairs):
 
 ```
-UID:           d44687e1-1a09-ef11-86d4-df13b8e4e655
-Name:          Iain Moffat
-Email:         ipm@ufl.edu
+UID:           aaaaaaaa-1234-5678-9abc-def012345678
+Name:          Sample User
+Email:         sample@example.com
 Active:        yes
 Employee:      yes
-Account:       14300000 (IT-ICT INFRA COMM TECHNOLOGY)
-Manager:       John Toner <john.toner@ufl.edu>
-Resource pool: UFIT Leaders
+Account:       999999 (Sample Department)
+Manager:       John Toner <john.toner@example.com>
+Resource pool: Sample Leaders
 ```
 
 JSON: `{"schema": "tdx.v1.person", "person": {...}}`.
@@ -306,6 +306,6 @@ Already has `svcs.People *peoplesvc.Service`. Reuse.
 3. **CLI accounts list:** new command + tests.
 4. **MCP tools:** four new read-only tools + tests + server count bump.
 5. **Docs:** README, guide.md.
-6. **Live verify on UFL + PR + tag.**
+6. **Live verify on the test tenant + PR + tag.**
 
 Inline execution.

@@ -117,7 +117,7 @@ func TestCreateEntry_WithConfirm(t *testing.T) {
 		switch {
 		case r.URL.Path == "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@ufl.edu","ReferenceID":1}`))
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@example.com","ReferenceID":1}`))
 
 		case r.Method == http.MethodPost && r.URL.Path == "/TDWebApi/api/time":
 			w.WriteHeader(http.StatusOK)

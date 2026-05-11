@@ -103,8 +103,8 @@ Reuse the existing `openBrowser` function from `internal/cli/auth/browser.go`
   "rows": [
     {
       "id": "row-01",
-      "label": "UFIT Administrative Activities: Administration",
-      "group": "UFIT Administration",
+      "label": "Sample Department Administrative Activities: Administration",
+      "group": "Sample Department Administration",
       "typeName": "Standard Activities",
       "hours": {"sun": 0, "mon": 4, "tue": 4, "wed": 4, "thu": 4, "fri": 4, "sat": 0}
     }

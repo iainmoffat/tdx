@@ -61,7 +61,7 @@ func TestWhoami_Success(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/TDWebApi/api/auth/getuser" {
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@ufl.edu","ReferenceID":1,"AlternateEmail":""}`))
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@example.com","ReferenceID":1,"AlternateEmail":""}`))
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)

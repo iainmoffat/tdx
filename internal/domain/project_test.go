@@ -15,7 +15,7 @@ func TestProjectPlanType_String(t *testing.T) {
 }
 
 func TestProjectTask_AssignedTo_CaseInsensitive(t *testing.T) {
-	me := "61fc4d29-1a09-ef11-86d4-df13b8e4e655"
+	me := "aaaaaaaa-1234-5678-9abc-def012345678"
 	task := ProjectTask{
 		Resources: []ProjectTaskResource{
 			{UID: "ABCD1234-AAAA-BBBB-CCCC-DDDDEEEEFFFF", FullName: "Someone"},

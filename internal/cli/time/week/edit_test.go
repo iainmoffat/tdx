@@ -28,7 +28,7 @@ func TestDraftToSheet_DenseHoursFromSparseCells(t *testing.T) {
 				ID:    "row-01",
 				Label: "Admin",
 				Target: domain.Target{
-					GroupName: "UFIT Administration", DisplayRef: "plan/2075/task/2076",
+					GroupName: "Sample Department Administration", DisplayRef: "plan/2075/task/2076",
 				},
 				TimeType: domain.TimeType{Name: "Standard Activities"},
 				Cells: []domain.DraftCell{
@@ -44,7 +44,7 @@ func TestDraftToSheet_DenseHoursFromSparseCells(t *testing.T) {
 	require.Len(t, sheet.Rows, 1)
 	require.Equal(t, "row-01", sheet.Rows[0].ID)
 	require.Equal(t, "Admin", sheet.Rows[0].Label)
-	require.Equal(t, "UFIT Administration", sheet.Rows[0].GroupName)
+	require.Equal(t, "Sample Department Administration", sheet.Rows[0].GroupName)
 	require.Equal(t, "Standard Activities", sheet.Rows[0].TypeName)
 	require.InDelta(t, 4.0, sheet.Rows[0].Hours.Mon, 0.001)
 	require.InDelta(t, 2.0, sheet.Rows[0].Hours.Tue, 0.001)

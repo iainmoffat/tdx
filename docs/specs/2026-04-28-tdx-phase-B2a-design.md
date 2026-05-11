@@ -326,7 +326,7 @@ Returns `tdx.v1.weekDraftRefreshResult`. Mutating but distinct from the existing
    - Strategy semantics with concrete examples.
    - Abort behavior + recovery (retry with `--strategy ours/theirs`, or `reset --yes`).
    - Worked example: pull → edit Mon to 6h → meanwhile remote changed Mon to 8h → refresh aborts → `--strategy ours` to keep 6h.
-3. **`docs/manual-tests/phase-B2a-week-drafts-refresh-walkthrough.md`** — runnable end-to-end against UFL tenant. Exercises:
+3. **`docs/manual-tests/phase-B2a-week-drafts-refresh-walkthrough.md`** — runnable end-to-end against sample tenant. Exercises:
    - Refresh with no remote changes (no-op success).
    - Refresh with local edits + non-conflicting remote changes (auto-merge, all three counters non-zero).
    - Refresh with conflicts under `--strategy abort` (verify error + zero disk mutation + `tdx time week status` unchanged).

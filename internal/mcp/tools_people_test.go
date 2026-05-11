@@ -91,7 +91,7 @@ func TestGetPerson_Shape(t *testing.T) {
 			_, _ = w.Write([]byte(`{"UID":"u","FullName":"T"}`))
 		case "/TDWebApi/api/people/abc-uid":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"UID":"abc-uid","FullName":"Iain Moffat","PrimaryEmail":"ipm@ufl.edu","IsEmployee":true,"IsActive":true,"DefaultAccountName":"ICT"}`))
+			_, _ = w.Write([]byte(`{"UID":"abc-uid","FullName":"Sample User","PrimaryEmail":"sample@example.com","IsEmployee":true,"IsActive":true,"DefaultAccountName":"ICT"}`))
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -108,7 +108,7 @@ func TestGetPerson_Shape(t *testing.T) {
 	require.Equal(t, "tdx.v1.person", got["schema"])
 	person, ok := got["person"].(map[string]any)
 	require.True(t, ok)
-	require.Equal(t, "Iain Moffat", person["fullName"])
+	require.Equal(t, "Sample User", person["fullName"])
 }
 
 func TestListAccounts_SortedByName(t *testing.T) {

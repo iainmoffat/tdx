@@ -10,7 +10,7 @@ import (
 )
 
 const accountsFixture = `[
-	{"ID":866,"Name":"14300000 (IT-ICT INFRA COMM TECHNOLOGY)","IsActive":true,"Code":"14300000","ManagerUID":"d44687e1-1a09-ef11-86d4-df13b8e4e655","ManagerFullName":"Iain Moffat"},
+	{"ID":866,"Name":"999999 (Sample Department)","IsActive":true,"Code":"999999","ManagerUID":"aaaaaaaa-1234-5678-9abc-def012345678","ManagerFullName":"Sample User"},
 	{"ID":1,"Name":"00000000 (BOARD OF TRUSTEES)","IsActive":true,"Code":"00000000","ManagerUID":"00000000-0000-0000-0000-000000000000","ManagerFullName":null},
 	{"ID":3,"Name":"01000000 (OFFICE OF PRESIDENT)","IsActive":true,"Code":"01000000","ManagerUID":"00000000-0000-0000-0000-000000000000","ManagerFullName":null}
 ]`
@@ -34,9 +34,9 @@ func TestSearchAccounts_Decode(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, accounts, 3)
 	require.Equal(t, 866, accounts[0].ID)
-	require.Equal(t, "14300000 (IT-ICT INFRA COMM TECHNOLOGY)", accounts[0].Name)
-	require.Equal(t, "Iain Moffat", accounts[0].ManagerFullName)
-	require.Equal(t, "14300000", accounts[0].Code)
+	require.Equal(t, "999999 (Sample Department)", accounts[0].Name)
+	require.Equal(t, "Sample User", accounts[0].ManagerFullName)
+	require.Equal(t, "999999", accounts[0].Code)
 }
 
 func TestResolveAccountByName_ExactMatch(t *testing.T) {
@@ -44,7 +44,7 @@ func TestResolveAccountByName_ExactMatch(t *testing.T) {
 	defer srv.Close()
 	svc, profile := harness(t, srv.URL)
 
-	acct, err := svc.ResolveAccountByName(context.Background(), profile, "14300000 (IT-ICT INFRA COMM TECHNOLOGY)")
+	acct, err := svc.ResolveAccountByName(context.Background(), profile, "999999 (Sample Department)")
 	require.NoError(t, err)
 	require.Equal(t, 866, acct.ID)
 }

@@ -134,7 +134,7 @@ The cobra-level integration (does `runAdd` actually CALL `resolveTicketAppID` an
 3. `tdx time entry add --ticket N` without `--app` and without a profile `TicketAppID` returns an error whose message mentions `tdx ticket app use`.
 4. `tdx time entry add --ticket --help` text drops "(requires --app)" or notes the fallback.
 5. All existing tests pass; 3 new helper tests pass; `go vet` and `golangci-lint` clean.
-6. Live-verified on UFL.
+6. Live-verified on the test tenant.
 7. Released as v0.16.4 (PR + squash + tag + Goreleaser).
 
 ## Risks

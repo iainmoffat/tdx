@@ -63,22 +63,22 @@ Append to `internal/domain/user_test.go`:
 func TestUser_HasManagerFields(t *testing.T) {
 	u := User{
 		UID:            "user-1",
-		FullName:       "Iain Moffat",
-		Email:          "ipm@ufl.edu",
+		FullName:       "Sample User",
+		Email:          "sample@example.com",
 		Active:         true,
-		AccountName:    "UFIT Operations",
+		AccountName:    "Sample Operations",
 		ReportsToUID:   "mgr-uid",
 		ReportsToID:    42,
 		ReportsToName:  "Manager Name",
-		ReportsToEmail: "mgr@ufl.edu",
+		ReportsToEmail: "mgr@example.com",
 	}
 	require.Equal(t, "user-1", u.UID)
 	require.Equal(t, "mgr-uid", u.ReportsToUID)
 	require.Equal(t, 42, u.ReportsToID)
 	require.Equal(t, "Manager Name", u.ReportsToName)
-	require.Equal(t, "mgr@ufl.edu", u.ReportsToEmail)
+	require.Equal(t, "mgr@example.com", u.ReportsToEmail)
 	require.True(t, u.Active)
-	require.Equal(t, "UFIT Operations", u.AccountName)
+	require.Equal(t, "Sample Operations", u.AccountName)
 }
 ```
 
@@ -722,14 +722,14 @@ func TestGetUser_Decodes(t *testing.T) {
 		_, _ = w.Write([]byte(`{
 			"UID": "target-uid",
 			"ID":  100,
-			"FullName": "Iain Moffat",
-			"PrimaryEmail": "ipm@ufl.edu",
+			"FullName": "Sample User",
+			"PrimaryEmail": "sample@example.com",
 			"IsActive": true,
-			"DefaultAccountName": "UFIT",
+			"DefaultAccountName": "Sample Dept",
 			"ReportsToUid": "mgr-uid",
 			"ReportsToId":  42,
 			"ReportsToFullName": "Manager Name",
-			"ReportsToEmail":   "mgr@ufl.edu"
+			"ReportsToEmail":   "mgr@example.com"
 		}`))
 	}))
 	defer srv.Close()
@@ -740,14 +740,14 @@ func TestGetUser_Decodes(t *testing.T) {
 	require.Equal(t, domain.User{
 		ID:             100,
 		UID:            "target-uid",
-		FullName:       "Iain Moffat",
-		Email:          "ipm@ufl.edu",
+		FullName:       "Sample User",
+		Email:          "sample@example.com",
 		Active:         true,
-		AccountName:    "UFIT",
+		AccountName:    "Sample Dept",
 		ReportsToUID:   "mgr-uid",
 		ReportsToID:    42,
 		ReportsToName:  "Manager Name",
-		ReportsToEmail: "mgr@ufl.edu",
+		ReportsToEmail: "mgr@example.com",
 	}, u)
 }
 
@@ -2748,7 +2748,7 @@ docs/specs/2026-04-30-time-report-status.md
 - [x] go vet ./...
 - [x] gofmt -l .
 - [x] golangci-lint run ./... (0 issues)
-- [x] Live verification on UFL: --manager me --week ...
+- [x] Live verification on the test tenant: --manager me --week ...
 
 ## Demo
 [paste sample human output here]

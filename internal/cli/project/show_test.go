@@ -23,8 +23,8 @@ func (s *stubDraftsvc) LoadDraft(_ string, _ time.Time, _ string) (domain.WeekDr
 func TestShow_RendersProjectDetail(t *testing.T) {
 	stub := &stubProjectsvc{
 		project: domain.Project{
-			ID: 259, Name: "Disaster Recovery", StatusName: "Executing",
-			ManagerName: "Charlotte Looney", SponsorName: "Elias Eldayrie",
+			ID: 259, Name: "Sample Recovery", StatusName: "Executing",
+			ManagerName: "Pat Manager", SponsorName: "Sam Sponsor",
 			PercentComplete: 96.0, IsActive: true,
 			EstimatedHours: 320.0, ActualHours: 58.0,
 		},
@@ -35,9 +35,9 @@ func TestShow_RendersProjectDetail(t *testing.T) {
 	require.NoError(t, err)
 	out := buf.String()
 	require.Contains(t, out, "PROJECT 259")
-	require.Contains(t, out, "Disaster Recovery")
+	require.Contains(t, out, "Sample Recovery")
 	require.Contains(t, out, "Executing")
-	require.Contains(t, out, "Charlotte Looney")
+	require.Contains(t, out, "Pat Manager")
 	require.Contains(t, out, "96.0%")
 }
 

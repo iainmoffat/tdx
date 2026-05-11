@@ -374,12 +374,12 @@ Updates:
 Per established patterns:
 
 1. **Unit tests on pure runner functions** (mocked `ticketsvcAPI` interface).
-2. **Service-layer tests** with `httptest.Server` fixtures. Fixtures captured from live UFL responses (per `feedback_probe_wire_formats_early.md` — never trust the docs alone).
+2. **Service-layer tests** with `httptest.Server` fixtures. Fixtures captured from live Sample responses (per `feedback_probe_wire_formats_early.md` — never trust the docs alone).
 3. **CLI tests** via runner-function calls; cobra layer not exercised in tests.
 4. **MCP tool tests** in `internal/mcp/tools_ticket_test.go` mirroring `tools_people_test.go`.
 
 **Live probe before locking fixtures:**
-- Pick a real UFL ticket app (one user has access to)
+- Pick a real Sample ticket app (one user has access to)
 - Capture: `/applications` (apps list), `/{appId}/tickets/statuses`, `/{appId}/tickets/types`, `/{appId}/tickets/searches`, `POST /{appId}/tickets/search` (small filter), `GET /{appId}/tickets/{id}`, `GET /{appId}/tickets/{id}/feed`
 - Save sanitized JSON snippets into `internal/svc/ticketsvc/testdata/`
 - Verify wire field names and time-zone handling on dates
@@ -418,7 +418,7 @@ Each of the 4 mutating commands tested on a low-stakes test ticket. Roll back an
 - **Saved searches return partial records that omit important fields.** Mitigation: `tdx ticket search saved <name>` output explicitly notes "partial — use `tdx ticket show <id>` for full detail" in the table footer when results are partial.
 - **`PATCH /tickets/{id}` may have non-obvious failure modes (read-only fields, workflow-locked statuses).** Mitigation: surface TD's error response verbatim; document common cases in `docs/guide/ticket.md`.
 - **Status-name resolution is ambiguous in some apps** (e.g. multiple "Closed" variants). Mitigation: ambiguous-match returns a candidate list error; users can pass `--status-id <int>` for unambiguous selection.
-- **TD search-endpoint silent-filter pattern** (per `reference_td_search_silent_filters.md`). Mitigation: probe live which `TicketSearch` fields the UFL tenant honors before relying on them; fall back to client-side filtering for any silently-ignored fields.
+- **TD search-endpoint silent-filter pattern** (per `reference_td_search_silent_filters.md`). Mitigation: probe live which `TicketSearch` fields the sample tenant honors before relying on them; fall back to client-side filtering for any silently-ignored fields.
 - **Rate limit on saved searches (60/min/IP).** Mitigation: surface 429 errors with a clear message; CLI doesn't auto-retry.
 
 ## Acceptance criteria
@@ -431,5 +431,5 @@ Each of the 4 mutating commands tested on a low-stakes test ticket. Roll back an
 6. All 12 MCP tools are registered; mutating ones require `confirm: true`; tool count reaches 56.
 7. New `docs/guide/ticket.md` exists with full per-command reference; ASCII tree updated in `guide.md` and `README.md` (byte-identical); MCP tool tables in `guide/mcp.md` updated.
 8. `go test ./... && go vet ./... && gofmt -l . && golangci-lint run ./...` all green.
-9. Live-verified against UFL on at least one real ticket app for every command.
+9. Live-verified against the test tenant on at least one real ticket app for every command.
 10. Released as v0.16.0 (PR + squash-merge + tag + Goreleaser run).

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the Go project foundation, profile/credentials storage, TD HTTP client skeleton, and the `tdx auth` + `tdx config` command trees, ending with a working `tdx auth login` using the paste-token flow against `https://ufl.teamdynamix.com/`.
+**Goal:** Build the Go project foundation, profile/credentials storage, TD HTTP client skeleton, and the `tdx auth` + `tdx config` command trees, ending with a working `tdx auth login` using the paste-token flow against `https://demotemplate.teamdynamix.com/`.
 
 **Architecture:** Cobra CLI → thin command layer → services (`authsvc`) → config/client primitives. All business logic lives in functions that take explicit dependencies (paths, readers, writers), so commands stay thin and everything is unit-testable. The TD HTTP client is a generic typed wrapper with token plumbing and `Retry-After` handling; no time-specific endpoints in this phase.
 
@@ -242,7 +242,7 @@ import (
 func TestProfile_Validate_AcceptsValidProfile(t *testing.T) {
 	p := Profile{
 		Name:          "default",
-		TenantBaseURL: "https://ufl.teamdynamix.com/",
+		TenantBaseURL: "https://demotemplate.teamdynamix.com/",
 	}
 	require.NoError(t, p.Validate())
 }
@@ -250,7 +250,7 @@ func TestProfile_Validate_AcceptsValidProfile(t *testing.T) {
 func TestProfile_Validate_RejectsEmptyName(t *testing.T) {
 	p := Profile{
 		Name:          "",
-		TenantBaseURL: "https://ufl.teamdynamix.com/",
+		TenantBaseURL: "https://demotemplate.teamdynamix.com/",
 	}
 	require.ErrorIs(t, p.Validate(), ErrInvalidProfile)
 }
@@ -263,7 +263,7 @@ func TestProfile_Validate_RejectsMissingURL(t *testing.T) {
 func TestProfile_Validate_RejectsNonHTTPSURL(t *testing.T) {
 	p := Profile{
 		Name:          "default",
-		TenantBaseURL: "http://ufl.teamdynamix.com/",
+		TenantBaseURL: "http://demotemplate.teamdynamix.com/",
 	}
 	require.ErrorIs(t, p.Validate(), ErrInvalidProfile)
 }
@@ -271,7 +271,7 @@ func TestProfile_Validate_RejectsNonHTTPSURL(t *testing.T) {
 func TestProfile_Validate_RejectsNameWithSlash(t *testing.T) {
 	p := Profile{
 		Name:          "bad/name",
-		TenantBaseURL: "https://ufl.teamdynamix.com/",
+		TenantBaseURL: "https://demotemplate.teamdynamix.com/",
 	}
 	require.ErrorIs(t, p.Validate(), ErrInvalidProfile)
 }
@@ -578,7 +578,7 @@ func TestProfileStore_RoundTrip(t *testing.T) {
 	in := ProfileConfig{
 		DefaultProfile: "ufl",
 		Profiles: []domain.Profile{
-			{Name: "ufl", TenantBaseURL: "https://ufl.teamdynamix.com/"},
+			{Name: "ufl", TenantBaseURL: "https://demotemplate.teamdynamix.com/"},
 			{Name: "sandbox", TenantBaseURL: "https://sandbox.teamdynamix.com/"},
 		},
 	}
@@ -593,7 +593,7 @@ func TestProfileStore_AddProfile(t *testing.T) {
 	p := writablePaths(t)
 	s := NewProfileStore(p)
 
-	err := s.AddProfile(domain.Profile{Name: "ufl", TenantBaseURL: "https://ufl.teamdynamix.com/"})
+	err := s.AddProfile(domain.Profile{Name: "ufl", TenantBaseURL: "https://demotemplate.teamdynamix.com/"})
 	require.NoError(t, err)
 
 	cfg, err := s.Load()
@@ -606,7 +606,7 @@ func TestProfileStore_AddDuplicateRejected(t *testing.T) {
 	p := writablePaths(t)
 	s := NewProfileStore(p)
 
-	prof := domain.Profile{Name: "ufl", TenantBaseURL: "https://ufl.teamdynamix.com/"}
+	prof := domain.Profile{Name: "ufl", TenantBaseURL: "https://demotemplate.teamdynamix.com/"}
 	require.NoError(t, s.AddProfile(prof))
 	err := s.AddProfile(prof)
 	require.ErrorIs(t, err, domain.ErrProfileExists)
@@ -641,7 +641,7 @@ func TestProfileStore_GetProfile(t *testing.T) {
 	p := writablePaths(t)
 	s := NewProfileStore(p)
 
-	prof := domain.Profile{Name: "ufl", TenantBaseURL: "https://ufl.teamdynamix.com/"}
+	prof := domain.Profile{Name: "ufl", TenantBaseURL: "https://demotemplate.teamdynamix.com/"}
 	require.NoError(t, s.AddProfile(prof))
 
 	got, err := s.GetProfile("ufl")
@@ -2181,7 +2181,7 @@ func TestProfileAdd_AddsAndPersists(t *testing.T) {
 	cmd := NewCmd()
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
-	cmd.SetArgs([]string{"profile", "add", "default", "--url", "https://ufl.teamdynamix.com/"})
+	cmd.SetArgs([]string{"profile", "add", "default", "--url", "https://demotemplate.teamdynamix.com/"})
 	require.NoError(t, cmd.Execute())
 	require.Contains(t, out.String(), "added profile \"default\"")
 }
@@ -2191,7 +2191,7 @@ func TestProfileList_ShowsAddedProfile(t *testing.T) {
 	t.Setenv("TDX_CONFIG_HOME", dir)
 
 	cmd := NewCmd()
-	cmd.SetArgs([]string{"profile", "add", "default", "--url", "https://ufl.teamdynamix.com/"})
+	cmd.SetArgs([]string{"profile", "add", "default", "--url", "https://demotemplate.teamdynamix.com/"})
 	require.NoError(t, cmd.Execute())
 
 	var out bytes.Buffer
@@ -2200,7 +2200,7 @@ func TestProfileList_ShowsAddedProfile(t *testing.T) {
 	cmd.SetArgs([]string{"profile", "list"})
 	require.NoError(t, cmd.Execute())
 	require.Contains(t, out.String(), "default")
-	require.Contains(t, out.String(), "ufl.teamdynamix.com")
+	require.Contains(t, out.String(), "demotemplate.teamdynamix.com")
 	require.Contains(t, out.String(), "*") // default marker
 }
 
@@ -2352,7 +2352,7 @@ func newProfileAddCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&url, "url", "", "tenant base URL (e.g. https://ufl.teamdynamix.com/)")
+	cmd.Flags().StringVar(&url, "url", "", "tenant base URL (e.g. https://demotemplate.teamdynamix.com/)")
 	_ = cmd.MarkFlagRequired("url")
 	return cmd
 }
@@ -2442,7 +2442,7 @@ Run:
 go test ./...
 go build ./cmd/tdx
 ./tdx auth profile list
-./tdx auth profile add default --url https://ufl.teamdynamix.com/
+./tdx auth profile add default --url https://demotemplate.teamdynamix.com/
 ./tdx auth profile list
 ```
 
@@ -2951,7 +2951,7 @@ func TestLogin_EmptyTokenRejected(t *testing.T) {
 	t.Setenv("TDX_CONFIG_HOME", dir)
 
 	cmd := NewCmdWithTokenReader(loginRunner{input: "   "})
-	cmd.SetArgs([]string{"login", "--profile", "default", "--url", "https://ufl.teamdynamix.com/"})
+	cmd.SetArgs([]string{"login", "--profile", "default", "--url", "https://demotemplate.teamdynamix.com/"})
 	err := cmd.Execute()
 	require.Error(t, err)
 	require.True(t, strings.Contains(err.Error(), "empty token") || strings.Contains(err.Error(), "invalid token"))
@@ -3057,7 +3057,7 @@ token when prompted. The token is validated against the tenant's
 				}
 			}
 			if tenantURL == "" {
-				tenantURL = "https://ufl.teamdynamix.com/"
+				tenantURL = "https://demotemplate.teamdynamix.com/"
 				fmt.Fprintf(cmd.ErrOrStderr(), "no --url given; defaulting to %s\n", tenantURL)
 			}
 
@@ -3083,7 +3083,7 @@ token when prompted. The token is validated against the tenant's
 		},
 	}
 	cmd.Flags().StringVar(&profileFlag, "profile", "", "profile name to sign in as (default: existing default or 'default')")
-	cmd.Flags().StringVar(&urlFlag, "url", "", "tenant base URL (default: existing profile or https://ufl.teamdynamix.com/)")
+	cmd.Flags().StringVar(&urlFlag, "url", "", "tenant base URL (default: existing profile or https://demotemplate.teamdynamix.com/)")
 	return cmd
 }
 ```
@@ -3145,7 +3145,7 @@ This document exercises the Phase 1 auth flow against a real TeamDynamix tenant.
 ## Prerequisites
 
 - A built `tdx` binary (`go build ./cmd/tdx`).
-- Access to a TeamDynamix tenant (default: `https://ufl.teamdynamix.com/`).
+- Access to a TeamDynamix tenant (default: `https://demotemplate.teamdynamix.com/`).
 - A valid API token for your TD user (obtain from the TD web UI — exact location
   depends on your tenant configuration, typically under Profile → API Tokens).
 
@@ -3178,10 +3178,10 @@ This document exercises the Phase 1 auth flow against a real TeamDynamix tenant.
 
 5. **Sign in with a paste token.**
    ```
-   ./tdx auth login --profile default --url https://ufl.teamdynamix.com/
+   ./tdx auth login --profile default --url https://demotemplate.teamdynamix.com/
    ```
    Expected: a prompt asking for the token. Paste the token (it will not
-   echo) and press Enter. On success: `signed in as profile "default" (https://ufl.teamdynamix.com/)`.
+   echo) and press Enter. On success: `signed in as profile "default" (https://demotemplate.teamdynamix.com/)`.
 
 6. **Confirm status reports valid.**
    ```
@@ -3190,7 +3190,7 @@ This document exercises the Phase 1 auth flow against a real TeamDynamix tenant.
    Expected:
    ```
    profile:  default
-   tenant:   https://ufl.teamdynamix.com/
+   tenant:   https://demotemplate.teamdynamix.com/
    state:    authenticated
    token:    valid
    ```
@@ -3199,7 +3199,7 @@ This document exercises the Phase 1 auth flow against a real TeamDynamix tenant.
    ```
    ./tdx auth profile list
    ```
-   Expected: `* default  https://ufl.teamdynamix.com/`.
+   Expected: `* default  https://demotemplate.teamdynamix.com/`.
 
 8. **Verify credentials file permissions.**
    ```
@@ -3220,7 +3220,7 @@ This document exercises the Phase 1 auth flow against a real TeamDynamix tenant.
     Expected:
     ```
     profile:  default
-    tenant:   https://ufl.teamdynamix.com/
+    tenant:   https://demotemplate.teamdynamix.com/
     state:    not authenticated
               run 'tdx auth login' to sign in
     ```
@@ -3229,12 +3229,12 @@ This document exercises the Phase 1 auth flow against a real TeamDynamix tenant.
 
 - **Bad token.** Enter a random string at the login prompt. Expected: `invalid token: server rejected token`.
 - **Wrong tenant URL.** Pass `--url https://wrong.teamdynamix.com/`. Expected: an HTTP error surfaced clearly.
-- **Missing URL and no existing profile.** Run `./tdx auth login` on a fresh system. Expected: defaults to `https://ufl.teamdynamix.com/` with a `stderr` notice.
+- **Missing URL and no existing profile.** Run `./tdx auth login` on a fresh system. Expected: defaults to `https://demotemplate.teamdynamix.com/` with a `stderr` notice.
 
 ## Notes
 
 - Phase 1 does not implement any ergonomic browser SSO flow. Phase 1B is the
-  follow-up for that, once the UFL SSO callback mechanism is verified.
+  follow-up for that, once the Sample SSO callback mechanism is verified.
 - Phase 1 does not fetch user identity. `tdx auth status` will gain a "signed
   in as …" line in Phase 2 once a whoami endpoint is confirmed.
 ```
@@ -3263,10 +3263,10 @@ Expected: all tests pass across `internal/domain/`, `internal/config/`, `interna
 go build ./cmd/tdx
 ```
 
-- [ ] **Execute the manual walkthrough** against a real UFL token (`docs/manual-tests/phase-1-auth-walkthrough.md`).
+- [ ] **Execute the manual walkthrough** against a real Sample token (`docs/manual-tests/phase-1-auth-walkthrough.md`).
 
 - [ ] **Confirm the phase-1 exit criteria (from spec §11 Phase 1):**
-  - `tdx auth login` succeeds end-to-end on a UFL laptop. ✓ via paste-token.
+  - `tdx auth login` succeeds end-to-end on a Sample laptop. ✓ via paste-token.
   - `tdx auth status` prints identity + tenant + expiry. ✓ *partial* — prints profile/tenant/state; identity and expiry deferred to later phases per the plan.
   - A manual curl-equivalent works against TD using the stored token. ✓ verified transitively by the status check's `Ping`.
 
@@ -3276,5 +3276,5 @@ go build ./cmd/tdx
 
 - **Identity display** — `tdx auth status` currently does not show the signed-in user's name/email. Phase 2 will pick a verified TD endpoint (likely `/api/people/...` or an auth whoami) and add it.
 - **Token expiry display** — paste-token flow gives no TTL metadata. Phase 1B may add expiry tracking if the proper SSO flow provides it.
-- **Loopback / device-code SSO** — Phase 1B, gated on a dedicated brainstorm verifying the UFL SSO wire protocol.
+- **Loopback / device-code SSO** — Phase 1B, gated on a dedicated brainstorm verifying the Sample SSO wire protocol.
 - **Global flags** — this plan only wires `--profile`. `--json`, `--no-color`, `--yes`, `--verbose`, `--quiet` will be added when their first consumer appears (likely in Phase 2).

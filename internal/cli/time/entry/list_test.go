@@ -120,7 +120,7 @@ func TestEntryList_DefaultFilterUsesWhoami(t *testing.T) {
 		switch r.URL.Path {
 		case "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"ReferenceID":42,"UID":"default-user","FullName":"Default User","PrimaryEmail":"me@ufl.edu"}`))
+			_, _ = w.Write([]byte(`{"ReferenceID":42,"UID":"default-user","FullName":"Default User","PrimaryEmail":"me@example.com"}`))
 		case "/TDWebApi/api/time/search":
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`[]`))

@@ -15,7 +15,7 @@ type wireApp struct {
 
 // wireTicketStatus matches GET /TDWebApi/api/{appId}/tickets/statuses rows.
 //
-// StatusClass enum (live-verified on UFL 2026-05-08):
+// StatusClass enum (live-verified on the test tenant 2026-05-08):
 //
 //	1 = New, 2 = InProcess, 3 = Completed (Resolved/Closed),
 //	4 = Cancelled, 5 = OnHold
@@ -41,7 +41,7 @@ type wireTicketType struct {
 // wireTicket matches GET /TDWebApi/api/{appId}/tickets/{id} and rows in
 // POST /TDWebApi/api/{appId}/tickets/search responses. StatusClass is
 // included so client-side open-only filtering can be applied (TD's IsOpen
-// filter on the search endpoint is silently ignored on UFL).
+// filter on the search endpoint is silently ignored on the test tenant).
 type wireTicket struct {
 	ID                  int      `json:"ID"`
 	AppID               int      `json:"AppID"`
@@ -69,7 +69,7 @@ type wireTicket struct {
 
 // wireTicketSearch is the request body for POST /tickets/search.
 //
-// Live-verified on UFL 2026-05-08: only StatusIDs/MaxResults/ResponsibilityUids/
+// Live-verified 2026-05-08: only StatusIDs/MaxResults/ResponsibilityUids/
 // RequestorUids are reliably honored. The IsOpen field that TD documents on
 // this endpoint is silently ignored — open-only filtering is done client-side
 // by SearchTickets using the StatusClass field returned on each row.
@@ -111,7 +111,7 @@ type wireFeedAdd struct {
 }
 
 // wireSavedSearch matches a row in GET /tickets/searches.
-// Live-verified on UFL 2026-05-08: owner fields are CreatedUID/CreatedFullName,
+// Live-verified 2026-05-08: owner fields are CreatedUID/CreatedFullName,
 // and there is no Description field on saved searches in this app type.
 type wireSavedSearch struct {
 	ID              int    `json:"ID"`
@@ -156,7 +156,7 @@ type wireGroup struct {
 // wireTicketTask matches GET /TDWebApi/api/{appId}/tickets/{ticketID}/tasks
 // rows and GET /TDWebApi/api/{appId}/tickets/{ticketID}/tasks/{id}.
 //
-// Live-verified on UFL 2026-05-08: dates use TD's standard format and
+// Live-verified 2026-05-08: dates use TD's standard format and
 // CompletedDate may be "0001-01-01T00:00:00" when unset (parseTDTime
 // returns zero time for that). ResponsibleUid is null (empty string)
 // when unassigned at the individual level — group assignment uses

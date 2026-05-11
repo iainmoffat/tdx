@@ -171,7 +171,7 @@ git commit -m "feat(domain): add TicketTask type"
 // wireTicketTask matches GET /TDWebApi/api/{appId}/tickets/{ticketID}/tasks
 // rows and GET /TDWebApi/api/{appId}/tickets/{ticketID}/tasks/{id}.
 //
-// Live-verified on UFL 2026-05-08: dates use TD's standard format and
+// Live-verified on the test tenant 2026-05-08: dates use TD's standard format and
 // CompletedDate may be "0001-01-01T00:00:00" when unset (parseTDTime
 // returns zero time for that). ResponsibleUid is null (empty string)
 // when unassigned at the individual level — group assignment uses
@@ -2034,7 +2034,7 @@ go build -o tdx ./cmd/tdx
 TOKEN=$(grep "default:" ~/.config/tdx/credentials.yaml | awk '{print $2}')
 TASK_ID=$(curl -s -H "Authorization: Bearer $TOKEN" -X POST -H "Content-Type: application/json" \
   -d '{"Title":"v0.16.2 verify task","Description":"probe","PercentComplete":0}' \
-  "https://ufl.teamdynamix.com/TDWebApi/api/34/tickets/542034/tasks" | python3 -c "import json,sys; print(json.load(sys.stdin)['ID'])")
+  "https://demotemplate.teamdynamix.com/TDWebApi/api/34/tickets/542034/tasks" | python3 -c "import json,sys; print(json.load(sys.stdin)['ID'])")
 echo "test task id: $TASK_ID"
 ```
 
@@ -2061,7 +2061,7 @@ If any wire-format mismatch surfaces, fix and re-test.
 TOKEN=$(grep "default:" ~/.config/tdx/credentials.yaml | awk '{print $2}')
 curl -s -H "Authorization: Bearer $TOKEN" -X PUT -H "Content-Type: application/json" \
   -d "{\"ID\":$TASK_ID,\"TicketID\":542034,\"Title\":\"v0.16.2 verify task (CLEANUP)\",\"IsActive\":false,\"PercentComplete\":100}" \
-  "https://ufl.teamdynamix.com/TDWebApi/api/34/tickets/542034/tasks/$TASK_ID" -o /dev/null -w "cleanup: HTTP %{http_code}\n"
+  "https://demotemplate.teamdynamix.com/TDWebApi/api/34/tickets/542034/tasks/$TASK_ID" -o /dev/null -w "cleanup: HTTP %{http_code}\n"
 ```
 
 (DELETE returns 403 for non-admins; soft-delete via `IsActive=false` is the workaround.)
