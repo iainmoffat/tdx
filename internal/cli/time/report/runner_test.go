@@ -1,7 +1,9 @@
 package report
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -647,4 +649,149 @@ func TestRunner_IncompleteNotSetIgnoresThreshold(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Len(t, out.Rows, 3, "incomplete=false: all three users returned regardless of WorkableHours or hours logged")
+}
+
+// --- JSON envelope threshold tests ---
+
+// jsonEnvelope is a minimal decode target for the JSON envelope emitted by buildJSONEnvelope.
+type jsonEnvelope struct {
+	Filter struct {
+		ThresholdMode string  `json:"thresholdMode"`
+		Threshold     float64 `json:"threshold"`
+	} `json:"filter"`
+	Weeks []struct {
+		Rows []struct {
+			UserUID   string  `json:"userUID"`
+			Threshold float64 `json:"threshold"`
+		} `json:"rows"`
+	} `json:"weeks"`
+}
+
+func encodeEnvelope(t *testing.T, rep domain.TimeStatusReport, f statusFlags) jsonEnvelope {
+	t.Helper()
+	var buf bytes.Buffer
+	require.NoError(t, printJSON(&buf, rep, f))
+	var env jsonEnvelope
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &env))
+	return env
+}
+
+func TestRunner_JSONEnvelopeThresholdModePerUser(t *testing.T) {
+	// Bob:   WorkableHours=32, logged 30h → incomplete
+	// Carol: WorkableHours=40, logged 35h → incomplete
+	// thresholdSet=false → per-user mode.
+	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	users := []domain.User{
+		{UID: "bob", FullName: "Bob", ReportsToUID: "mgr", WorkableHours: 32},
+		{UID: "carol", FullName: "Carol", ReportsToUID: "mgr", WorkableHours: 40},
+	}
+	reports := map[string]domain.WeekReport{
+		"bob":   {WeekRef: week, UserUID: "bob", TotalMinutes: 30 * 60, Status: domain.ReportOpen},
+		"carol": {WeekRef: week, UserUID: "carol", TotalMinutes: 35 * 60, Status: domain.ReportOpen},
+	}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{reports: reports},
+		People: &mockPeoplesvc{search: users},
+		Auth:   &mockAuthsvc{me: domain.User{UID: "mgr"}},
+	}
+	f := statusFlags{
+		managers:     []string{"me"},
+		week:         "2026-04-14",
+		includeZero:  true,
+		incomplete:   true,
+		thresholdSet: false,
+		limit:        100,
+	}
+	rep, err := assembleReport(context.Background(), deps, f)
+	require.NoError(t, err)
+	require.Len(t, rep.Rows, 2)
+
+	env := encodeEnvelope(t, rep, f)
+
+	require.Equal(t, "per-user", env.Filter.ThresholdMode)
+	require.Equal(t, float64(0), env.Filter.Threshold, "per-user mode: filter.threshold omitted (0)")
+
+	// Build a UID → threshold map from the envelope rows.
+	require.Len(t, env.Weeks, 1)
+	rowThresholds := map[string]float64{}
+	for _, r := range env.Weeks[0].Rows {
+		rowThresholds[r.UserUID] = r.Threshold
+	}
+	require.Equal(t, float64(32), rowThresholds["bob"], "Bob's threshold = his WorkableHours")
+	require.Equal(t, float64(40), rowThresholds["carol"], "Carol's threshold = her WorkableHours")
+}
+
+func TestRunner_JSONEnvelopeThresholdModeGlobal(t *testing.T) {
+	// Same Bob/Carol, but thresholdSet=true with threshold=20 → global mode.
+	// Both are below 20h? No — Bob has 30h and Carol 35h → neither is below 20h → 0 rows.
+	// Use threshold=38 so Bob (30h) is below but Carol (35h) is also below.
+	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	users := []domain.User{
+		{UID: "bob", FullName: "Bob", ReportsToUID: "mgr", WorkableHours: 32},
+		{UID: "carol", FullName: "Carol", ReportsToUID: "mgr", WorkableHours: 40},
+	}
+	reports := map[string]domain.WeekReport{
+		"bob":   {WeekRef: week, UserUID: "bob", TotalMinutes: 30 * 60, Status: domain.ReportOpen},
+		"carol": {WeekRef: week, UserUID: "carol", TotalMinutes: 35 * 60, Status: domain.ReportOpen},
+	}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{reports: reports},
+		People: &mockPeoplesvc{search: users},
+		Auth:   &mockAuthsvc{me: domain.User{UID: "mgr"}},
+	}
+	f := statusFlags{
+		managers:     []string{"me"},
+		week:         "2026-04-14",
+		includeZero:  true,
+		incomplete:   true,
+		threshold:    38,
+		thresholdSet: true,
+		limit:        100,
+	}
+	rep, err := assembleReport(context.Background(), deps, f)
+	require.NoError(t, err)
+	require.Len(t, rep.Rows, 2, "both Bob (30h) and Carol (35h) are below the global 38h threshold")
+
+	env := encodeEnvelope(t, rep, f)
+
+	require.Equal(t, "global", env.Filter.ThresholdMode)
+	require.Equal(t, float64(38), env.Filter.Threshold)
+
+	require.Len(t, env.Weeks, 1)
+	for _, r := range env.Weeks[0].Rows {
+		require.Equal(t, float64(38), r.Threshold, "every row threshold == global threshold (UID=%s)", r.UserUID)
+	}
+}
+
+func TestRunner_JSONEnvelopeNoFilterMode(t *testing.T) {
+	// incomplete=false: thresholdMode and threshold absent; row threshold absent.
+	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	user := domain.User{UID: "u1", FullName: "Alice", WorkableHours: 40}
+	reports := map[string]domain.WeekReport{
+		"u1": {WeekRef: week, UserUID: "u1", TotalMinutes: 40 * 60, Status: domain.ReportOpen},
+	}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{reports: reports},
+		People: &mockPeoplesvc{users: map[string]domain.User{"u1": user}},
+		Auth:   &mockAuthsvc{},
+	}
+	f := statusFlags{
+		users:       []string{"u1"},
+		week:        "2026-04-14",
+		includeZero: true,
+		incomplete:  false,
+		limit:       100,
+	}
+	rep, err := assembleReport(context.Background(), deps, f)
+	require.NoError(t, err)
+	require.Len(t, rep.Rows, 1)
+
+	env := encodeEnvelope(t, rep, f)
+
+	require.Equal(t, "", env.Filter.ThresholdMode, "thresholdMode absent when incomplete=false")
+	require.Equal(t, float64(0), env.Filter.Threshold, "threshold absent when incomplete=false")
+
+	require.Len(t, env.Weeks, 1)
+	require.Len(t, env.Weeks[0].Rows, 1)
+	require.Equal(t, float64(0), env.Weeks[0].Rows[0].Threshold, "per-row threshold absent when incomplete=false")
 }

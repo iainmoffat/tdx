@@ -147,6 +147,7 @@ func assembleReport(ctx context.Context, deps runnerDeps, f statusFlags) (domain
 			} else {
 				rowThreshold = defaultThresholdFallback
 			}
+			r.Threshold = rowThreshold // set on the local copy before the skip check
 			if r.TotalHours() >= rowThreshold {
 				continue
 			}

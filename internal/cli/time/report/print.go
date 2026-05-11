@@ -65,6 +65,7 @@ func buildJSONEnvelope(rep domain.TimeStatusReport, f statusFlags) any {
 		Accounts      []string `json:"accounts,omitempty"`
 		ResourcePools []string `json:"resourcePools,omitempty"`
 		Incomplete    bool     `json:"incomplete,omitempty"`
+		ThresholdMode string   `json:"thresholdMode,omitempty"`
 		Threshold     float64  `json:"threshold,omitempty"`
 		From          string   `json:"from"`
 		To            string   `json:"to"`
@@ -79,6 +80,7 @@ func buildJSONEnvelope(rep domain.TimeStatusReport, f statusFlags) any {
 		BillableHours    float64 `json:"billableHours"`
 		NonBillableHours float64 `json:"nonBillableHours"`
 		TotalHours       float64 `json:"totalHours"`
+		Threshold        float64 `json:"threshold,omitempty"`
 	}
 	type totalsJSON struct {
 		BillableHours    float64 `json:"billableHours"`
@@ -110,9 +112,17 @@ func buildJSONEnvelope(rep domain.TimeStatusReport, f statusFlags) any {
 	}
 	if f.incomplete {
 		filter.Incomplete = true
-		filter.Threshold = f.threshold
-		if filter.Threshold <= 0 {
-			filter.Threshold = 40
+		if f.thresholdSet {
+			filter.ThresholdMode = "global"
+			filter.Threshold = f.threshold
+			if filter.Threshold <= 0 {
+				filter.Threshold = 40 // align with the runner's defaultThresholdFallback
+			}
+		} else {
+			filter.ThresholdMode = "per-user"
+			// Per-user mode: leave filter.Threshold = 0 (omitted in JSON via omitempty).
+			// The per-row threshold field on each WeekStatusRow tells consumers what
+			// was actually applied.
 		}
 	}
 
@@ -126,6 +136,7 @@ func buildJSONEnvelope(rep domain.TimeStatusReport, f statusFlags) any {
 				ReportsToName: r.User.ReportsToName, ReportsToEmail: r.User.ReportsToEmail,
 				Status:        string(r.Status),
 				BillableHours: r.BillableHours(), NonBillableHours: r.NonBillableHours(), TotalHours: r.TotalHours(),
+				Threshold: r.Threshold,
 			})
 			bill += r.BillableMin
 			nonBill += r.NonBillableMin
