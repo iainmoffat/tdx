@@ -527,9 +527,9 @@ func TestRunner_IncompletePerUserFromWorkableHours(t *testing.T) {
 	// No --threshold flag set; thresholdSet=false → per-user mode.
 	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
 	users := []domain.User{
-		{UID: "alice", FullName: "Alice", ReportsToUID: "mgr", WorkableHours: 40},
-		{UID: "bob", FullName: "Bob", ReportsToUID: "mgr", WorkableHours: 32},
-		{UID: "carol", FullName: "Carol", ReportsToUID: "mgr", WorkableHours: 40},
+		{UID: "alice", FullName: "Alice", ReportsToUID: "mgr", WorkableHours: 8.0}, // 8h/day = 40h/week FT
+		{UID: "bob", FullName: "Bob", ReportsToUID: "mgr", WorkableHours: 6.4},     // 6.4h/day = 32h/week PT
+		{UID: "carol", FullName: "Carol", ReportsToUID: "mgr", WorkableHours: 8.0}, // 8h/day = 40h/week FT
 	}
 	reports := map[string]domain.WeekReport{
 		"alice": {WeekRef: week, UserUID: "alice", TotalMinutes: 40 * 60, Status: domain.ReportOpen},
@@ -594,9 +594,9 @@ func TestRunner_IncompleteGlobalThresholdOverridesPerUser(t *testing.T) {
 	// All three have logged >= 20h, so none are incomplete.
 	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
 	users := []domain.User{
-		{UID: "alice", FullName: "Alice", ReportsToUID: "mgr", WorkableHours: 40},
-		{UID: "bob", FullName: "Bob", ReportsToUID: "mgr", WorkableHours: 32},
-		{UID: "carol", FullName: "Carol", ReportsToUID: "mgr", WorkableHours: 40},
+		{UID: "alice", FullName: "Alice", ReportsToUID: "mgr", WorkableHours: 8.0}, // 8h/day = 40h/week FT
+		{UID: "bob", FullName: "Bob", ReportsToUID: "mgr", WorkableHours: 6.4},     // 6.4h/day = 32h/week PT
+		{UID: "carol", FullName: "Carol", ReportsToUID: "mgr", WorkableHours: 8.0}, // 8h/day = 40h/week FT
 	}
 	reports := map[string]domain.WeekReport{
 		"alice": {WeekRef: week, UserUID: "alice", TotalMinutes: 40 * 60, Status: domain.ReportOpen},
@@ -626,9 +626,9 @@ func TestRunner_IncompleteNotSetIgnoresThreshold(t *testing.T) {
 	// All three rows should be returned regardless of WorkableHours.
 	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
 	users := []domain.User{
-		{UID: "alice", FullName: "Alice", ReportsToUID: "mgr", WorkableHours: 40},
-		{UID: "bob", FullName: "Bob", ReportsToUID: "mgr", WorkableHours: 32},
-		{UID: "carol", FullName: "Carol", ReportsToUID: "mgr", WorkableHours: 40},
+		{UID: "alice", FullName: "Alice", ReportsToUID: "mgr", WorkableHours: 8.0}, // 8h/day = 40h/week FT
+		{UID: "bob", FullName: "Bob", ReportsToUID: "mgr", WorkableHours: 6.4},     // 6.4h/day = 32h/week PT
+		{UID: "carol", FullName: "Carol", ReportsToUID: "mgr", WorkableHours: 8.0}, // 8h/day = 40h/week FT
 	}
 	reports := map[string]domain.WeekReport{
 		"alice": {WeekRef: week, UserUID: "alice", TotalMinutes: 40 * 60, Status: domain.ReportOpen},
@@ -677,13 +677,13 @@ func encodeEnvelope(t *testing.T, rep domain.TimeStatusReport, f statusFlags) js
 }
 
 func TestRunner_JSONEnvelopeThresholdModePerUser(t *testing.T) {
-	// Bob:   WorkableHours=32, logged 30h → incomplete
-	// Carol: WorkableHours=40, logged 35h → incomplete
+	// Bob:   WorkableHours=6.4/day → 32h/week threshold, logged 30h → incomplete
+	// Carol: WorkableHours=8.0/day → 40h/week threshold, logged 35h → incomplete
 	// thresholdSet=false → per-user mode.
 	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
 	users := []domain.User{
-		{UID: "bob", FullName: "Bob", ReportsToUID: "mgr", WorkableHours: 32},
-		{UID: "carol", FullName: "Carol", ReportsToUID: "mgr", WorkableHours: 40},
+		{UID: "bob", FullName: "Bob", ReportsToUID: "mgr", WorkableHours: 6.4},
+		{UID: "carol", FullName: "Carol", ReportsToUID: "mgr", WorkableHours: 8.0},
 	}
 	reports := map[string]domain.WeekReport{
 		"bob":   {WeekRef: week, UserUID: "bob", TotalMinutes: 30 * 60, Status: domain.ReportOpen},
@@ -717,8 +717,8 @@ func TestRunner_JSONEnvelopeThresholdModePerUser(t *testing.T) {
 	for _, r := range env.Weeks[0].Rows {
 		rowThresholds[r.UserUID] = r.Threshold
 	}
-	require.Equal(t, float64(32), rowThresholds["bob"], "Bob's threshold = his WorkableHours")
-	require.Equal(t, float64(40), rowThresholds["carol"], "Carol's threshold = her WorkableHours")
+	require.Equal(t, float64(32), rowThresholds["bob"], "Bob's threshold = his WorkableHours × 5 (6.4 × 5 = 32)")
+	require.Equal(t, float64(40), rowThresholds["carol"], "Carol's threshold = her WorkableHours × 5 (8.0 × 5 = 40)")
 }
 
 func TestRunner_JSONEnvelopeThresholdModeGlobal(t *testing.T) {
@@ -727,8 +727,8 @@ func TestRunner_JSONEnvelopeThresholdModeGlobal(t *testing.T) {
 	// Use threshold=38 so Bob (30h) is below but Carol (35h) is also below.
 	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
 	users := []domain.User{
-		{UID: "bob", FullName: "Bob", ReportsToUID: "mgr", WorkableHours: 32},
-		{UID: "carol", FullName: "Carol", ReportsToUID: "mgr", WorkableHours: 40},
+		{UID: "bob", FullName: "Bob", ReportsToUID: "mgr", WorkableHours: 6.4},
+		{UID: "carol", FullName: "Carol", ReportsToUID: "mgr", WorkableHours: 8.0},
 	}
 	reports := map[string]domain.WeekReport{
 		"bob":   {WeekRef: week, UserUID: "bob", TotalMinutes: 30 * 60, Status: domain.ReportOpen},
@@ -766,7 +766,7 @@ func TestRunner_JSONEnvelopeThresholdModeGlobal(t *testing.T) {
 func TestRunner_JSONEnvelopeNoFilterMode(t *testing.T) {
 	// incomplete=false: thresholdMode and threshold absent; row threshold absent.
 	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
-	user := domain.User{UID: "u1", FullName: "Alice", WorkableHours: 40}
+	user := domain.User{UID: "u1", FullName: "Alice", WorkableHours: 8.0}
 	reports := map[string]domain.WeekReport{
 		"u1": {WeekRef: week, UserUID: "u1", TotalMinutes: 40 * 60, Status: domain.ReportOpen},
 	}

@@ -1002,9 +1002,11 @@ cannot mix `--manager X --resource-pool Y` in a single run.
 ```
 
 `--incomplete` filters to user-weeks below the threshold. When `--threshold` is omitted,
-each user's TD `WorkableHours` (e.g. 40 for FT, 32 for PT) is used as their individual
-threshold; if `WorkableHours` is unset in TD, falls back to 40. Pass `--threshold N`
-to override with a global threshold for all rows.
+each user's TD `WorkableHours` is used to compute their individual weekly threshold.
+TD stores `WorkableHours` as hours per day (typically 8.0 for FT, 6.4 for PT), and
+tdx multiplies by 5 to get a weekly threshold (40h FT, 32h PT). If `WorkableHours` is
+unset (0) in TD, falls back to 40h. Pass `--threshold N` to override with a global
+threshold for all rows.
 
 `--incomplete` is independent of submission status — a `submitted` 38h holiday week
 still shows up if below the threshold. Permission-denied rows drop out under
@@ -1022,10 +1024,10 @@ default          human table
 ```
 
 When `--json` is used with `--incomplete`:
-- Each row's `threshold` field shows the threshold value used for that row
-  (e.g. the user's `WorkableHours`, or the `--threshold` override if provided).
+- Each row's `threshold` field shows the weekly threshold value used for that row
+  (the user's `WorkableHours × 5`, or the `--threshold` override if provided).
 - The JSON envelope's `filter.thresholdMode` is either `"per-user"` (when `--threshold`
-  is omitted, using `WorkableHours`) or `"global"` (when `--threshold N` is specified).
+  is omitted, using `WorkableHours × 5`) or `"global"` (when `--threshold N` is specified).
 
 #### Examples
 

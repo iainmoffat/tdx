@@ -126,9 +126,11 @@ func assembleReport(ctx context.Context, deps runnerDeps, f statusFlags) (domain
 	// permission-denied since we can't classify hours we couldn't read).
 	// Threshold mode:
 	//   - thresholdSet=true   → global f.threshold (or 40 if <= 0) for every row
-	//   - thresholdSet=false  → per-user from row.User.WorkableHours; falls
-	//                           back to defaultThresholdFallback (40) when 0
+	//   - thresholdSet=false  → per-user from row.User.WorkableHours * workdaysPerWeek
+	//                           (TD's WorkableHours is per-DAY, e.g. 8.0 for FT);
+	//                           falls back to defaultThresholdFallback (40) when 0
 	const defaultThresholdFallback = 40.0
+	const workdaysPerWeek = 5.0
 	if f.incomplete {
 		globalThreshold := f.threshold
 		if globalThreshold <= 0 {
@@ -143,7 +145,7 @@ func assembleReport(ctx context.Context, deps runnerDeps, f statusFlags) (domain
 			if f.thresholdSet {
 				rowThreshold = globalThreshold
 			} else if r.User.WorkableHours > 0 {
-				rowThreshold = r.User.WorkableHours
+				rowThreshold = r.User.WorkableHours * workdaysPerWeek
 			} else {
 				rowThreshold = defaultThresholdFallback
 			}

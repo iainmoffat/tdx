@@ -3,6 +3,8 @@
 **Date:** 2026-05-11
 **Goal:** `tdx time report status --incomplete` uses each user's `WorkableHours` (from TD) as the threshold by default, rather than a global `--threshold 40`. Explicit `--threshold N` still works as a global override. Closes a deferred item from v0.12.0.
 
+> **Post-implementation correction (2026-05-11):** Live probing of UFL revealed that TD returns `WorkableHours` as **hours per day**, not per week (e.g. `8.0` for a FT staff member, not `40`). The runner multiplies by 5 (`workdaysPerWeek`) to compute the weekly threshold. All test fixtures, examples, and prose in this spec that show `WorkableHours: 40 / 32` as weekly values should be read as the equivalent daily values (`8.0 / 6.4`); the final code and documentation reflect the correct daily semantic.
+
 ## Motivation
 
 TD already stores per-user expected weekly hours (`WorkableHours`) — admins set them when onboarding (40 FT, 32 PT, etc.). The current `tdx time report status --incomplete` command can't see that field; it applies one global threshold to everyone, so PT staff at 32 hours show as "incomplete" against the 40-default unless the operator runs separate commands per group or manually sifts the output. Closing this gap was explicitly deferred from the v0.12.0 incomplete-filter spec (`docs/specs/2026-05-04-time-report-status-incomplete-filter.md` § Q1 + deferred section).
