@@ -109,7 +109,7 @@ type ProjectTask struct {
 	PlanName        string                `json:"planName,omitempty"`
 	ID              int                   `json:"taskID"`
 	Title           string                `json:"title"`
-	Status          string                `json:"status,omitempty"`  // TD returns a string here ("InProcess")
+	Status          string                `json:"status,omitempty"` // TD returns a string here ("InProcess")
 	StatusID        int                   `json:"statusID,omitempty"`
 	PercentComplete float64               `json:"percentComplete,omitempty"`
 	EstimatedHours  float64               `json:"estimatedHours,omitempty"`

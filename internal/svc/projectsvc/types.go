@@ -39,7 +39,7 @@ type wireProjectSearch struct {
 }
 
 type wirePlan struct {
-	ID              int     `json:"ID"`       // plan ID
+	ID              int     `json:"ID"` // plan ID
 	Title           string  `json:"Title"`
 	ProjectID       int     `json:"ProjectID"`
 	ProjectName     string  `json:"ProjectName"`
@@ -108,7 +108,7 @@ func parseTD(s string) time.Time {
 	for _, layout := range []string{
 		time.RFC3339,
 		time.RFC3339Nano,
-		"2006-01-02T15:04:05",      // TD often omits the zone on plan/task dates
+		"2006-01-02T15:04:05", // TD often omits the zone on plan/task dates
 		"2006-01-02T15:04:05.999",
 	} {
 		if t, err := time.Parse(layout, s); err == nil {
