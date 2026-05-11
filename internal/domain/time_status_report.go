@@ -14,6 +14,10 @@ type WeekStatusRow struct {
 	BillableMin    int          `json:"billableMinutes"`
 	NonBillableMin int          `json:"nonBillableMinutes"`
 	TotalMin       int          `json:"totalMinutes"`
+	// Threshold is the per-row hours threshold applied during --incomplete
+	// filtering. 0 / omitted when --incomplete is not set or for rows that
+	// were never filtered (e.g. permission-denied).
+	Threshold float64 `json:"threshold,omitempty"`
 }
 
 func (r WeekStatusRow) BillableHours() float64    { return float64(r.BillableMin) / 60.0 }

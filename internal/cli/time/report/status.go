@@ -24,6 +24,7 @@ type statusFlags struct {
 	includeZero   bool
 	incomplete    bool
 	threshold     float64
+	thresholdSet  bool // true when --threshold was explicitly passed (CLI: cmd.Flags().Changed("threshold"); MCP: in.Threshold > 0)
 	limit         int
 	json          bool
 	csv           bool
@@ -60,6 +61,7 @@ Output formats (mutually exclusive; default: human table):
 			if cmd.Flags().Changed("threshold") && !f.incomplete {
 				return fmt.Errorf("--threshold requires --incomplete")
 			}
+			f.thresholdSet = cmd.Flags().Changed("threshold")
 			if err := validateStatusFlags(f); err != nil {
 				return err
 			}

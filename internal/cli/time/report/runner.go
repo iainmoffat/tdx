@@ -124,17 +124,33 @@ func assembleReport(ctx context.Context, deps runnerDeps, f statusFlags) (domain
 
 	// Apply --incomplete filter (keeps rows below threshold; drops
 	// permission-denied since we can't classify hours we couldn't read).
+	// Threshold mode:
+	//   - thresholdSet=true   → global f.threshold (or 40 if <= 0) for every row
+	//   - thresholdSet=false  → per-user from row.User.WorkableHours * workdaysPerWeek
+	//                           (TD's WorkableHours is per-DAY, e.g. 8.0 for FT);
+	//                           falls back to defaultThresholdFallback (40) when 0
+	const defaultThresholdFallback = 40.0
+	const workdaysPerWeek = 5.0
 	if f.incomplete {
-		threshold := f.threshold
-		if threshold <= 0 {
-			threshold = 40
+		globalThreshold := f.threshold
+		if globalThreshold <= 0 {
+			globalThreshold = defaultThresholdFallback
 		}
 		filtered := results[:0]
 		for _, r := range results {
 			if r.Status == domain.ReportStatus("permission-denied") {
 				continue
 			}
-			if r.TotalHours() >= threshold {
+			var rowThreshold float64
+			if f.thresholdSet {
+				rowThreshold = globalThreshold
+			} else if r.User.WorkableHours > 0 {
+				rowThreshold = r.User.WorkableHours * workdaysPerWeek
+			} else {
+				rowThreshold = defaultThresholdFallback
+			}
+			r.Threshold = rowThreshold // set on the local copy before the skip check
+			if r.TotalHours() >= rowThreshold {
 				continue
 			}
 			filtered = append(filtered, r)
@@ -168,6 +184,7 @@ type MCPInputs struct {
 	IncludeZero   bool
 	Incomplete    bool
 	Threshold     float64
+	ThresholdSet  bool // mirror of statusFlags.thresholdSet — populated by handler from `Threshold > 0`
 	Limit         int
 	TimeSvc       timesvcAPI
 	PeopleSvc     peoplesvcAPI
@@ -193,6 +210,7 @@ func RunForMCP(ctx context.Context, in MCPInputs) (any, error) {
 		includeZero:   in.IncludeZero,
 		incomplete:    in.Incomplete,
 		threshold:     in.Threshold,
+		thresholdSet:  in.ThresholdSet,
 		limit:         in.Limit,
 	}
 	if err := validateStatusFlags(f); err != nil {

@@ -998,15 +998,21 @@ cannot mix `--manager X --resource-pool Y` in a single run.
 ```
 --include-zero        include user-weeks with zero total minutes (default true)
 --incomplete          keep only user-weeks below --threshold (drops permission-denied)
---threshold N         hours threshold for --incomplete (default 40); requires --incomplete
+--threshold N         explicit global threshold (hours); requires --incomplete
 ```
 
-`--incomplete` is independent of submission status — a `submitted` 38h holiday
-week still shows up if 38 < threshold. The threshold defaults to 40 (full
-US-FT week); pass `--threshold 32` for part-time staff. Permission-denied
-rows drop out under `--incomplete` (zero hours we couldn't read aren't
-informative). Subtotals and OVERALL totals reflect the filtered set,
-mirroring how `--include-zero=false` already works.
+`--incomplete` filters to user-weeks below the threshold. When `--threshold` is omitted,
+each user's TD `WorkableHours` is used to compute their individual weekly threshold.
+TD stores `WorkableHours` as hours per day (typically 8.0 for FT, 6.4 for PT), and
+tdx multiplies by 5 to get a weekly threshold (40h FT, 32h PT). If `WorkableHours` is
+unset (0) in TD, falls back to 40h. Pass `--threshold N` to override with a global
+threshold for all rows.
+
+`--incomplete` is independent of submission status — a `submitted` 38h holiday week
+still shows up if below the threshold. Permission-denied rows drop out under
+`--incomplete` (zero hours we couldn't read aren't informative). Subtotals and
+OVERALL totals reflect the filtered set, mirroring how `--include-zero=false` already
+works.
 
 #### Output formats (mutually exclusive)
 
@@ -1016,6 +1022,12 @@ default          human table
 --csv            CSV on stdout (no subtotal rows; pivot in Excel)
 --xlsx PATH      write XLSX file (single sheet, bold frozen header)
 ```
+
+When `--json` is used with `--incomplete`:
+- Each row's `threshold` field shows the weekly threshold value used for that row
+  (the user's `WorkableHours × 5`, or the `--threshold` override if provided).
+- The JSON envelope's `filter.thresholdMode` is either `"per-user"` (when `--threshold`
+  is omitted, using `WorkableHours × 5`) or `"global"` (when `--threshold N` is specified).
 
 #### Examples
 
@@ -1035,11 +1047,14 @@ tdx time report status --resource-pool "ICT - DBP - Linux Platform Services LPS"
 # Whole org in XLSX (requires --yes)
 tdx time report status --all --yes --week 2026-04-12 --xlsx all.xlsx
 
-# Direct reports who haven't logged a full week
+# Direct reports below their individual WorkableHours (per-user threshold)
 tdx time report status --manager me --week 2026-04-19 --incomplete
 
-# Same, but for a 32-hour PT team
-tdx time report status --manager me --week 2026-04-19 --incomplete --threshold 32
+# Override with a global threshold of 20 hours for everyone
+tdx time report status --manager me --week 2026-04-19 --incomplete --threshold 20
+
+# Restore pre-v0.16.5 behavior (global 40 for all users)
+tdx time report status --manager me --week 2026-04-19 --incomplete --threshold 40
 
 # Multiple managers — union of direct reports
 tdx time report status --manager me --manager other-uid --week 2026-04-19

@@ -131,3 +131,23 @@ func TestSearchUsers_DecodesResourcePool(t *testing.T) {
 	require.Equal(t, 46, users[0].ResourcePoolID)
 	require.Equal(t, "ICT - DBP - Linux Platform Services LPS", users[0].ResourcePoolName)
 }
+
+func TestGetUserDecodesWorkableHours(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{
+			"UID": "u1",
+			"FullName": "Test User",
+			"PrimaryEmail": "test@example.com",
+			"WorkableHours": 32.0
+		}`))
+	}))
+	defer srv.Close()
+	svc, prof := harness(t, srv.URL)
+	got, err := svc.GetUser(context.Background(), prof, "u1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.WorkableHours != 32.0 {
+		t.Errorf("WorkableHours: got %v, want 32.0", got.WorkableHours)
+	}
+}

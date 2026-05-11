@@ -78,7 +78,7 @@ func TestPrintJSON_IncompleteEchoedWhenSet(t *testing.T) {
 	var buf bytes.Buffer
 	f := statusFlags{
 		managers: []string{"me"}, week: "2026-04-14",
-		incomplete: true, threshold: 32,
+		incomplete: true, threshold: 32, thresholdSet: true,
 	}
 	require.NoError(t, printJSON(&buf, sampleReport(), f))
 	var got map[string]any
@@ -86,6 +86,7 @@ func TestPrintJSON_IncompleteEchoedWhenSet(t *testing.T) {
 	filter, ok := got["filter"].(map[string]any)
 	require.True(t, ok)
 	require.Equal(t, true, filter["incomplete"])
+	require.Equal(t, "global", filter["thresholdMode"])
 	require.InDelta(t, 32.0, filter["threshold"], 0.001)
 }
 

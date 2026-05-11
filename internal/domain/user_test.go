@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -50,4 +51,26 @@ func TestUser_HasManagerFields(t *testing.T) {
 	require.Equal(t, "mgr@ufl.edu", u.ReportsToEmail)
 	require.True(t, u.Active)
 	require.Equal(t, "UFIT Operations", u.AccountName)
+}
+
+func TestUserWorkableHoursZeroValue(t *testing.T) {
+	var u User
+	if u.WorkableHours != 0 {
+		t.Errorf("zero value should be 0.0, got %v", u.WorkableHours)
+	}
+}
+
+func TestUserWorkableHoursRoundTrip(t *testing.T) {
+	u := User{UID: "u1", WorkableHours: 32.5}
+	b, err := json.Marshal(u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got User
+	if err := json.Unmarshal(b, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.WorkableHours != 32.5 {
+		t.Errorf("round-trip lost value; got %v", got.WorkableHours)
+	}
 }
