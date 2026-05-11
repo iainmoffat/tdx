@@ -66,6 +66,27 @@ func TestTable_PreservesRowOrder(t *testing.T) {
 	require.Contains(t, lines[3], "m")
 }
 
+func TestTable_UnicodeEllipsisAlignsByRunes(t *testing.T) {
+	// "Hello…" is 6 visible chars (1 ellipsis rune) but 8 bytes. Column
+	// width and padding must use rune count, not byte count, otherwise
+	// adjacent columns drift by 2 spaces.
+	var buf bytes.Buffer
+	Table(&buf,
+		[]string{"NAME", "AGE"},
+		[][]string{
+			{"Hello…", "1"}, // 6 runes, 8 bytes
+			{"ABCDEF", "2"}, // 6 runes, 6 bytes — same visual width as row 1
+		},
+		nil,
+	)
+	lines := splitLines(buf.String())
+	require.Len(t, lines, 3)
+	// Strip trailing whitespace; remaining columns should be the same width.
+	require.Equal(t, "NAME    AGE", strings.TrimRight(lines[0], " "))
+	require.Equal(t, "Hello…  1", strings.TrimRight(lines[1], " "))
+	require.Equal(t, "ABCDEF  2", strings.TrimRight(lines[2], " "))
+}
+
 func TestTable_NoTrailingSpaces(t *testing.T) {
 	var buf bytes.Buffer
 	Table(&buf,
