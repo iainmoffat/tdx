@@ -2,6 +2,7 @@ package project
 
 import (
 	"bytes"
+	"context"
 	"testing"
 
 	"github.com/iainmoffat/tdx/internal/domain"
@@ -18,7 +19,7 @@ func TestPlanList_RendersTable(t *testing.T) {
 		},
 	}
 	var buf bytes.Buffer
-	err := runPlanList(nil, &buf, stub, "default", 259, "", false, false)
+	err := runPlanList(context.Background(), &buf, stub, "default", 259, "", false, false)
 	require.NoError(t, err)
 	out := buf.String()
 	require.Contains(t, out, "1292")
@@ -34,7 +35,7 @@ func TestPlanList_JSONEnvelope(t *testing.T) {
 		},
 	}
 	var buf bytes.Buffer
-	err := runPlanList(nil, &buf, stub, "default", 259, "", false, true)
+	err := runPlanList(context.Background(), &buf, stub, "default", 259, "", false, true)
 	require.NoError(t, err)
 	out := buf.String()
 	require.Contains(t, out, `tdx.v1.projectPlanList`)
@@ -44,7 +45,7 @@ func TestPlanList_JSONEnvelope(t *testing.T) {
 func TestPlanList_PassesNameLike(t *testing.T) {
 	stub := &stubProjectsvc{plans: nil}
 	var buf bytes.Buffer
-	_ = runPlanList(nil, &buf, stub, "default", 259, "FY2026", false, false)
+	_ = runPlanList(context.Background(), &buf, stub, "default", 259, "FY2026", false, false)
 	require.Equal(t, "FY2026", stub.lastNameLike)
 	require.Equal(t, 259, stub.lastProjectID)
 }
@@ -52,7 +53,7 @@ func TestPlanList_PassesNameLike(t *testing.T) {
 func TestPlanList_Empty(t *testing.T) {
 	stub := &stubProjectsvc{plans: nil}
 	var buf bytes.Buffer
-	err := runPlanList(nil, &buf, stub, "default", 259, "", false, false)
+	err := runPlanList(context.Background(), &buf, stub, "default", 259, "", false, false)
 	require.NoError(t, err)
 	require.Contains(t, buf.String(), "no plans found for project 259")
 }

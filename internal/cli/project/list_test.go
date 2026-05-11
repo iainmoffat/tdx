@@ -2,6 +2,7 @@ package project
 
 import (
 	"bytes"
+	"context"
 	"testing"
 
 	"github.com/iainmoffat/tdx/internal/domain"
@@ -18,7 +19,7 @@ func TestList_DefaultRendersTable(t *testing.T) {
 		},
 	}
 	var buf bytes.Buffer
-	err := runProjectList(nil, &buf, stub, "default", 50, false)
+	err := runProjectList(context.Background(), &buf, stub, "default", 50, false)
 	require.NoError(t, err)
 	out := buf.String()
 	// Should contain project IDs
@@ -39,7 +40,7 @@ func TestList_JSONEnvelope(t *testing.T) {
 		},
 	}
 	var buf bytes.Buffer
-	err := runProjectList(nil, &buf, stub, "default", 50, true)
+	err := runProjectList(context.Background(), &buf, stub, "default", 50, true)
 	require.NoError(t, err)
 	out := buf.String()
 	require.Contains(t, out, `tdx.v1.projectPlanList`)
@@ -50,7 +51,7 @@ func TestList_JSONEnvelope(t *testing.T) {
 func TestList_Empty(t *testing.T) {
 	stub := &stubProjectsvc{plans: nil}
 	var buf bytes.Buffer
-	err := runProjectList(nil, &buf, stub, "default", 50, false)
+	err := runProjectList(context.Background(), &buf, stub, "default", 50, false)
 	require.NoError(t, err)
 	require.Contains(t, buf.String(), "no projects found")
 }
@@ -62,7 +63,7 @@ func TestList_RespectsLimit(t *testing.T) {
 	}
 	stub := &stubProjectsvc{plans: plans}
 	var buf bytes.Buffer
-	err := runProjectList(nil, &buf, stub, "default", 3, false)
+	err := runProjectList(context.Background(), &buf, stub, "default", 3, false)
 	require.NoError(t, err)
 	out := buf.String()
 	// Only 3 rows (+ header) — check by counting occurrences of waterfall (type 0 = unknown(0))

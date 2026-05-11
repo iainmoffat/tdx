@@ -2,23 +2,12 @@ package project
 
 import (
 	"bytes"
+	"context"
 	"testing"
 
 	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
 )
-
-type stubPeoplesvc struct{}
-
-func (s *stubPeoplesvc) LookupPeople(_ interface{}, _ string, q string, _ int) ([]domain.User, error) {
-	return nil, nil
-}
-func (s *stubPeoplesvc) SearchUsers(_ interface{}, _ string, _ domain.UserFilter) ([]domain.User, error) {
-	return nil, nil
-}
-func (s *stubPeoplesvc) ResolveAccountByName(_ interface{}, _, _ string) (interface{}, error) {
-	return nil, nil
-}
 
 func TestSearch_RendersProjects(t *testing.T) {
 	stub := &stubProjectsvc{
@@ -27,7 +16,7 @@ func TestSearch_RendersProjects(t *testing.T) {
 		},
 	}
 	var buf bytes.Buffer
-	err := runProjectSearch(nil, &buf, stub, nil, "default", "uid-me",
+	err := runProjectSearch(context.Background(), &buf, stub, nil, "default", "uid-me",
 		"Disaster", "", nil, nil, false, 50, false)
 	require.NoError(t, err)
 	out := buf.String()
@@ -42,7 +31,7 @@ func TestSearch_JSONEnvelope(t *testing.T) {
 		},
 	}
 	var buf bytes.Buffer
-	err := runProjectSearch(nil, &buf, stub, nil, "default", "uid-me",
+	err := runProjectSearch(context.Background(), &buf, stub, nil, "default", "uid-me",
 		"", "", nil, nil, false, 50, true)
 	require.NoError(t, err)
 	out := buf.String()
@@ -53,7 +42,7 @@ func TestSearch_JSONEnvelope(t *testing.T) {
 func TestSearch_SetsFilter(t *testing.T) {
 	stub := &stubProjectsvc{projects: nil}
 	var buf bytes.Buffer
-	_ = runProjectSearch(nil, &buf, stub, nil, "default", "uid-me",
+	_ = runProjectSearch(context.Background(), &buf, stub, nil, "default", "uid-me",
 		"myquery", "", nil, nil, false, 10, false)
 	require.Equal(t, "myquery", stub.lastFilter.NameLike)
 	require.Equal(t, 10, stub.lastFilter.MaxResults)
@@ -62,7 +51,7 @@ func TestSearch_SetsFilter(t *testing.T) {
 func TestSearch_NumericTypeID(t *testing.T) {
 	stub := &stubProjectsvc{projects: nil}
 	var buf bytes.Buffer
-	err := runProjectSearch(nil, &buf, stub, nil, "default", "",
+	err := runProjectSearch(context.Background(), &buf, stub, nil, "default", "",
 		"", "", nil, []string{"42"}, false, 50, false)
 	require.NoError(t, err)
 	require.Equal(t, []int{42}, stub.lastFilter.TypeIDs)
@@ -74,7 +63,7 @@ func TestSearch_TypeNameResolves(t *testing.T) {
 		projects:     nil,
 	}
 	var buf bytes.Buffer
-	err := runProjectSearch(nil, &buf, stub, nil, "default", "",
+	err := runProjectSearch(context.Background(), &buf, stub, nil, "default", "",
 		"", "", nil, []string{"IT Project"}, false, 50, false)
 	require.NoError(t, err)
 	require.Equal(t, []int{5}, stub.lastFilter.TypeIDs)
@@ -90,7 +79,7 @@ func TestSearch_ClientSideManagerFilter(t *testing.T) {
 	}
 	var buf bytes.Buffer
 	// managerArg is a UID (>= 32 chars with 4 dashes) so resolvePrincipal passes it through.
-	err := runProjectSearch(nil, &buf, stub, nil, "default", "uid-me",
+	err := runProjectSearch(context.Background(), &buf, stub, nil, "default", "uid-me",
 		"", "61fc4d29-1a09-ef11-86d4-df13b8e4e655", nil, nil, false, 50, false)
 	require.NoError(t, err)
 	// Only project with ManagerUID == resolved UID should appear.

@@ -2,6 +2,7 @@ package project
 
 import (
 	"bytes"
+	"context"
 	"testing"
 	"time"
 
@@ -30,7 +31,7 @@ func TestShow_RendersProjectDetail(t *testing.T) {
 	}
 	drafts := &stubDraftsvc{}
 	var buf bytes.Buffer
-	err := runProjectShow(nil, &buf, stub, drafts, "default", 259, false)
+	err := runProjectShow(context.Background(), &buf, stub, drafts, "default", 259, false)
 	require.NoError(t, err)
 	out := buf.String()
 	require.Contains(t, out, "PROJECT 259")
@@ -46,7 +47,7 @@ func TestShow_JSONEnvelope(t *testing.T) {
 	}
 	drafts := &stubDraftsvc{}
 	var buf bytes.Buffer
-	err := runProjectShow(nil, &buf, stub, drafts, "default", 259, true)
+	err := runProjectShow(context.Background(), &buf, stub, drafts, "default", 259, true)
 	require.NoError(t, err)
 	out := buf.String()
 	require.Contains(t, out, `tdx.v1.project`)
@@ -72,7 +73,7 @@ func TestShow_ThisWeekCrossover(t *testing.T) {
 		},
 	}
 	var buf bytes.Buffer
-	err := runProjectShow(nil, &buf, stub, drafts, "default", 259, false)
+	err := runProjectShow(context.Background(), &buf, stub, drafts, "default", 259, false)
 	require.NoError(t, err)
 	out := buf.String()
 	// This week crossover should show 2.00h
