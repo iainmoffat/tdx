@@ -19,6 +19,11 @@ type User struct {
 
 	IsEmployee bool   `json:"isEmployee,omitempty" yaml:"isEmployee,omitempty"`
 	Title      string `json:"title,omitempty"      yaml:"title,omitempty"`
+
+	// WorkableHours is the user's expected weekly hours from TD. 0.0 means
+	// unset/unknown; the time-report --incomplete filter falls back to a
+	// global 40 default when computing per-user thresholds.
+	WorkableHours float64 `json:"workableHours,omitempty" yaml:"workableHours,omitempty"`
 }
 
 // DisplayName returns the most specific non-empty name available.

@@ -3,21 +3,22 @@ package peoplesvc
 // wireUser matches GET /TDWebApi/api/people/{uid} and rows in the
 // POST /TDWebApi/api/people/search response.
 type wireUser struct {
-	UID                string `json:"UID"`
-	ID                 int    `json:"ID"`
-	FullName           string `json:"FullName"`
-	PrimaryEmail       string `json:"PrimaryEmail"`
-	AlternateEmail     string `json:"AlternateEmail"`
-	IsActive           bool   `json:"IsActive"`
-	DefaultAccountName string `json:"DefaultAccountName"`
-	ReportsToUid       string `json:"ReportsToUid"`
-	ReportsToId        int    `json:"ReportsToId"`
-	ReportsToFullName  string `json:"ReportsToFullName"`
-	ReportsToEmail     string `json:"ReportsToEmail"`
-	ResourcePoolID     int    `json:"ResourcePoolID"`
-	ResourcePoolName   string `json:"ResourcePoolName"`
-	IsEmployee         bool   `json:"IsEmployee"`
-	Title              string `json:"Title"`
+	UID                string  `json:"UID"`
+	ID                 int     `json:"ID"`
+	FullName           string  `json:"FullName"`
+	PrimaryEmail       string  `json:"PrimaryEmail"`
+	AlternateEmail     string  `json:"AlternateEmail"`
+	IsActive           bool    `json:"IsActive"`
+	DefaultAccountName string  `json:"DefaultAccountName"`
+	ReportsToUid       string  `json:"ReportsToUid"`
+	ReportsToId        int     `json:"ReportsToId"`
+	ReportsToFullName  string  `json:"ReportsToFullName"`
+	ReportsToEmail     string  `json:"ReportsToEmail"`
+	ResourcePoolID     int     `json:"ResourcePoolID"`
+	ResourcePoolName   string  `json:"ResourcePoolName"`
+	IsEmployee         bool    `json:"IsEmployee"`
+	Title              string  `json:"Title"`
+	WorkableHours      float64 `json:"WorkableHours,omitempty"`
 }
 
 // wireAccount matches rows in POST /TDWebApi/api/accounts/search.

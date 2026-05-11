@@ -86,5 +86,6 @@ func decodeUser(w wireUser) domain.User {
 		ResourcePoolName: strings.TrimSpace(w.ResourcePoolName),
 		IsEmployee:       w.IsEmployee,
 		Title:            strings.TrimSpace(w.Title),
+		WorkableHours:    w.WorkableHours,
 	}
 }
