@@ -75,6 +75,11 @@ tdx
 │   ├── comment / status / assign / update / log
 │   ├── types / statuses / groups → list
 │   └── task             → list / show / feed / update / log
+├── project
+│   ├── list / search / show
+│   ├── plan             → list
+│   ├── task             → list (--mine) / show
+│   └── log
 ├── time
 │   ├── entry            → list / show / add / update / delete
 │   ├── template         → derive / list / show / edit / clone / delete / apply / compare
