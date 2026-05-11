@@ -39,8 +39,8 @@ func (k TargetKind) IsKnown() bool {
 // SupportsComponentLookup reports whether TD exposes a
 // /TDWebApi/api/time/types/component/... endpoint for this kind that tdx
 // can currently address. Only kinds that return true can be passed to
-// `tdx time type for`. (TargetProjectTask is intentionally excluded
-// until domain.Target gains a PlanID field.)
+// `tdx time type for`. (TargetProjectTask uses a different time-type lookup
+// path via project/plan/task context and is handled separately in projectsvc.)
 func (k TargetKind) SupportsComponentLookup() bool {
 	switch k {
 	case TargetTicket, TargetTicketTask,
@@ -58,6 +58,7 @@ type Target struct {
 	AppID       int        `json:"appID" yaml:"appID"`
 	ItemID      int        `json:"itemID" yaml:"itemID"`
 	TaskID      int        `json:"taskID,omitempty" yaml:"taskID,omitempty"`
+	PlanID      int        `json:"planID,omitempty" yaml:"planID,omitempty"`     // project-task plan ID
 	ProjectID   int        `json:"projectID,omitempty" yaml:"projectID,omitempty"`
 	DisplayName string     `json:"displayName,omitempty" yaml:"displayName,omitempty"`
 	DisplayRef  string     `json:"displayRef,omitempty" yaml:"displayRef,omitempty"`
