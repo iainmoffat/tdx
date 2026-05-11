@@ -298,12 +298,13 @@ func TestRunner_IncompleteWithCustomThreshold(t *testing.T) {
 		Auth:   &mockAuthsvc{me: domain.User{UID: "mgr"}},
 	}
 	out, err := assembleReport(context.Background(), deps, statusFlags{
-		managers:    []string{"me"},
-		week:        "2026-04-14",
-		includeZero: true,
-		incomplete:  true,
-		threshold:   32,
-		limit:       100,
+		managers:     []string{"me"},
+		week:         "2026-04-14",
+		includeZero:  true,
+		incomplete:   true,
+		threshold:    32,
+		thresholdSet: true,
+		limit:        100,
 	})
 	require.NoError(t, err)
 	require.Len(t, out.Rows, 1, "only the 30h row is below 32h threshold")
