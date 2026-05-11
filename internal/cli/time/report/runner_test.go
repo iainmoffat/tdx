@@ -517,3 +517,134 @@ func TestRunner_RangeProducesMultipleWeeks(t *testing.T) {
 	require.Equal(t, week1.StartDate, out.Rows[0].WeekRef.StartDate)
 	require.Equal(t, week2.StartDate, out.Rows[1].WeekRef.StartDate)
 }
+
+func TestRunner_IncompletePerUserFromWorkableHours(t *testing.T) {
+	// Alice: WorkableHours=40, logged 40h → not incomplete (40 >= 40)
+	// Bob:   WorkableHours=32, logged 30h → incomplete (30 < 32)
+	// Carol: WorkableHours=40, logged 35h → incomplete (35 < 40)
+	// No --threshold flag set; thresholdSet=false → per-user mode.
+	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	users := []domain.User{
+		{UID: "alice", FullName: "Alice", ReportsToUID: "mgr", WorkableHours: 40},
+		{UID: "bob", FullName: "Bob", ReportsToUID: "mgr", WorkableHours: 32},
+		{UID: "carol", FullName: "Carol", ReportsToUID: "mgr", WorkableHours: 40},
+	}
+	reports := map[string]domain.WeekReport{
+		"alice": {WeekRef: week, UserUID: "alice", TotalMinutes: 40 * 60, Status: domain.ReportOpen},
+		"bob":   {WeekRef: week, UserUID: "bob", TotalMinutes: 30 * 60, Status: domain.ReportOpen},
+		"carol": {WeekRef: week, UserUID: "carol", TotalMinutes: 35 * 60, Status: domain.ReportOpen},
+	}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{reports: reports},
+		People: &mockPeoplesvc{search: users},
+		Auth:   &mockAuthsvc{me: domain.User{UID: "mgr"}},
+	}
+	out, err := assembleReport(context.Background(), deps, statusFlags{
+		managers:     []string{"me"},
+		week:         "2026-04-14",
+		includeZero:  true,
+		incomplete:   true,
+		thresholdSet: false,
+		limit:        100,
+	})
+	require.NoError(t, err)
+	require.Len(t, out.Rows, 2, "Bob and Carol are incomplete; Alice meets her threshold")
+	gotUIDs := make(map[string]bool)
+	for _, r := range out.Rows {
+		gotUIDs[r.User.UID] = true
+	}
+	if !gotUIDs["bob"] || !gotUIDs["carol"] || gotUIDs["alice"] {
+		t.Errorf("expected bob and carol in result, not alice; got UIDs: %v", gotUIDs)
+	}
+}
+
+func TestRunner_IncompletePerUserFallbackTo40(t *testing.T) {
+	// User with WorkableHours=0 (unset) and TotalMinutes=30h → falls back to 40h → 30 < 40 → incomplete.
+	// No --threshold; thresholdSet=false.
+	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	users := []domain.User{
+		{UID: "u1", FullName: "Unset", ReportsToUID: "mgr", WorkableHours: 0},
+	}
+	reports := map[string]domain.WeekReport{
+		"u1": {WeekRef: week, UserUID: "u1", TotalMinutes: 30 * 60, Status: domain.ReportOpen},
+	}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{reports: reports},
+		People: &mockPeoplesvc{search: users},
+		Auth:   &mockAuthsvc{me: domain.User{UID: "mgr"}},
+	}
+	out, err := assembleReport(context.Background(), deps, statusFlags{
+		managers:     []string{"me"},
+		week:         "2026-04-14",
+		includeZero:  true,
+		incomplete:   true,
+		thresholdSet: false,
+		limit:        100,
+	})
+	require.NoError(t, err)
+	require.Len(t, out.Rows, 1, "WorkableHours=0 falls back to 40h; 30h < 40h → incomplete")
+	require.Equal(t, "u1", out.Rows[0].User.UID)
+}
+
+func TestRunner_IncompleteGlobalThresholdOverridesPerUser(t *testing.T) {
+	// Same Alice/Bob/Carol setup as TestRunner_IncompletePerUserFromWorkableHours,
+	// BUT with --threshold 20 explicit (thresholdSet=true) → global mode.
+	// All three have logged >= 20h, so none are incomplete.
+	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	users := []domain.User{
+		{UID: "alice", FullName: "Alice", ReportsToUID: "mgr", WorkableHours: 40},
+		{UID: "bob", FullName: "Bob", ReportsToUID: "mgr", WorkableHours: 32},
+		{UID: "carol", FullName: "Carol", ReportsToUID: "mgr", WorkableHours: 40},
+	}
+	reports := map[string]domain.WeekReport{
+		"alice": {WeekRef: week, UserUID: "alice", TotalMinutes: 40 * 60, Status: domain.ReportOpen},
+		"bob":   {WeekRef: week, UserUID: "bob", TotalMinutes: 30 * 60, Status: domain.ReportOpen},
+		"carol": {WeekRef: week, UserUID: "carol", TotalMinutes: 35 * 60, Status: domain.ReportOpen},
+	}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{reports: reports},
+		People: &mockPeoplesvc{search: users},
+		Auth:   &mockAuthsvc{me: domain.User{UID: "mgr"}},
+	}
+	out, err := assembleReport(context.Background(), deps, statusFlags{
+		managers:     []string{"me"},
+		week:         "2026-04-14",
+		includeZero:  true,
+		incomplete:   true,
+		threshold:    20,
+		thresholdSet: true,
+		limit:        100,
+	})
+	require.NoError(t, err)
+	require.Len(t, out.Rows, 0, "global threshold=20 overrides per-user; all three logged >= 20h → no incomplete rows")
+}
+
+func TestRunner_IncompleteNotSetIgnoresThreshold(t *testing.T) {
+	// f.incomplete=false: three users with logged hours; no filtering applied.
+	// All three rows should be returned regardless of WorkableHours.
+	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	users := []domain.User{
+		{UID: "alice", FullName: "Alice", ReportsToUID: "mgr", WorkableHours: 40},
+		{UID: "bob", FullName: "Bob", ReportsToUID: "mgr", WorkableHours: 32},
+		{UID: "carol", FullName: "Carol", ReportsToUID: "mgr", WorkableHours: 40},
+	}
+	reports := map[string]domain.WeekReport{
+		"alice": {WeekRef: week, UserUID: "alice", TotalMinutes: 40 * 60, Status: domain.ReportOpen},
+		"bob":   {WeekRef: week, UserUID: "bob", TotalMinutes: 30 * 60, Status: domain.ReportOpen},
+		"carol": {WeekRef: week, UserUID: "carol", TotalMinutes: 35 * 60, Status: domain.ReportOpen},
+	}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{reports: reports},
+		People: &mockPeoplesvc{search: users},
+		Auth:   &mockAuthsvc{me: domain.User{UID: "mgr"}},
+	}
+	out, err := assembleReport(context.Background(), deps, statusFlags{
+		managers:    []string{"me"},
+		week:        "2026-04-14",
+		includeZero: true,
+		incomplete:  false,
+		limit:       100,
+	})
+	require.NoError(t, err)
+	require.Len(t, out.Rows, 3, "incomplete=false: all three users returned regardless of WorkableHours or hours logged")
+}
