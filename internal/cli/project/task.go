@@ -43,6 +43,32 @@ func newTaskListCmd(svc projectsvcAPI) *cobra.Command {
 		Use:   "list [<project-id>]",
 		Short: "List project tasks (--plan required when project-id given; --mine for cross-project)",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Pre-config validation: flag combinations that should error
+			// before we even try to load a profile (so unit tests can hit
+			// these branches without a real config on disk).
+			if mineFlag && (len(args) > 0 || planIDFlag != 0) {
+				return fmt.Errorf("--mine is mutually exclusive with <project-id> and --plan")
+			}
+			if !mineFlag {
+				if len(args) == 0 {
+					return fmt.Errorf("provide <project-id> --plan <plan-id>, or use --mine for your tasks across all projects")
+				}
+				projectIDPre, err := strconv.Atoi(args[0])
+				if err != nil || projectIDPre <= 0 {
+					return fmt.Errorf("project id must be a positive integer, got %q", args[0])
+				}
+				if planIDFlag == 0 {
+					return fmt.Errorf("--plan is required when specifying a project-id (run `tdx project plan list %d` to see available plans)", projectIDPre)
+				}
+			}
+
+			if limitFlag < 1 {
+				limitFlag = 50
+			}
+			if limitFlag > 200 {
+				limitFlag = 200
+			}
+
 			paths, err := config.ResolvePaths()
 			if err != nil {
 				return err
@@ -57,17 +83,6 @@ func newTaskListCmd(svc projectsvcAPI) *cobra.Command {
 				s = projectsvc.New(paths)
 			}
 
-			if mineFlag && (len(args) > 0 || planIDFlag != 0) {
-				return fmt.Errorf("--mine is mutually exclusive with <project-id> and --plan")
-			}
-
-			if limitFlag < 1 {
-				limitFlag = 50
-			}
-			if limitFlag > 200 {
-				limitFlag = 200
-			}
-
 			if mineFlag {
 				authedUID, err := authedUIDFor(cmd.Context(), auth, profile)
 				if err != nil {
@@ -75,18 +90,7 @@ func newTaskListCmd(svc projectsvcAPI) *cobra.Command {
 				}
 				return runTaskListMine(cmd.Context(), cmd.OutOrStdout(), s, profile, authedUID, limitFlag, jsonFlag)
 			}
-
-			// Single-plan mode: project-id + --plan required.
-			if len(args) == 0 {
-				return fmt.Errorf("provide <project-id> --plan <plan-id>, or use --mine for your tasks across all projects")
-			}
-			projectID, err := strconv.Atoi(args[0])
-			if err != nil || projectID <= 0 {
-				return fmt.Errorf("project id must be a positive integer, got %q", args[0])
-			}
-			if planIDFlag == 0 {
-				return fmt.Errorf("--plan is required when specifying a project-id (run `tdx project plan list %d` to see available plans)", projectID)
-			}
+			projectID, _ := strconv.Atoi(args[0]) // already validated above
 			return runTaskListSinglePlan(cmd.Context(), cmd.OutOrStdout(), s, profile, projectID, planIDFlag, limitFlag, jsonFlag)
 		},
 	}
