@@ -88,7 +88,7 @@ Read these BEFORE starting any task. They're the model for every layer:
 Per memory note `feedback_probe_wire_formats_early.md`: TD docs lie. The historical pattern in this repo:
 1. Write services against documented wire types.
 2. Run `go test ./...` to confirm fixture-based tests pass.
-3. **Live-verify against UFL during Task 19** (before tag). Capture real responses; if any wire field is wrong, amend in a follow-up commit on the same branch.
+3. **Live-verify against Sample during Task 19** (before tag). Capture real responses; if any wire field is wrong, amend in a follow-up commit on the same branch.
 
 Do **not** block tasks 1-18 on live access. Build against documented types; fix in Task 19 if needed.
 
@@ -2381,7 +2381,7 @@ git commit -m "docs: add tdx ticket reference + tree updates + MCP tool tables"
 
 ### Live verification
 
-These steps require an authenticated session against UFL (or another tenant the user has). Before committing fixtures or code changes from live data, sanitize anything sensitive.
+These steps require an authenticated session against Sample (or another tenant the user has). Before committing fixtures or code changes from live data, sanitize anything sensitive.
 
 - [ ] **Step 1: Pre-flight**
 
@@ -2420,7 +2420,7 @@ Use a low-stakes test ticket for the four mutations. After verification, roll ba
 If any command fails because of a wire-format issue (TD field names different from what the spec assumed), fix in `internal/svc/ticketsvc/types.go` and the relevant decoder. Add a test fixture from the captured live response. Commit:
 
 ```bash
-git commit -m "fix(ticketsvc): correct wire format for X (live UFL probe)"
+git commit -m "fix(ticketsvc): correct wire format for X (live Sample probe)"
 ```
 
 ### Version bump + PR

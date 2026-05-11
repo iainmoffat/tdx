@@ -2585,7 +2585,7 @@ All four must succeed.
 
 - [ ] **Step 26.2 — Manual walkthrough**
 
-Run `docs/manual-tests/phase-B1-week-drafts-walkthrough.md` against the live UFL tenant. Sign off the bottom block.
+Run `docs/manual-tests/phase-B1-week-drafts-walkthrough.md` against the live sample tenant. Sign off the bottom block.
 
 - [ ] **Step 26.3 — Push branch + open PR**
 

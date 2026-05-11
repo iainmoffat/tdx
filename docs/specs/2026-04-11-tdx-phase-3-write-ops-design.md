@@ -399,7 +399,7 @@ This is a local validation error, not an API round-trip.
 
 ### Step 0: Probe TD write endpoints (before coding)
 
-Probe the live UFL tenant to verify wire shapes. Run these against a real token:
+Probe the live sample tenant to verify wire shapes. Run these against a real token:
 
 1. **POST /api/time** — create a test entry (for a known date/type/target), capture the request and response to verify `wireTimeEntryWrite` field names and `wireBulkResult` shape.
 2. **PUT /api/time/{id}** — update the test entry, verify the response is a single `wireTimeEntry` (same shape as GET).
@@ -481,4 +481,4 @@ Add these steps to `scripts/walkthrough.sh` after the existing read-only steps:
 5. `tdx time entry delete <id>` → verify success
 6. `tdx time entry show <id>` → verify "entry not found" (exit 1)
 
-The walkthrough date/type/target will be configurable via env vars (like the existing `TDX_WALKTHROUGH_WEEK`), with defaults for the UFL tenant.
+The walkthrough date/type/target will be configurable via env vars (like the existing `TDX_WALKTHROUGH_WEEK`), with defaults for the sample tenant.

@@ -134,7 +134,7 @@ func runProjectLog(ctx context.Context, w io.Writer, svc timesvcLogAPI, profile,
 	}
 
 	// Target convention for project tasks (matches timesvc/encode.go and
-	// componentPathFor — verified against UFL): ItemID carries the plan ID,
+	// componentPathFor — verified against the live tenant): ItemID carries the plan ID,
 	// TaskID carries the task ID, ProjectID carries the project ID.
 	target := domain.Target{
 		Kind:      domain.TargetProjectTask,

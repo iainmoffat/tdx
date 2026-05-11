@@ -18,14 +18,14 @@ func TestGetUser_Decodes(t *testing.T) {
 		_, _ = w.Write([]byte(`{
 			"UID": "target-uid",
 			"ID":  100,
-			"FullName": "Iain Moffat",
-			"PrimaryEmail": "ipm@ufl.edu",
+			"FullName": "Sample User",
+			"PrimaryEmail": "sample@example.com",
 			"IsActive": true,
-			"DefaultAccountName": "UFIT",
+			"DefaultAccountName": "Sample Dept",
 			"ReportsToUid": "mgr-uid",
 			"ReportsToId":  42,
 			"ReportsToFullName": "Manager Name",
-			"ReportsToEmail":   "mgr@ufl.edu"
+			"ReportsToEmail":   "mgr@example.com"
 		}`))
 	}))
 	defer srv.Close()
@@ -36,14 +36,14 @@ func TestGetUser_Decodes(t *testing.T) {
 	require.Equal(t, domain.User{
 		ID:             100,
 		UID:            "target-uid",
-		FullName:       "Iain Moffat",
-		Email:          "ipm@ufl.edu",
+		FullName:       "Sample User",
+		Email:          "sample@example.com",
 		Active:         true,
-		AccountName:    "UFIT",
+		AccountName:    "Sample Dept",
 		ReportsToUID:   "mgr-uid",
 		ReportsToID:    42,
 		ReportsToName:  "Manager Name",
-		ReportsToEmail: "mgr@ufl.edu",
+		ReportsToEmail: "mgr@example.com",
 	}, u)
 }
 
@@ -119,7 +119,7 @@ func TestSearchUsers_DecodesResourcePool(t *testing.T) {
 			"PrimaryEmail": "u1@x.com",
 			"IsActive": true,
 			"ResourcePoolID": 46,
-			"ResourcePoolName": "ICT - DBP - Linux Platform Services LPS\t"
+			"ResourcePoolName": "Sample Pool - Platform Engineering\t"
 		}]`))
 	}))
 	defer srv.Close()
@@ -129,7 +129,7 @@ func TestSearchUsers_DecodesResourcePool(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, users, 1)
 	require.Equal(t, 46, users[0].ResourcePoolID)
-	require.Equal(t, "ICT - DBP - Linux Platform Services LPS", users[0].ResourcePoolName)
+	require.Equal(t, "Sample Pool - Platform Engineering", users[0].ResourcePoolName)
 }
 
 func TestGetUserDecodesWorkableHours(t *testing.T) {

@@ -4220,7 +4220,7 @@ Create `docs/manual-tests/phase-A-week-drafts-walkthrough.md` mirroring the form
 
 Outline:
 
-1. **Setup** — `tdx auth status`, confirm authenticated to UFL tenant.
+1. **Setup** — `tdx auth status`, confirm authenticated to sample tenant.
 2. **Templates migration** — the user upgrades to the new tdx version; confirm migration prompt fires (or auto-yes if single profile); verify templates moved to per-profile dir.
 3. **Pull a recent week** — `tdx time week pull 2026-04-26` against real data; verify draft file exists at `~/.config/tdx/profiles/<active>/weeks/2026-04-26/default.yaml`; verify pulled-snapshot sibling.
 4. **Show / status** — verify grid output, status banner, sync state shows `clean`.
@@ -4267,7 +4267,7 @@ go vet ./...
 
 - [ ] **Step 28.4 — Manual walkthrough on real tenant**
 
-Execute every step of `docs/manual-tests/phase-A-week-drafts-walkthrough.md` against the live UFL tenant. Sign off in the doc.
+Execute every step of `docs/manual-tests/phase-A-week-drafts-walkthrough.md` against the live sample tenant. Sign off in the doc.
 
 - [ ] **Step 28.5 — Version bump**
 
@@ -4297,7 +4297,7 @@ Spec: docs/specs/2026-04-27-tdx-week-drafts-design.md
 
 - [ ] go test ./... passes
 - [ ] golangci-lint run ./... clean
-- [ ] Manual walkthrough at docs/manual-tests/phase-A-week-drafts-walkthrough.md completed against UFL tenant
+- [ ] Manual walkthrough at docs/manual-tests/phase-A-week-drafts-walkthrough.md completed against sample tenant
 EOF
 )"
 ```

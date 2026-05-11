@@ -145,7 +145,7 @@ package domain
 import "time"
 
 // EasternTZ is America/New_York, the canonical time zone for all date
-// computations in tdx. UFL's TeamDynamix tenant bills on Eastern time, so
+// computations in tdx. Sample's TeamDynamix tenant bills on Eastern time, so
 // "this week" and "today" must be computed there regardless of laptop clock.
 //
 // The embedded tzdata import in cmd/tdx/main.go guarantees this load succeeds
@@ -225,13 +225,13 @@ import (
 )
 
 func TestUser_DisplayName(t *testing.T) {
-	u := User{FullName: "Iain Moffat", Email: "ipm@ufl.edu"}
-	require.Equal(t, "Iain Moffat", u.DisplayName())
+	u := User{FullName: "Sample User", Email: "sample@example.com"}
+	require.Equal(t, "Sample User", u.DisplayName())
 }
 
 func TestUser_DisplayName_FallsBackToEmail(t *testing.T) {
-	u := User{Email: "ipm@ufl.edu"}
-	require.Equal(t, "ipm@ufl.edu", u.DisplayName())
+	u := User{Email: "sample@example.com"}
+	require.Equal(t, "sample@example.com", u.DisplayName())
 }
 
 func TestUser_DisplayName_FallsBackToUID(t *testing.T) {
@@ -1234,7 +1234,7 @@ Before writing any code, verify the wire struct against a real response. From a 
 TOKEN='PASTE_TOKEN_HERE'
 curl -s -H "Authorization: Bearer $TOKEN" \
      -H "Accept: application/json" \
-     https://ufl.teamdynamix.com/TDWebApi/api/auth/getuser | head -80
+     https://demotemplate.teamdynamix.com/TDWebApi/api/auth/getuser | head -80
 ```
 
 Record the exact top-level field names in the response. The expected shape from the TD reference is roughly:
@@ -1302,8 +1302,8 @@ func TestWhoAmI_DecodesUser(t *testing.T) {
 		_, _ = w.Write([]byte(`{
 			"ID": 42,
 			"UID": "abcd-1234",
-			"FullName": "Iain Moffat",
-			"PrimaryEmail": "ipm@ufl.edu"
+			"FullName": "Sample User",
+			"PrimaryEmail": "sample@example.com"
 		}`))
 	})
 
@@ -1311,8 +1311,8 @@ func TestWhoAmI_DecodesUser(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 42, user.ID)
 	require.Equal(t, "abcd-1234", user.UID)
-	require.Equal(t, "Iain Moffat", user.FullName)
-	require.Equal(t, "ipm@ufl.edu", user.Email)
+	require.Equal(t, "Sample User", user.FullName)
+	require.Equal(t, "sample@example.com", user.Email)
 }
 
 func TestWhoAmI_Unauthorized(t *testing.T) {
@@ -1435,7 +1435,7 @@ func TestService_StatusVerifiesValidToken(t *testing.T) {
 			_, _ = w.Write([]byte(`[]`))
 		case "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"ID":42,"UID":"abcd-1234","FullName":"Iain Moffat","PrimaryEmail":"ipm@ufl.edu"}`))
+			_, _ = w.Write([]byte(`{"ID":42,"UID":"abcd-1234","FullName":"Sample User","PrimaryEmail":"sample@example.com"}`))
 		default:
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
@@ -1452,8 +1452,8 @@ func TestService_StatusVerifiesValidToken(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, status.Authenticated)
 	require.True(t, status.TokenValid)
-	require.Equal(t, "Iain Moffat", status.User.FullName)
-	require.Equal(t, "ipm@ufl.edu", status.User.Email)
+	require.Equal(t, "Sample User", status.User.FullName)
+	require.Equal(t, "sample@example.com", status.User.Email)
 	require.Empty(t, status.UserErr)
 }
 ```
@@ -1560,7 +1560,7 @@ func TestStatus_ProfileWithValidToken(t *testing.T) {
 			_, _ = w.Write([]byte(`[]`))
 		case "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"ID":42,"UID":"abcd-1234","FullName":"Iain Moffat","PrimaryEmail":"ipm@ufl.edu"}`))
+			_, _ = w.Write([]byte(`{"ID":42,"UID":"abcd-1234","FullName":"Sample User","PrimaryEmail":"sample@example.com"}`))
 		default:
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
@@ -1580,8 +1580,8 @@ func TestStatus_ProfileWithValidToken(t *testing.T) {
 	require.NoError(t, cmd.Execute())
 	require.Contains(t, out.String(), "authenticated")
 	require.Contains(t, out.String(), "token:    valid")
-	require.Contains(t, out.String(), "user:     Iain Moffat")
-	require.Contains(t, out.String(), "email:    ipm@ufl.edu")
+	require.Contains(t, out.String(), "user:     Sample User")
+	require.Contains(t, out.String(), "email:    sample@example.com")
 }
 ```
 
@@ -1592,8 +1592,8 @@ Extend `TestStatus_JSONOutput` similarly and add assertions for the new JSON fie
 	require.Contains(t, s, `"profile": "default"`)
 	require.Contains(t, s, `"authenticated": true`)
 	require.Contains(t, s, `"tokenValid": true`)
-	require.Contains(t, s, `"fullName": "Iain Moffat"`)
-	require.Contains(t, s, `"email": "ipm@ufl.edu"`)
+	require.Contains(t, s, `"fullName": "Sample User"`)
+	require.Contains(t, s, `"email": "sample@example.com"`)
 ```
 
 - [ ] **Step 7: Update cli/auth/status.go**
@@ -2783,7 +2783,7 @@ func TestGetWeekReport_DecodesAndComputesDays(t *testing.T) {
 			"PeriodEndDate": "2026-04-11T00:00:00Z",
 			"Status": 0,
 			"TimeReportUid": "abcd-1234",
-			"UserFullName": "Iain Moffat",
+			"UserFullName": "Sample User",
 			"MinutesBillable": 0,
 			"MinutesNonBillable": 1200,
 			"MinutesTotal": 1200,
@@ -3677,7 +3677,7 @@ func TestEntryList_DefaultFilterUsesWhoami(t *testing.T) {
 		switch r.URL.Path {
 		case "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"ID":42,"UID":"default-user","FullName":"Default User","PrimaryEmail":"me@ufl.edu"}`))
+			_, _ = w.Write([]byte(`{"ID":42,"UID":"default-user","FullName":"Default User","PrimaryEmail":"me@example.com"}`))
 		case "/TDWebApi/api/time/search":
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`[]`))
@@ -5045,7 +5045,7 @@ git commit -m "feat(cli): add tdx time type list/for and wire time into root"
 **Files:**
 - Create: `docs/manual-tests/phase-2-read-ops-walkthrough.md`
 
-This is the last task. It produces a human-executable walkthrough that exercises every Phase 2 command against the real UFL tenant, in the same style as Phase 1's walkthrough.
+This is the last task. It produces a human-executable walkthrough that exercises every Phase 2 command against the real sample tenant, in the same style as Phase 1's walkthrough.
 
 - [ ] **Step 1: Create the walkthrough document**
 
@@ -5074,7 +5074,7 @@ TeamDynamix tenant.
 
 2. **Sign in (skip if already signed in).**
    ```
-   ./tdx auth login --profile default --url https://ufl.teamdynamix.com/
+   ./tdx auth login --profile default --url https://demotemplate.teamdynamix.com/
    ```
    Paste your API token when prompted.
 
@@ -5085,7 +5085,7 @@ TeamDynamix tenant.
    Expected:
    ```
    profile:  default
-   tenant:   https://ufl.teamdynamix.com/
+   tenant:   https://demotemplate.teamdynamix.com/
    state:    authenticated
    token:    valid
    user:     <Your Full Name>
@@ -5249,7 +5249,7 @@ Expected: all packages green — `internal/domain/`, `internal/config/`, `intern
 go build ./cmd/tdx
 ```
 
-- [ ] **Execute the manual walkthrough** against a real UFL token (`docs/manual-tests/phase-2-read-ops-walkthrough.md`).
+- [ ] **Execute the manual walkthrough** against a real Sample token (`docs/manual-tests/phase-2-read-ops-walkthrough.md`).
 
 - [ ] **Confirm the Phase 2 exit criteria (from spec §1):**
   - `tdx time entry list` returns this week's entries for the signed-in user with zero flags.

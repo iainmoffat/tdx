@@ -24,21 +24,21 @@ TeamDynamix tenant.
 
    - **SSO (recommended for end users):**
      ```
-     ./tdx auth login --sso --profile default --url https://ufl.teamdynamix.com/
+     ./tdx auth login --sso --profile default --url https://demotemplate.teamdynamix.com/
      ```
-     This opens `https://ufl.teamdynamix.com/TDWebApi/api/auth/loginsso` in
+     This opens `https://demotemplate.teamdynamix.com/TDWebApi/api/auth/loginsso` in
      your browser. Complete the SSO flow if prompted, then copy the token
      shown on the resulting page and paste it back at the CLI prompt.
 
    - **Manual paste (Phase 1 default — works without --sso):**
      ```
-     ./tdx auth login --profile default --url https://ufl.teamdynamix.com/
+     ./tdx auth login --profile default --url https://demotemplate.teamdynamix.com/
      ```
      Find a token in the TD admin UI and paste it when prompted.
 
    - **Scripted (CI / walkthrough automation):**
      ```
-     echo "$TOKEN" | ./tdx auth login --token-stdin --profile default --url https://ufl.teamdynamix.com/
+     echo "$TOKEN" | ./tdx auth login --token-stdin --profile default --url https://demotemplate.teamdynamix.com/
      ```
      Reads the token from stdin without a TTY prompt. Used by
      `scripts/walkthrough.sh`.
@@ -50,7 +50,7 @@ TeamDynamix tenant.
    Expected:
    ```
    profile:  default
-   tenant:   https://ufl.teamdynamix.com/
+   tenant:   https://demotemplate.teamdynamix.com/
    state:    authenticated
    token:    valid
    user:     <Your Full Name>

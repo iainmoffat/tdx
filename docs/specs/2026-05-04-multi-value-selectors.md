@@ -214,6 +214,6 @@ type getTimeStatusReportArgs struct {
 
 1. **CLI + runner:** convert flags to slices; runner branches handle multi-value union; tests.
 2. **JSON envelope + MCP:** plural field renames; tests.
-3. **Docs + live verify on UFL + PR + tag.**
+3. **Docs + live verify on the test tenant + PR + tag.**
 
 Inline execution.

@@ -456,7 +456,7 @@ Fill in after completing all steps.
 
 ```
 Date run:     _______________
-Tenant:       https://ufl.teamdynamix.com/
+Tenant:       https://demotemplate.teamdynamix.com/
 tdx version:  _______________
 Tester:       _______________
 Week used:    _______________

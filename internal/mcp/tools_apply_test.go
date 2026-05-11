@@ -21,7 +21,7 @@ func applyTestServer(t *testing.T) *httptest.Server {
 		switch {
 		case r.URL.Path == "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@ufl.edu","ReferenceID":1}`))
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@example.com","ReferenceID":1}`))
 
 		case r.Method == http.MethodGet && len(r.URL.Path) > len("/TDWebApi/api/time/report/"):
 			// Empty week — no existing entries.
@@ -176,7 +176,7 @@ func applyWriteServer(t *testing.T) *httptest.Server {
 		switch {
 		case r.URL.Path == "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@ufl.edu","ReferenceID":1}`))
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@example.com","ReferenceID":1}`))
 
 		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/TDWebApi/api/time/report/"):
 			w.WriteHeader(http.StatusOK)

@@ -12,7 +12,7 @@ import (
 func TestList_DefaultRendersTable(t *testing.T) {
 	stub := &stubProjectsvc{
 		plans: []domain.ProjectPlan{
-			{ID: 1292, ProjectID: 259, ProjectName: "Disaster Recovery", Title: "FY2026 Plan",
+			{ID: 1292, ProjectID: 259, ProjectName: "Sample Recovery", Title: "FY2026 Plan",
 				Type: domain.PlanWaterfall, MyTaskCount: 3, TaskCount: 12},
 			{ID: 1300, ProjectID: 260, ProjectName: "Alpha Project", Title: "Alpha Waterfall",
 				Type: domain.PlanWaterfall, MyTaskCount: 0, TaskCount: 5},

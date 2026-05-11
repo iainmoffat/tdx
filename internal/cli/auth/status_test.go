@@ -53,7 +53,7 @@ func TestStatus_ProfileWithValidToken(t *testing.T) {
 			_, _ = w.Write([]byte(`[]`))
 		case "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"ReferenceID":42,"UID":"abcd-1234","FullName":"Iain Moffat","PrimaryEmail":"ipm@ufl.edu"}`))
+			_, _ = w.Write([]byte(`{"ReferenceID":42,"UID":"abcd-1234","FullName":"Sample User","PrimaryEmail":"sample@example.com"}`))
 		default:
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
@@ -73,8 +73,8 @@ func TestStatus_ProfileWithValidToken(t *testing.T) {
 	require.NoError(t, cmd.Execute())
 	require.Contains(t, out.String(), "authenticated")
 	require.Contains(t, out.String(), "token:    valid")
-	require.Contains(t, out.String(), "user:     Iain Moffat")
-	require.Contains(t, out.String(), "email:    ipm@ufl.edu")
+	require.Contains(t, out.String(), "user:     Sample User")
+	require.Contains(t, out.String(), "email:    sample@example.com")
 }
 
 func TestStatus_JSONOutput(t *testing.T) {
@@ -88,7 +88,7 @@ func TestStatus_JSONOutput(t *testing.T) {
 			_, _ = w.Write([]byte(`[]`))
 		case "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"ReferenceID":42,"UID":"abcd-1234","FullName":"Iain Moffat","PrimaryEmail":"ipm@ufl.edu"}`))
+			_, _ = w.Write([]byte(`{"ReferenceID":42,"UID":"abcd-1234","FullName":"Sample User","PrimaryEmail":"sample@example.com"}`))
 		default:
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
@@ -111,6 +111,6 @@ func TestStatus_JSONOutput(t *testing.T) {
 	require.Contains(t, s, `"profile": "default"`)
 	require.Contains(t, s, `"authenticated": true`)
 	require.Contains(t, s, `"tokenValid": true`)
-	require.Contains(t, s, `"fullName": "Iain Moffat"`)
-	require.Contains(t, s, `"email": "ipm@ufl.edu"`)
+	require.Contains(t, s, `"fullName": "Sample User"`)
+	require.Contains(t, s, `"email": "sample@example.com"`)
 }

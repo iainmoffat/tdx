@@ -9,7 +9,7 @@ TD ticket tasks are sub-tasks of a ticket — used for breaking work into stages
 
 ## Decisions
 
-Settled during brainstorming on 2026-05-08, after live-probing UFL:
+Settled during brainstorming on 2026-05-08, after live-probing Sample:
 
 1. **Five commands** in `tdx ticket task`: `list`, `show`, `feed`, `update`, `log`. No `create`, `delete`, or `assign` — those are admin or permission-gated workflows; defer.
 2. **`update` is the feed-POST path; `log` is the time-entry path.** TD's web UI separates these because they have different semantic effects: `update` (POST `/tasks/{id}/feed`) records progress + an informational `HoursWorked` field that does NOT create a time entry; `log` creates a real time entry against `TargetTicketTask` via existing `timesvc.AddEntry`.
@@ -18,9 +18,9 @@ Settled during brainstorming on 2026-05-08, after live-probing UFL:
 5. **Reuse `domain.TicketFeedEntry`** for task feed (same shape — comments, system events).
 6. **Reuse `domain.Target.TargetTicketTask`** for `tdx ticket task log` — already exists, no domain change for the time-entry path.
 7. **MCP exposure:** 3 read + 2 mutating tools (5 new). Tool count: 57 → 62.
-8. **No `delete` command.** DELETE on a task returned HTTP 403 on UFL during live probing — most users don't have delete permission; not worth shipping a command users can't use.
+8. **No `delete` command.** DELETE on a task returned HTTP 403 on the test tenant during live probing — most users don't have delete permission; not worth shipping a command users can't use.
 
-## Live-verified API surface (UFL, 2026-05-08)
+## Live-verified API surface (Sample, 2026-05-08)
 
 | Endpoint | Verified shape |
 |---|---|
@@ -241,7 +241,7 @@ Clean up the test task at the end (set IsActive=false via raw PUT — DELETE is 
 ## Risks and mitigations
 
 - **`--hours-worked` confusion.** Users may expect this to create a time entry. Mitigation: `--help` text and the docs explicitly call out that `--hours-worked` is informational only; for real time entries, use `tdx ticket task log`.
-- **Tasks may not exist on most tickets in app 34.** Live probing of 40+ recent tickets returned 0 tasks — IT Tickets (the canonical UFL ticket app) doesn't use sub-tasks heavily. The commands still work; they just return "no tasks found." This is fine.
+- **Tasks may not exist on most tickets in app 34.** Live probing of 40+ recent tickets returned 0 tasks — IT Tickets (the canonical Sample ticket app) doesn't use sub-tasks heavily. The commands still work; they just return "no tasks found." This is fine.
 - **Permission edge case for `update`.** TD may gate task updates by ticket assignment / responsibility. Mitigation: surface TD's error response verbatim ("Permission denied" → user knows what's up).
 - **Date fields with `0001-01-01T00:00:00`.** TD returns this for unset `CompletedDate`. `parseTDTime` returns zero `time.Time` for it; CLI rendering hides zero-time fields.
 
@@ -257,7 +257,7 @@ Clean up the test task at the end (set IsActive=false via raw PUT — DELETE is 
 8. 5 new MCP tools registered; mutating ones require `confirm:true`; tool count = 62.
 9. Docs updated (guide/ticket.md + tree in guide.md + tree in README.md byte-identical + mcp.md tool tables).
 10. `go test ./... && go vet ./... && gofmt -l . && golangci-lint run ./...` all green.
-11. Live-verified against UFL on ticket 542034 with a real test task.
+11. Live-verified against the test tenant on ticket 542034 with a real test task.
 12. Released as v0.16.2 (PR + squash + tag + Goreleaser).
 
 ## Out of scope (explicitly deferred)

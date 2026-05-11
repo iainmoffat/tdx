@@ -44,7 +44,7 @@ const (
 	maxConcurrency = 5
 	hardLimit      = 1000
 	// employeeLimit caps the people search when filtering by IsEmployee.
-	// UFL has ~1080 employees; 5000 is well under TD's 10K behavior cap.
+	// Tenants commonly have 1000-2000 employees; 5000 is well under TD's 10K behavior cap.
 	employeeLimit = 5000
 )
 

@@ -36,8 +36,8 @@ Sample output:
 
 ```
 PROJECT-ID  PROJECT                           PLAN-ID  PLAN                                  TYPE       MY-TASKS  TASKS  % COMPLETE  START       END
-259         Fiscal Year 2026 Disaster Rec…  1292     Fiscal Year 2026 Disaster Recovery    waterfall  1         51     0.0%        2025-07-01  2026-06-30
-54          UFIT Operations and Support       2091     Operations                            waterfall  12        423    0.0%        2026-03-02  2029-12-31
+259         Fiscal Year 2026 Disaster Rec…  1292     Sample Recovery Project    waterfall  1         51     0.0%        2025-07-01  2026-06-30
+54          Sample Operations and Support       2091     Operations                            waterfall  12        423    0.0%        2026-03-02  2029-12-31
 ```
 
 ---
@@ -54,7 +54,7 @@ tdx project search --type "IT Project" --include-inactive
 
 **Flags:**
 
-- `--manager me|UID|email` — filter by project manager (admin). UFL-verified: server-side `ManagerUID` filter is honored.
+- `--manager me|UID|email` — filter by project manager (admin). Sample-verified: server-side `ManagerUID` filter is honored.
 - `--type NAME|ID` — repeatable. Numeric values are used directly; names resolve via `/api/projects/types`.
 - `--status ID` — repeatable. **Numeric IDs only** in Phase 1; project status names aren't surfaced as a lookup yet.
 - `--active` / `--include-inactive` — default is `--active`. Adding `--include-inactive` flips to `IsActive=false`.
@@ -75,13 +75,13 @@ tdx project show 259 --json     # schema: tdx.v1.project
 Sample output:
 
 ```
-PROJECT 259 — Fiscal Year 2026 Disaster Recovery
+PROJECT 259 — Sample Recovery Project
 
 Status:      Executing
 Type:        Regulatory Project
-Manager:     Charlotte Looney
-Sponsor:     Elias Eldayrie
-Account:     14300000 (IT-ICT INFRA COMM TECHNOLOGY)
+Manager:     Pat Manager
+Sponsor:     Sam Sponsor
+Account:     999999 (Sample Department)
 Active:      yes
 % Complete:  96.0%
 Hours:       actual=58.0 / estimated=320.0
@@ -146,8 +146,8 @@ Sample output:
 
 ```
 PROJECT  PLAN  TASK-ID  TITLE                                STATUS     %   EST  ACT      ASSIGNEES                       END
-496      4907  4911     Determine first service to migrate   Overdue    0%  0.0  0.0      Iain Moffat                     2026-03-13
-259      1292  4938     Project Activities                   InProcess  0%  0.0  47.0     Michael Merritt, Muralidhar…  2026-06-30
+496      4907  4911     Determine first service to migrate   Overdue    0%  0.0  0.0      Sample User                     2026-03-13
+259      1292  4938     Project Activities                   InProcess  0%  0.0  47.0     Resource A, Muralidhar…  2026-06-30
 ```
 
 **Note on UID matching:** TD returns task resource UIDs in UPPERCASE GUID form while `tdx auth status` shows your UID in lowercase. The `--mine` filter handles this with a case-insensitive compare.

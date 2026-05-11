@@ -1039,10 +1039,10 @@ tdx time report status --manager me --week 2026-04-12
 tdx time report status --user $UID --from 2026-04-12 --to 2026-04-26 --json
 
 # Whole department in CSV
-tdx time report status --account "UFIT Operations" --week 2026-04-12 --csv > status.csv
+tdx time report status --account "Sample Operations" --week 2026-04-12 --csv > status.csv
 
 # A specific TD resource pool (use the exact name from the TD UI)
-tdx time report status --resource-pool "ICT - DBP - Linux Platform Services LPS" --week 2026-04-12
+tdx time report status --resource-pool "Sample Pool - Platform Engineering" --week 2026-04-12
 
 # Whole org in XLSX (requires --yes)
 tdx time report status --all --yes --week 2026-04-12 --xlsx all.xlsx

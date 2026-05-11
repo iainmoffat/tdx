@@ -77,7 +77,7 @@ func componentPathFor(target domain.Target) (string, error) {
 	case domain.TargetProjectTask:
 		// PlanID lives in Target.ItemID (set by decodeTarget for
 		// componentTaskTime); TaskID in Target.TaskID; ProjectID in
-		// Target.ProjectID. Verified against UFL tenant 2026-04-29.
+		// Target.ProjectID. Verified against test tenant 2026-04-29.
 		return fmt.Sprintf("/TDWebApi/api/time/types/component/project/%d/plan/%d/task/%d",
 			target.ProjectID, target.ItemID, target.TaskID), nil
 	case domain.TargetProjectIssue:

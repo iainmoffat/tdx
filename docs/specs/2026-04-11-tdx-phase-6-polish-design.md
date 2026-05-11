@@ -14,7 +14,7 @@
 
 | Deliverable | Detail |
 |---|---|
-| Tenant abstraction | Remove UFL-specific defaults from walkthrough, audit SSO for generality, clean hardcoded references |
+| Tenant abstraction | Remove Sample-specific defaults from walkthrough, audit SSO for generality, clean hardcoded references |
 | README.md | Install, quick start, command reference, MCP setup, JSON schemas, development |
 | Makefile | build, test, lint, vet, fmt, clean, coverage, all |
 | Linting config | `.golangci.yml` with conservative defaults |
@@ -38,19 +38,19 @@
 
 ## 2. Tenant Abstraction
 
-### Current UFL-specific items
+### Current Sample-specific items
 
-1. **`scripts/walkthrough.sh`** — defaults to `https://ufl.teamdynamix.com/`, project ID 54, plan ID 2091, task ID 2612
-2. **SSO login** (`--sso` flag) — calls `/TDWebApi/api/auth/loginsso` which is a standard TD endpoint, not UFL-specific. The flag itself is generic.
-3. **Code comments** — references to "UFL tenant" in spec docs and some source comments
-4. **Walkthrough probing notes** — memory entries reference UFL-specific field discoveries
+1. **`scripts/walkthrough.sh`** — defaults to `https://demotemplate.teamdynamix.com/`, project ID 54, plan ID 2091, task ID 2612
+2. **SSO login** (`--sso` flag) — calls `/TDWebApi/api/auth/loginsso` which is a standard TD endpoint, not Sample-specific. The flag itself is generic.
+3. **Code comments** — references to "sample tenant" in spec docs and some source comments
+4. **Walkthrough probing notes** — memory entries reference Sample-specific field discoveries
 
 ### Changes
 
 1. **Walkthrough defaults:** Remove all default values. The walkthrough requires env vars to be set explicitly:
    ```bash
    TDX_WALKTHROUGH_TOKEN   # required — no default
-   TDX_WALKTHROUGH_URL     # required — no default (was https://ufl.teamdynamix.com/)
+   TDX_WALKTHROUGH_URL     # required — no default (was https://demotemplate.teamdynamix.com/)
    TDX_WALKTHROUGH_WEEK    # required — no default (was 2026-04-01)
    TDX_WALKTHROUGH_PROJECT # required for Phase 3+ steps
    TDX_WALKTHROUGH_PLAN    # required for Phase 3+ steps  
@@ -58,7 +58,7 @@
    ```
    The script errors clearly if any required var is missing.
 
-2. **Comments cleanup:** Replace "UFL" references in source code comments with generic "TD tenant" language. Spec/plan docs are historical — leave them as-is.
+2. **Comments cleanup:** Replace "Sample" references in source code comments with generic "TD tenant" language. Spec/plan docs are historical — leave them as-is.
 
 3. **SSO login:** Already generic (`/TDWebApi/api/auth/loginsso` is standard TD). No changes needed.
 

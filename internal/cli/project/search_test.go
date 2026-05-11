@@ -12,7 +12,7 @@ import (
 func TestSearch_RendersProjects(t *testing.T) {
 	stub := &stubProjectsvc{
 		projects: []domain.Project{
-			{ID: 259, Name: "Disaster Recovery", StatusName: "Executing", ManagerUID: "uid-mgr", ManagerName: "Charlotte"},
+			{ID: 259, Name: "Sample Recovery", StatusName: "Executing", ManagerUID: "uid-mgr", ManagerName: "Pat"},
 		},
 	}
 	var buf bytes.Buffer
@@ -21,7 +21,7 @@ func TestSearch_RendersProjects(t *testing.T) {
 	require.NoError(t, err)
 	out := buf.String()
 	require.Contains(t, out, "259")
-	require.Contains(t, out, "Disaster Recovery")
+	require.Contains(t, out, "Sample Recovery")
 }
 
 func TestSearch_JSONEnvelope(t *testing.T) {
@@ -80,7 +80,7 @@ func TestSearch_ClientSideManagerFilter(t *testing.T) {
 	var buf bytes.Buffer
 	// managerArg is a UID (>= 32 chars with 4 dashes) so resolvePrincipal passes it through.
 	err := runProjectSearch(context.Background(), &buf, stub, nil, "default", "uid-me",
-		"", "61fc4d29-1a09-ef11-86d4-df13b8e4e655", nil, nil, false, 50, false)
+		"", "aaaaaaaa-1234-5678-9abc-def012345678", nil, nil, false, 50, false)
 	require.NoError(t, err)
 	// Only project with ManagerUID == resolved UID should appear.
 	// Our stub returns "uid-me" as ManagerUID for project 1, so after client-side filter

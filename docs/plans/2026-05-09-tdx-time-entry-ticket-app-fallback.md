@@ -417,7 +417,7 @@ Plan: `docs/plans/2026-05-09-tdx-time-entry-ticket-app-fallback.md`
 - [x] `--app` explicit override still works
 - [x] Help text reflects the new behavior
 - [x] `go test ./... && go vet ./... && gofmt -l . && golangci-lint run ./...` all green
-- [x] Live-verified on UFL: --ticket 542034 without --app now reaches the type-resolution step (was previously rejected at the "--app required" gate)
+- [x] Live-verified on the test tenant: --ticket 542034 without --app now reaches the type-resolution step (was previously rejected at the "--app required" gate)
 
 After merge, tag `v0.16.4` to trigger Goreleaser.
 ```

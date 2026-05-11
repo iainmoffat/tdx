@@ -93,7 +93,7 @@ func (s *Service) ResolveStatusByName(ctx context.Context, profileName string, a
 }
 
 // isTerminalStatusClass returns true for TD StatusClass values that mean a
-// ticket is closed (no further work). Live-verified on UFL 2026-05-08:
+// ticket is closed (no further work). Live-verified 2026-05-08:
 // 3 = Completed (Resolved/Closed), 4 = Cancelled. Other classes (1=New,
 // 2=InProcess, 5=OnHold) are open.
 func isTerminalStatusClass(class int) bool {

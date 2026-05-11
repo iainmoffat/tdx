@@ -91,8 +91,8 @@ Then dump the field-list on the authenticated user:
 
 ```bash
 TOKEN=$(grep "default:" ~/.config/tdx/credentials.yaml | awk '{print $2}')
-MY_UID=$(./tdx auth status 2>&1 | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' || curl -s -H "Authorization: Bearer $TOKEN" "https://ufl.teamdynamix.com/TDWebApi/api/auth/getuser" | python3 -c "import json,sys; print(json.load(sys.stdin)['UID'])")
-curl -s -H "Authorization: Bearer $TOKEN" "https://ufl.teamdynamix.com/TDWebApi/api/people/$MY_UID" | python3 -c "
+MY_UID=$(./tdx auth status 2>&1 | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' || curl -s -H "Authorization: Bearer $TOKEN" "https://demotemplate.teamdynamix.com/TDWebApi/api/auth/getuser" | python3 -c "import json,sys; print(json.load(sys.stdin)['UID'])")
+curl -s -H "Authorization: Bearer $TOKEN" "https://demotemplate.teamdynamix.com/TDWebApi/api/people/$MY_UID" | python3 -c "
 import json,sys
 d = json.load(sys.stdin)
 matches = {k: v for k, v in d.items() if any(s in k.lower() for s in ['workable','hours','capacit','expected'])}
@@ -765,7 +765,7 @@ Slightly breaking for users who relied on the no-flag default-40 behavior. To re
 - JSON envelope gains per-row `threshold` and filter-level `thresholdMode`.
 - Fallback when `WorkableHours <= 0`: literal 40 default.
 
-### Live-verified on UFL
+### Live-verified on the test tenant
 
 - Per-user mode produces correct thresholds for staff with FT/PT WorkableHours
 - Global override still works
@@ -781,7 +781,7 @@ Plan: `docs/plans/2026-05-11-per-user-threshold-workable-hours.md`
 - [x] Runner per-user logic (4 cases)
 - [x] JSON envelope (thresholdMode + per-row threshold)
 - [x] `go test ./... && go vet ./... && golangci-lint run ./...` clean
-- [x] Live-verified per-user and global modes on UFL
+- [x] Live-verified per-user and global modes on the test tenant
 
 After merge, tag `v0.16.5` to trigger Goreleaser.
 ```

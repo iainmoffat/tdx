@@ -51,7 +51,7 @@ func TestLogin_EmptyTokenRejected(t *testing.T) {
 	t.Setenv("TDX_CONFIG_HOME", dir)
 
 	cmd := NewCmdWithTokenReader(loginRunner{input: "   "})
-	cmd.SetArgs([]string{"login", "--profile", "default", "--url", "https://ufl.teamdynamix.com/"})
+	cmd.SetArgs([]string{"login", "--profile", "default", "--url", "https://demotemplate.teamdynamix.com/"})
 	err := cmd.Execute()
 	require.Error(t, err)
 	require.True(t, strings.Contains(err.Error(), "empty token") || strings.Contains(err.Error(), "invalid token"))

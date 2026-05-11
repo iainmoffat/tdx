@@ -76,7 +76,7 @@ Search for tickets. Without any flags, returns your open assigned tickets (equiv
 tdx ticket search
 
 # Tickets assigned to me or a colleague, any status
-tdx ticket search --assignee me --assignee d44687e1-0000-0000-0000-000000000001 --include-closed
+tdx ticket search --assignee me --assignee aaaaaaaa-1234-5678-9abc-000000000001 --include-closed
 
 # Full-text search, cap at 20
 tdx ticket search --text "database migration" --limit 20
@@ -102,7 +102,7 @@ Output is a partial-record table: ID, TITLE, STATUS, ASSIGNEE, REQUESTOR, MODIFI
 - `--assignee <me|UID|email>` — filter by assignee; repeatable; defaults to `me` when no assignee/requestor flag is given
 - `--requestor <me|UID|email>` — filter by requestor; repeatable
 - `--responsibility-group <name|id>` — filter to tickets assigned to a TD responsibility group (team). Repeatable. Numeric arg = ID; non-numeric = case-insensitive exact name match (errors with candidate list on ambiguity). Use `tdx ticket groups list` to discover groups.
-- `--manager me|UID|email` — expand to "tickets assigned to direct reports of this person." Repeatable. `me` = the authenticated user. Resolution: fetches employees (~1k staff on UFL) and filters client-side by `ReportsToUID`, then injects matching UIDs as assignees. Direct reports only (no transitive walk).
+- `--manager me|UID|email` — expand to "tickets assigned to direct reports of this person." Repeatable. `me` = the authenticated user. Resolution: fetches employees (~1k staff on the test tenant) and filters client-side by `ReportsToUID`, then injects matching UIDs as assignees. Direct reports only (no transitive walk).
 - `--account <name>` — informational label only (not a TD-side filter); name-resolves for display
 - `--text <q>` — full-text search string
 - `--limit N` — max results (default 50, max 1000)
@@ -194,8 +194,8 @@ tdx ticket comment 12345 "Deployed the fix to staging." --yes
 # Private comment, notify two colleagues
 tdx ticket comment 12345 "Escalating — see notes." \
   --private \
-  --notify d44687e1-0000-0000-0000-000000000001 \
-  --notify d44687e1-0000-0000-0000-000000000002 \
+  --notify aaaaaaaa-1234-5678-9abc-000000000001 \
+  --notify aaaaaaaa-1234-5678-9abc-000000000002 \
   --yes
 ```
 
@@ -250,7 +250,7 @@ tdx ticket assign 12345 me --yes
 tdx ticket assign 12345 alice@example.com --yes
 
 # Assign by UID with a comment
-tdx ticket assign 12345 d44687e1-0000-0000-0000-000000000001 \
+tdx ticket assign 12345 aaaaaaaa-1234-5678-9abc-000000000001 \
   --comment "Taking this over from Alice." \
   --yes
 ```

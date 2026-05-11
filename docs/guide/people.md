@@ -36,7 +36,7 @@ table; the full UID is in JSON output.
 ## tdx people show
 
 ```bash
-tdx people show d44687e1-1a09-ef11-86d4-df13b8e4e655
+tdx people show aaaaaaaa-1234-5678-9abc-def012345678
 
 # JSON envelope (schema: tdx.v1.person)
 tdx people show <UID> --json
@@ -54,7 +54,7 @@ tdx people accounts list             # text, sorted by name
 tdx people accounts list --json      # tdx.v1.accountList
 ```
 
-Columns: ID, NAME, MANAGER, ACTIVE. UFL has 6404 accounts so expect a
+Columns: ID, NAME, MANAGER, ACTIVE. Sample has 6404 accounts so expect a
 long table; pipe through `grep` to narrow.
 
 #### How `--account` resolves names

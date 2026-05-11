@@ -435,7 +435,7 @@ Table-driven tests covering:
 11. CLI tests: `status_test.go`, `runner_test.go`.
 12. MCP: `tools_report.go` + tests.
 13. README + guide.md updates (include `--csv`/`--xlsx` examples).
-14. Live verification against UFL tenant (text, JSON, CSV, XLSX).
+14. Live verification against sample tenant (text, JSON, CSV, XLSX).
 15. Final quality gate, push branch, open PR, tag v0.9.0 (minor bump — new public CLI surface + new MCP tool).
 
 Subagent-driven execution recommended given the surface size (multiple new packages + CLI tree).

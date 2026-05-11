@@ -40,7 +40,7 @@ func (s *Service) ListSavedSearches(ctx context.Context, profileName string, app
 // limit caps results (default 50 when limit <= 0).
 // Returned tickets are partial records (IsFull=false).
 //
-// Wire shape (live-verified on UFL 2026-05-08): the request body needs a
+// Wire shape (live-verified on the test tenant 2026-05-08): the request body needs a
 // Page object (PageIndex, PageSize) — POSTing without one returns a 400.
 // The response is wrapped in {Data: [...], TotalCount, ...} rather than
 // being a flat array.

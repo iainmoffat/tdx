@@ -9,7 +9,7 @@ After v0.16.0 shipped, `tdx ticket search` covered "tickets assigned to me" via 
 
 ## Decisions
 
-Settled during brainstorming on 2026-05-08, after live probing UFL:
+Settled during brainstorming on 2026-05-08, after live probing Sample:
 
 1. **`ResponsibilityGroupIDs` IS honored server-side** on `POST /api/{appId}/tickets/search`. Live-verified: filtering by group 103 returned exactly 5 tickets, all with `ResponsibleGroupID==103`.
 2. **`/api/groups/search` (POST) returns the tenant-wide group list.** `GET /api/groups` is 405. Group rows have `ID`, `Name`, `IsActive`, `PlatformApplications`, etc. Filter params on this endpoint may be silently ignored (per the established TD silent-filter pattern); the implementation reads the full list and filters client-side for name resolution.
@@ -73,7 +73,7 @@ type TicketGroup struct {
 
 type TicketSearchFilter struct {
     // ... existing fields unchanged ...
-    ResponsibilityGroupIDs []int // NEW — server-side filter (honored on UFL)
+    ResponsibilityGroupIDs []int // NEW — server-side filter (honored on the test tenant)
 }
 ```
 
@@ -235,7 +235,7 @@ Per established patterns:
 
 3. **MCP tests** — at least one happy-path for `list_ticket_groups` and one for `search_tickets` with manager+group filters. Confirm tool count assertion is updated (server_test.go).
 
-4. **Live verification** before tag (run on UFL):
+4. **Live verification** before tag (run on the test tenant):
    - `tdx ticket groups list` returns ≥ a handful of groups
    - `tdx ticket search --responsibility-group "<a real group>"` returns matching tickets
    - `tdx ticket search --manager me` returns tickets assigned to my direct reports (or "no tickets matched" if no reports + IT Tickets)
@@ -248,24 +248,24 @@ Per established patterns:
 - "Primary vs secondary responsibility" distinction.
 - Watchers, workflow-step assignees, contacts.
 - New mutating commands.
-- Performance optimization for `--manager me` (the staff-list fetch is ~1093 rows on UFL = sub-second). Cache could come later if needed.
+- Performance optimization for `--manager me` (the staff-list fetch is ~1093 rows on the test tenant = sub-second). Cache could come later if needed.
 - Cross-app group filtering (groups in v0.16.1 are tenant-wide; the search is still per-app). If a group serves multiple apps, the user picks which app to search.
 
 ## Risks and mitigations
 
-- **`ResponsibilityGroupIDs` may behave differently on other tenants.** Mitigation: the live probe verified honor on UFL; we ship believing it's honored, and users on tenants where it isn't will see empty results — same failure mode as any silent-filter discovery. The wire field stays exported via the filter, and we can add a fallback (client-side group filter using `ResponsibleGroupID` on each row, like we do for IsOpen) in a patch release if needed.
+- **`ResponsibilityGroupIDs` may behave differently on other tenants.** Mitigation: the live probe verified honor on the test tenant; we ship believing it's honored, and users on tenants where it isn't will see empty results — same failure mode as any silent-filter discovery. The wire field stays exported via the filter, and we can add a fallback (client-side group filter using `ResponsibleGroupID` on each row, like we do for IsOpen) in a patch release if needed.
 - **`/api/groups/search` may also silently ignore filter params.** We don't rely on its filtering — we always send `{}` and read the full list. Acceptable.
-- **Manager expansion fetches all staff (~1k rows on UFL).** That's one extra API call per `tdx ticket search --manager` invocation. Acceptable; sub-second.
+- **Manager expansion fetches all staff (~1k rows on the test tenant).** That's one extra API call per `tdx ticket search --manager` invocation. Acceptable; sub-second.
 - **Adding `SearchUsers` to the CLI's `peoplesvcAPI` interface** is an interface-widening change. All existing test stubs must implement it. Spec calls this out so the implementer doesn't miss it.
 
 ## Acceptance criteria
 
-1. `tdx ticket search --responsibility-group "<real-name>"` returns tickets assigned to that group on UFL.
+1. `tdx ticket search --responsibility-group "<real-name>"` returns tickets assigned to that group on the test tenant.
 2. `tdx ticket search --manager me` returns tickets assigned to direct reports of the authenticated user.
 3. Multiple selectors (`--assignee me --responsibility-group X --manager Y`) combine with union semantics; default-to-me does NOT fire.
 4. `tdx ticket groups list` lists tenant groups; `--json` envelope is `tdx.v1.ticketGroupList`.
 5. `search_tickets` MCP tool accepts `responsibilityGroupIDs` and `managerUIDs` inputs.
 6. `list_ticket_groups` MCP tool registered; total tool count = 57.
 7. `go test ./... && go vet ./... && gofmt -l . && golangci-lint run ./...` all green.
-8. Live-verified against UFL on at least the four CLI cases above.
+8. Live-verified against the test tenant on at least the four CLI cases above.
 9. Released as v0.16.1 (PR + squash + tag + Goreleaser).

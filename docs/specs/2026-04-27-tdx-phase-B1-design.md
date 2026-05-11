@@ -272,7 +272,7 @@ Per the Phase A documentation discipline ("a phase is not done without docs"):
    - "Multiple drafts per week" — alternate names, `--name`, `list` grouping, `copy --as`, `rename`.
    - "Snapshots & history" — `snapshot --keep`, `restore`, `prune`, retention semantics, pinning.
    - "Archive & unarchive" — soft-archive behavior, the `--archived` filter.
-3. **`docs/manual-tests/phase-B1-week-drafts-walkthrough.md`** — runnable end-to-end against the live UFL tenant. Exercises:
+3. **`docs/manual-tests/phase-B1-week-drafts-walkthrough.md`** — runnable end-to-end against the live sample tenant. Exercises:
    - Create alternate via `pull --name pristine`.
    - `new --from-draft` with `--shift`.
    - `copy` across weeks.

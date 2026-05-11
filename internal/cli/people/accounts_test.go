@@ -15,7 +15,7 @@ import (
 
 func accountsFixture() []peoplesvc.Account {
 	return []peoplesvc.Account{
-		{ID: 866, Name: "ICT - Infrastructure", IsActive: true, ManagerFullName: "Iain Moffat"},
+		{ID: 866, Name: "Sample Department", IsActive: true, ManagerFullName: "Sample User"},
 		{ID: 1, Name: "Board of Trustees", IsActive: true},
 		{ID: 47, Name: "ADI - Business Analysis", IsActive: false},
 	}
@@ -28,7 +28,7 @@ func TestAccountsList_TextSortedByName(t *testing.T) {
 	s := out.String()
 	idxADI := strings.Index(s, "ADI - Business Analysis")
 	idxBOT := strings.Index(s, "Board of Trustees")
-	idxICT := strings.Index(s, "ICT - Infrastructure")
+	idxICT := strings.Index(s, "Sample Department")
 	require.True(t, idxADI >= 0 && idxBOT > idxADI && idxICT > idxBOT, "expected sorted-by-name output")
 	require.Contains(t, s, "yes")
 	require.Contains(t, s, "no", "inactive accounts render 'no'")

@@ -463,7 +463,7 @@ func testTemplate() domain.Template {
 			{
 				ID:       "row-01",
 				Label:    "Admin",
-				Target:   domain.Target{Kind: domain.TargetProjectTask, GroupName: "UFIT"},
+				Target:   domain.Target{Kind: domain.TargetProjectTask, GroupName: "Sample Dept"},
 				TimeType: domain.TimeType{ID: 5, Name: "Standard"},
 				Hours:    domain.WeekHours{Mon: 8.0, Tue: 8.0, Wed: 8.0, Thu: 8.0, Fri: 8.0},
 			},

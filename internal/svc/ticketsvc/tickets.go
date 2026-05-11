@@ -28,7 +28,7 @@ func (s *Service) GetTicket(ctx context.Context, profileName string, appID, id i
 
 // SearchTickets calls POST /tickets/search. Returns partial records (IsFull=false).
 //
-// Open-only filtering note (live-verified on UFL 2026-05-08): TD's IsOpen
+// Open-only filtering note (live-verified on the test tenant 2026-05-08): TD's IsOpen
 // request-body field is silently ignored on the search endpoint, so we
 // filter client-side using the StatusClass field on each result. We
 // over-fetch by 5x (capped at 1000) to give the post-filter enough rows

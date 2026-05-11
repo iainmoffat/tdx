@@ -98,7 +98,7 @@ func TestService_StatusVerifiesValidToken(t *testing.T) {
 			_, _ = w.Write([]byte(`[]`))
 		case "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"ReferenceID":42,"UID":"abcd-1234","FullName":"Iain Moffat","PrimaryEmail":"ipm@ufl.edu"}`))
+			_, _ = w.Write([]byte(`{"ReferenceID":42,"UID":"abcd-1234","FullName":"Sample User","PrimaryEmail":"sample@example.com"}`))
 		default:
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
@@ -115,8 +115,8 @@ func TestService_StatusVerifiesValidToken(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, status.Authenticated)
 	require.True(t, status.TokenValid)
-	require.Equal(t, "Iain Moffat", status.User.FullName)
-	require.Equal(t, "ipm@ufl.edu", status.User.Email)
+	require.Equal(t, "Sample User", status.User.FullName)
+	require.Equal(t, "sample@example.com", status.User.Email)
 	require.Empty(t, status.UserErr)
 }
 

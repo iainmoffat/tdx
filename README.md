@@ -45,7 +45,7 @@ tdx time template apply my-week --week 2026-04-14 --yes
 tdx time report status --manager me --week 2026-04-12
 
 # Or for a TD resource pool (matches the TD UI's filter)
-tdx time report status --resource-pool "ICT - DBP - Linux Platform Services LPS" --week 2026-04-12
+tdx time report status --resource-pool "Sample Pool - Platform Engineering" --week 2026-04-12
 
 # Direct reports who haven't logged a full week
 tdx time report status --manager me --week 2026-04-19 --incomplete

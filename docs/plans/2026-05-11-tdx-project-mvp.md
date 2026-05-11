@@ -8,7 +8,7 @@
 
 **Architecture:** Net-new `internal/svc/projectsvc/` + `internal/cli/project/` + `internal/mcp/tools_project.go` packages. Additive domain types (`Project`, `ProjectPlan`, `ProjectTask`, `ProjectPlanType`). Additive `Target.PlanID` field. Reuse existing `timesvc.AddEntry` for `tdx project log`.
 
-**Wire-format facts confirmed by live probe on UFL (2026-05-11):**
+**Wire-format facts confirmed by live probe on the test tenant (2026-05-11):**
 
 - `/api/projects/list` returns **plan-shaped** objects. Each row carries `ID` (= plan ID), `Title`, `ProjectID`, `ProjectName`, `TaskCount`, `MyTaskCount`, `PlanType` (1=waterfall, 2=cardwall), plus a smattering of plan-state fields (`DraftID`, `IsCheckedOut`, `CurrentVersion`).
 - `/api/projects/search` returns full project records. NameLike + IsActive honored.
@@ -244,7 +244,7 @@ func TestProjectPlanType_String(t *testing.T) {
 }
 
 func TestProjectTask_AssignedTo_CaseInsensitive(t *testing.T) {
-    me := "61fc4d29-1a09-ef11-86d4-df13b8e4e655"
+    me := "aaaaaaaa-1234-5678-9abc-def012345678"
     task := ProjectTask{
         Resources: []ProjectTaskResource{
             {UID: "ABCD1234-AAAA-BBBB-CCCC-DDDDEEEEFFFF", FullName: "Someone"},
@@ -669,12 +669,12 @@ tdx project show <id> [--json] [--profile P]
 
 Renders header:
 ```
-PROJECT 259 — Fiscal Year 2026 Disaster Recovery
+PROJECT 259 — Sample Recovery Project
 Status:        Executing
 Type:          Regulatory Project (Regulatory Project, category=UF - IT Project)
-Manager:       Charlotte Looney
-Sponsor:       Elias Eldayrie
-Account:       14300000 (IT-ICT INFRA COMM TECHNOLOGY)
+Manager:       Pat Manager
+Sponsor:       Sam Sponsor
+Account:       999999 (Sample Department)
 Active:        yes
 % Complete:    96.0%
 Hours:         actual=58.0 / estimated=320.0
@@ -865,9 +865,9 @@ feat(mcp): add 7 project tools (6 read + log_project_task_time)
 
 ---
 
-### Task 12: Live verification on UFL
+### Task 12: Live verification on the test tenant
 
-- [ ] **Step 12.1: Build and run each command against UFL**
+- [ ] **Step 12.1: Build and run each command against Sample**
 
 ```bash
 go build -o /tmp/tdx-project ./cmd/tdx
@@ -951,6 +951,6 @@ PR title: `v0.17.0: tdx project MVP (Phase 1)`
 - ✅ 7 MCP tools → Task 11
 - ✅ Domain types + `Target.PlanID` → Task 1
 - ✅ Service layer → Task 2
-- ✅ Live verify on UFL → Task 12
+- ✅ Live verify on the test tenant → Task 12
 - ✅ Docs + README → Task 13
 - ✅ Release → Task 14

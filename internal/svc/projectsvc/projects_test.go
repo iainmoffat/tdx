@@ -19,7 +19,7 @@ func TestListMine_DecodesPlanRows(t *testing.T) {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		_, _ = w.Write([]byte(`[
-			{"ID": 1292, "Title": "FY2026 DR Plan", "ProjectID": 259, "ProjectName": "Disaster Recovery",
+			{"ID": 1292, "Title": "FY2026 DR Plan", "ProjectID": 259, "ProjectName": "Sample Recovery",
 			 "TaskCount": 12, "MyTaskCount": 3, "PlanType": 1,
 			 "StartDateUtc": "2025-07-01T00:00:00", "EndDateUtc": "2026-06-30T00:00:00"}
 		]`))
@@ -32,7 +32,7 @@ func TestListMine_DecodesPlanRows(t *testing.T) {
 	p := plans[0]
 	require.Equal(t, 1292, p.ID)
 	require.Equal(t, 259, p.ProjectID)
-	require.Equal(t, "Disaster Recovery", p.ProjectName)
+	require.Equal(t, "Sample Recovery", p.ProjectName)
 	require.Equal(t, "FY2026 DR Plan", p.Title)
 	require.Equal(t, 3, p.MyTaskCount)
 	require.Equal(t, domain.PlanWaterfall, p.Type)
@@ -69,10 +69,10 @@ func TestGet_DecodesProjectWithAdminAsManager(t *testing.T) {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		_, _ = w.Write([]byte(`{
-			"ID": 259, "Name": "Disaster Recovery",
+			"ID": 259, "Name": "Sample Recovery",
 			"StatusID": 3, "StatusName": "Executing",
-			"AdminUID": "abc-manager-uid", "AdminName": "Charlotte Looney",
-			"SponsorUID": "def-sponsor-uid", "SponsorName": "Elias Eldayrie",
+			"AdminUID": "abc-manager-uid", "AdminName": "Pat Manager",
+			"SponsorUID": "def-sponsor-uid", "SponsorName": "Sam Sponsor",
 			"PercentComplete": 96.0, "IsActive": true,
 			"StartDate": "2025-07-01T00:00:00", "EndDate": "2026-06-30T00:00:00"
 		}`))
@@ -82,9 +82,9 @@ func TestGet_DecodesProjectWithAdminAsManager(t *testing.T) {
 	p, err := svc.Get(context.Background(), prof, 259)
 	require.NoError(t, err)
 	require.Equal(t, 259, p.ID)
-	require.Equal(t, "Disaster Recovery", p.Name)
+	require.Equal(t, "Sample Recovery", p.Name)
 	require.Equal(t, "abc-manager-uid", p.ManagerUID)
-	require.Equal(t, "Charlotte Looney", p.ManagerName)
+	require.Equal(t, "Pat Manager", p.ManagerName)
 	require.Equal(t, "def-sponsor-uid", p.SponsorUID)
 	require.Equal(t, "Executing", p.StatusName)
 	require.InDelta(t, 96.0, p.PercentComplete, 0.001)

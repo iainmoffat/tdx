@@ -229,10 +229,10 @@ func testGroupedSheet() Sheet {
 	return Sheet{
 		Name: "test",
 		Rows: []SheetRow{
-			{ID: "row-01", Label: "Admin Task", GroupName: "UFIT Administration", TypeName: "Standard", Hours: domain.WeekHours{Mon: 8.0}},
-			{ID: "row-03", Label: "Prof Dev", GroupName: "UFIT Administration", TypeName: "Training"},
-			{ID: "row-04", Label: "Docker", GroupName: "UFIT Operations", TypeName: "Standard", Hours: domain.WeekHours{Tue: 1.0}},
-			{ID: "row-02", Label: "Linux", GroupName: "UFIT Operations", TypeName: "Standard", Hours: domain.WeekHours{Mon: 1.0}},
+			{ID: "row-01", Label: "Admin Task", GroupName: "Sample Department Administration", TypeName: "Standard", Hours: domain.WeekHours{Mon: 8.0}},
+			{ID: "row-03", Label: "Prof Dev", GroupName: "Sample Department Administration", TypeName: "Training"},
+			{ID: "row-04", Label: "Docker", GroupName: "Sample Operations", TypeName: "Standard", Hours: domain.WeekHours{Tue: 1.0}},
+			{ID: "row-02", Label: "Linux", GroupName: "Sample Operations", TypeName: "Standard", Hours: domain.WeekHours{Mon: 1.0}},
 		},
 	}
 }

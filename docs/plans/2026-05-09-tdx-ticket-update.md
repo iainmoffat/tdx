@@ -1303,7 +1303,7 @@ Write the body to `/tmp/pr-body-v0.16.3.md`:
 
 Phase D.2a — `tdx ticket update <id>` for generic field updates beyond the existing dedicated `status`/`assign`/`comment`/`log` commands. One new MCP tool (`update_ticket`). Tool count 62 → 63.
 
-`tdx ticket create` is split out and deferred to v0.17.0 — UFL probing on 2026-05-09 confirmed typical (non-admin) users lack API create permission on the canonical IT Tickets app.
+`tdx ticket create` is split out and deferred to v0.17.0 — Sample probing on 2026-05-09 confirmed typical (non-admin) users lack API create permission on the canonical IT Tickets app.
 
 ### What `update` covers
 
@@ -1315,7 +1315,7 @@ Phase D.2a — `tdx ticket update <id>` for generic field updates beyond the exi
 
 Excludes status and assignee — those have dedicated commands; do not duplicate.
 
-### Live-verified on UFL ticket 542034
+### Live-verified on the test tenant ticket 542034
 
 - title / description changes ✓
 - type by name ✓

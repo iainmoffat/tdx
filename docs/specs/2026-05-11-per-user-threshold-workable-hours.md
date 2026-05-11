@@ -3,7 +3,7 @@
 **Date:** 2026-05-11
 **Goal:** `tdx time report status --incomplete` uses each user's `WorkableHours` (from TD) as the threshold by default, rather than a global `--threshold 40`. Explicit `--threshold N` still works as a global override. Closes a deferred item from v0.12.0.
 
-> **Post-implementation correction (2026-05-11):** Live probing of UFL revealed that TD returns `WorkableHours` as **hours per day**, not per week (e.g. `8.0` for a FT staff member, not `40`). The runner multiplies by 5 (`workdaysPerWeek`) to compute the weekly threshold. All test fixtures, examples, and prose in this spec that show `WorkableHours: 40 / 32` as weekly values should be read as the equivalent daily values (`8.0 / 6.4`); the final code and documentation reflect the correct daily semantic.
+> **Post-implementation correction (2026-05-11):** Live probing of Sample revealed that TD returns `WorkableHours` as **hours per day**, not per week (e.g. `8.0` for a FT staff member, not `40`). The runner multiplies by 5 (`workdaysPerWeek`) to compute the weekly threshold. All test fixtures, examples, and prose in this spec that show `WorkableHours: 40 / 32` as weekly values should be read as the equivalent daily values (`8.0 / 6.4`); the final code and documentation reflect the correct daily semantic.
 
 ## Motivation
 
@@ -72,7 +72,7 @@ The 40-fallback is the literal documented in the runner. Configurable later if a
 4. Is the field always present, or omitted when unset?
 5. Same probe on `POST /api/people/search` rows — does it survive the search-list wire shape?
 
-Earlier probing during v0.9.x people-search work did NOT find a `WorkableHours` field in the response on UFL — that probe was during v0.9.1 (2026-04-30). The field may have been added since, or may live under a different shape. Live probe is mandatory before writing the wire struct.
+Earlier probing during v0.9.x people-search work did NOT find a `WorkableHours` field in the response on the test tenant — that probe was during v0.9.1 (2026-04-30). The field may have been added since, or may live under a different shape. Live probe is mandatory before writing the wire struct.
 
 **Documented expectation (per TD's published schema):** `WorkableHours` is a `Double` field on `User`, weekly hours, `0.0` when unset. If the live response differs, the wire-format fix is mechanical: rename the wire tag, change the type, adjust `decodeUser`.
 
@@ -239,14 +239,14 @@ Skip the hint if the existing renderer doesn't have a natural place for it. YAGN
 2. `tdx time report status --manager me --week ... --incomplete --threshold N` applies N globally (preserves pre-v0.16.5 behavior).
 3. JSON output includes per-row `threshold` and filter-level `thresholdMode = "per-user"|"global"` when `--incomplete` is set.
 4. `domain.User.WorkableHours` field exists; `peoplesvc` deserializes it.
-5. Live-verified on UFL: at least one user with FT WorkableHours (40) and one with PT (32 or other) — the `--incomplete` result should differ from the pre-v0.16.5 global-40 behavior.
+5. Live-verified on the test tenant: at least one user with FT WorkableHours (40) and one with PT (32 or other) — the `--incomplete` result should differ from the pre-v0.16.5 global-40 behavior.
 6. All existing tests pass; new tests pass; `go vet` + `golangci-lint` clean.
 7. Doc updated.
 8. Released as v0.16.5 (PR + squash + tag + Goreleaser).
 
 ## Risks and mitigations
 
-- **`WorkableHours` field may not exist or may be named differently on UFL.** Mitigation: probe live before locking the wire struct. Earlier probe (v0.9.1, 2026-04-30) didn't surface it — that may have been a different endpoint or a field added since. Concretely, the implementer must:
+- **`WorkableHours` field may not exist or may be named differently on the test tenant.** Mitigation: probe live before locking the wire struct. Earlier probe (v0.9.1, 2026-04-30) didn't surface it — that may have been a different endpoint or a field added since. Concretely, the implementer must:
   1. Refresh auth (token expired during planning).
   2. `curl /api/people/<my-uid>` and grep for `Workable`/`Hours`/`Capacity`/`Expected` — if no match, dump all fields and pick the closest. If genuinely missing, escalate (this becomes a "no WorkableHours data" gap, which means we fall back to 40 for everyone anyway — equivalent to current behavior — and the feature still ships as "no-op when data missing").
   3. Same probe against a `POST /api/people/search` row.

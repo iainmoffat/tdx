@@ -231,6 +231,6 @@ type getTimeStatusReportArgs struct {
 
 1. **CLI + runner:** add flags, validation, filter loop in `assembleReport`; tests.
 2. **JSON envelope + MCP:** plumb through `print.go` and `tools_report.go`; tests.
-3. **Docs + live verify on UFL + PR + tag.**
+3. **Docs + live verify on the test tenant + PR + tag.**
 
 Inline execution.

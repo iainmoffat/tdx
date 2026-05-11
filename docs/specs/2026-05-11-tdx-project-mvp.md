@@ -60,7 +60,7 @@ tdx project search [QUERY] [--manager me|UID|email] [--status NAME|ID]... [--typ
 
 `QUERY` maps to `NameLike`. Default: `IsActive=true`, `IsOpen=true`. `--manager me` resolves via `auth.WhoAmI`. Other filters resolved via list-then-match (no new server endpoints needed for Phase 1 — `TypeID` comes from `GET /api/projects/types`; status names from the project's status list if cheap, else accept numeric only and document).
 
-**Filter fidelity:** TD search endpoints have a documented history of silently ignoring filter params. We will live-probe each filter on UFL and document any that are ignored in `reference_td_search_silent_filters.md`. Client-side post-filter as a fallback for fields TD ignores.
+**Filter fidelity:** TD search endpoints have a documented history of silently ignoring filter params. We will live-probe each filter on the test tenant and document any that are ignored in `reference_td_search_silent_filters.md`. Client-side post-filter as a fallback for fields TD ignores.
 
 #### `tdx project show <id>`
 
@@ -284,7 +284,7 @@ Plus the integration smoke I always do: `go test ./... && go vet ./... && gofmt 
 
 ## Live verification (mandatory before tag)
 
-1. `tdx project list` returns >= 1 project on UFL for the authed user.
+1. `tdx project list` returns >= 1 project on the test tenant for the authed user.
 2. Decode the actual `/api/projects/list` response and reconcile against the planned domain shape. If TD really returns Plan-shaped objects, adjust the decoder; either keep `Project` as the CLI-facing type (preferred) or introduce `ProjectListEntry`.
 3. `tdx project search "<known project name fragment>"` returns matching projects.
 4. Each `ProjectSearch` filter live-probed; any silently-ignored field documented in `reference_td_search_silent_filters.md`.
@@ -298,7 +298,7 @@ Plus the integration smoke I always do: `go test ./... && go vet ./... && gofmt 
 
 - **`/api/projects/list` shape ambiguity** → live-probe before locking decoder.
 - **Search filter fidelity** → live-probe per filter; document silent-ignores.
-- **`MyTaskCount` may be absent on UFL** → fall back to fanout without the pruning step; `--mine` still works, just slower.
+- **`MyTaskCount` may be absent on the test tenant** → fall back to fanout without the pruning step; `--mine` still works, just slower.
 - **`--mine` fanout latency** → cap projects at 50, run plan/task fetches with bounded concurrency (use `golang.org/x/sync/errgroup` w/ limit 5, same pattern as `time/report`).
 - **`Target.PlanID` addition** → strictly additive, but every place that constructs/serializes `Target` needs a quick read to confirm no test fixture breaks. Already mostly covered by `time entry add` paths.
 
@@ -306,7 +306,7 @@ Plus the integration smoke I always do: `go test ./... && go vet ./... && gofmt 
 
 1. All 7 commands above behave per the Behavior section, both human and `--json`.
 2. All 7 MCP tools register and respond correctly to mock inputs.
-3. Live verification (#1–9 above) passes on UFL.
+3. Live verification (#1–9 above) passes on the test tenant.
 4. `docs/guide.md` index gets a one-line entry for `tdx project`; `docs/guide/project.md` (new) documents each command with examples.
 5. README mentions `tdx project` in the command tree.
 6. Tests + vet + gofmt + golangci-lint clean.

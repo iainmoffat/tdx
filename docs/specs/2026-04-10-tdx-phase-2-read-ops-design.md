@@ -7,7 +7,7 @@
 
 ## 1. Goal
 
-Ship the v1 shortlist of read-only time commands so tdx is already useful for daily "what did I log?" workflows before any write path exists. All commands must work end-to-end against the real UFL TeamDynamix tenant. No writes, no templates, no pagination beyond a `--limit` cap.
+Ship the v1 shortlist of read-only time commands so tdx is already useful for daily "what did I log?" workflows before any write path exists. All commands must work end-to-end against the real Sample TeamDynamix tenant. No writes, no templates, no pagination beyond a `--limit` cap.
 
 ### Exit criteria
 
@@ -16,7 +16,7 @@ Ship the v1 shortlist of read-only time commands so tdx is already useful for da
 - `tdx time type list` returns the tenant's visible time types.
 - `tdx time type for ticket 12345 --app 42` returns the types valid for that work item.
 - `tdx auth status` prints `user:` and `email:` lines when authenticated.
-- A manual walkthrough at `docs/manual-tests/phase-2-read-ops-walkthrough.md` runs all commands against real UFL and passes.
+- A manual walkthrough at `docs/manual-tests/phase-2-read-ops-walkthrough.md` runs all commands against real Sample and passes.
 
 ## 2. Scope
 
@@ -161,7 +161,7 @@ var ErrUnsupportedTargetKind  = errors.New("unsupported target kind")
 
 ### 3.2 Time zone
 
-**All dates are computed in `America/New_York`**, regardless of laptop clock. This matches UFL's billing week.
+**All dates are computed in `America/New_York`**, regardless of laptop clock. This matches Sample's billing week.
 
 ```go
 // internal/domain/tz.go
@@ -436,7 +436,7 @@ Phase 1's output:
 
 ```
 profile:  default
-tenant:   https://ufl.teamdynamix.com/
+tenant:   https://demotemplate.teamdynamix.com/
 state:    authenticated
 token:    valid
 ```
@@ -445,18 +445,18 @@ Phase 2 adds two lines when `Authenticated && TokenValid`:
 
 ```
 profile:  default
-tenant:   https://ufl.teamdynamix.com/
+tenant:   https://demotemplate.teamdynamix.com/
 state:    authenticated
 token:    valid
-user:     Iain Moffat
-email:    ipm@ufl.edu
+user:     Sample User
+email:    sample@example.com
 ```
 
 Whoami failure is non-fatal:
 
 ```
 profile:  default
-tenant:   https://ufl.teamdynamix.com/
+tenant:   https://demotemplate.teamdynamix.com/
 state:    authenticated
 token:    valid
 user:     (lookup failed: <short error>)
@@ -482,7 +482,7 @@ Same TDD pattern as Phase 1.
 - **Unit tests per renderer** using golden-string comparison against `bytes.Buffer`. The `WeekGrid` test asserts exact column alignment with a known fixture.
 - **Integration tests per CLI command**, using the `cobra.Execute` pattern + `TDX_CONFIG_HOME=t.TempDir()` + an httptest-backed TD stub. Same pattern Phase 1 used for `auth status` / `auth login`.
 - **Domain tests** for `WeekRefContaining` covering: Sunday input, Saturday input, mid-week input, DST-boundary input (2026-03-08 spring forward in NY), year-boundary input.
-- **Manual walkthrough** at `docs/manual-tests/phase-2-read-ops-walkthrough.md` — runs all six commands against real UFL, verifies human and `--json` output shapes. This is the Phase 2 equivalent of the Phase 1 walkthrough.
+- **Manual walkthrough** at `docs/manual-tests/phase-2-read-ops-walkthrough.md` — runs all six commands against real Sample, verifies human and `--json` output shapes. This is the Phase 2 equivalent of the Phase 1 walkthrough.
 
 Coverage targets: `internal/domain/` ≥ 90%, `internal/svc/timesvc/` ≥ 85%, `internal/cli/time/*` ≥ 70%.
 
@@ -496,7 +496,7 @@ Coverage targets: `internal/domain/` ≥ 90%, `internal/svc/timesvc/` ≥ 85%, `
 | 4 | `--ticket` requires `--app` (no auto-inference) | Simplest, avoids extra API calls. Deferred config-based default |
 | 5 | `entry list` always renders flat table, never grid | Clean separation: `entry list` = details, `week show` = summary |
 | 6 | Typed TD methods live in `timesvc`, not `tdx.Client` | `tdx` stays a "thin HTTP client" per framework spec §5.8 |
-| 7 | All dates computed in `America/New_York` | UFL billing zone; travels with laptop clock ignored |
+| 7 | All dates computed in `America/New_York` | Sample billing zone; travels with laptop clock ignored |
 | 8 | Week columns are Sun..Sat, always seven | Matches TD web app layout. **Amends framework spec §5.4** which said "Monday start" |
 | 9 | `entry list` default `--limit 100` | Safe cap until pagination semantics verified |
 | 10 | Whoami failure is non-fatal for `auth status`, fatal for default-filter `entry list` | `status` is a degradable display; `list` needs a concrete user ID |
@@ -508,7 +508,7 @@ Coverage targets: `internal/domain/` ≥ 90%, `internal/svc/timesvc/` ≥ 85%, `
 
 Each item below is a **Step 0** on its owning task — verify first, implement second.
 
-1. **`/auth/getuser` response shape.** Probe with real UFL token; write the decode struct against the actual JSON. Owning task: authsvc.WhoAmI.
+1. **`/auth/getuser` response shape.** Probe with real Sample token; write the decode struct against the actual JSON. Owning task: authsvc.WhoAmI.
 2. **`POST /time/search` request body shape (`TimeEntryFilter`).** Read from `ReferenceMaterial/Time`. Owning task: timesvc.SearchEntries.
 3. **TD pagination on `/time/search`.** Check reference. If paginated, add a `--all` flag in a follow-up task, not Phase 2.
 4. **Component-target endpoint URLs per `TargetKind`.** Read from `ReferenceMaterial/Time`. Unsupported kinds return `ErrUnsupportedTargetKind`. Owning task: timesvc.TimeTypesForTarget.
