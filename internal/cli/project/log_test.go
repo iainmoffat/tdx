@@ -69,11 +69,12 @@ func TestLog_BuildsTargetProjectTask(t *testing.T) {
 		259, 1292, 4938, 0.25, 0, "Work", 0, "", "", false, false)
 	require.NoError(t, err)
 
+	// Target convention for project tasks: ItemID=planID, TaskID=taskID, ProjectID=projectID
+	// (matches timesvc/encode.go + componentPathFor).
 	tgt := svc.lastIn.Target
 	require.Equal(t, domain.TargetProjectTask, tgt.Kind)
-	require.Equal(t, 4938, tgt.ItemID)
+	require.Equal(t, 1292, tgt.ItemID, "ItemID should be planID")
 	require.Equal(t, 4938, tgt.TaskID)
-	require.Equal(t, 1292, tgt.PlanID)
 	require.Equal(t, 259, tgt.ProjectID)
 }
 

@@ -87,7 +87,8 @@ type wireTask struct {
 	IsParent        bool               `json:"IsParent,omitempty"`
 	IndentLevel     int                `json:"IndentLevel,omitempty"`
 	ParentID        int                `json:"ParentID,omitempty"`
-	OutlineNumber   string             `json:"OutlineNumber,omitempty"`
+	OutlineNumber   int                `json:"OutlineNumber,omitempty"` // sequential row order; dotted string is in Wbs
+	Wbs             string             `json:"Wbs,omitempty"`
 	Description     string             `json:"Description,omitempty"`
 	Resources       []wireTaskResource `json:"Resources,omitempty"`
 	TicketAppID     int                `json:"TicketAppID,omitempty"`

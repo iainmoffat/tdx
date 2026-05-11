@@ -79,7 +79,7 @@ func decodeTask(w wireTask, projectID, planID int) domain.ProjectTask {
 		IsParent:        w.IsParent,
 		IndentLevel:     w.IndentLevel,
 		ParentID:        w.ParentID,
-		OutlineNumber:   w.OutlineNumber,
+		OutlineNumber:   w.Wbs, // TD's dotted WBS string (e.g. "2.3.1"); int OutlineNumber is row-order
 		Description:     w.Description,
 		Resources:       resources,
 		TicketAppID:     w.TicketAppID,

@@ -28,7 +28,7 @@ func TestListTasks_DecodesTasksWithResources(t *testing.T) {
 			},
 			{
 				"ID": 4939, "Title": "Parent task", "ProjectID": 259, "PlanID": 1292,
-				"IsParent": true, "IndentLevel": 0, "OutlineNumber": "1"
+				"IsParent": true, "IndentLevel": 0, "OutlineNumber": 1, "Wbs": "1"
 			}
 		]`))
 	}))

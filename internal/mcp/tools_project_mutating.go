@@ -63,12 +63,12 @@ func logProjectTaskTimeHandler(svcs Services) func(context.Context, *sdkmcp.Call
 			}
 		}
 
-		// Resolve time type.
+		// Target convention for project tasks (matches timesvc/encode.go and
+		// componentPathFor): ItemID=planID, TaskID=taskID, ProjectID=projectID.
 		target := domain.Target{
 			Kind:      domain.TargetProjectTask,
-			ItemID:    args.TaskID,
+			ItemID:    args.PlanID,
 			TaskID:    args.TaskID,
-			PlanID:    args.PlanID,
 			ProjectID: args.ProjectID,
 		}
 		typeID := args.TypeID
