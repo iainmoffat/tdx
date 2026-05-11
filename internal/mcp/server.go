@@ -6,6 +6,7 @@ import (
 	"github.com/iainmoffat/tdx/internal/svc/authsvc"
 	"github.com/iainmoffat/tdx/internal/svc/draftsvc"
 	"github.com/iainmoffat/tdx/internal/svc/peoplesvc"
+	"github.com/iainmoffat/tdx/internal/svc/projectsvc"
 	"github.com/iainmoffat/tdx/internal/svc/ticketsvc"
 	"github.com/iainmoffat/tdx/internal/svc/timesvc"
 	"github.com/iainmoffat/tdx/internal/svc/tmplsvc"
@@ -19,6 +20,7 @@ type Services struct {
 	Drafts   *draftsvc.Service
 	People   *peoplesvc.Service
 	Tickets  *ticketsvc.Service
+	Projects *projectsvc.Service
 	Profile  string // default profile name
 }
 
@@ -41,6 +43,8 @@ func NewServer(version string, svcs Services) *sdkmcp.Server {
 	RegisterPeopleTools(srv, svcs)
 	RegisterTicketTools(srv, svcs)
 	RegisterTicketMutatingTools(srv, svcs)
+	RegisterProjectTools(srv, svcs)
+	RegisterProjectMutatingTools(srv, svcs)
 
 	return srv
 }

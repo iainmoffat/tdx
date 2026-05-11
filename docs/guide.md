@@ -35,6 +35,11 @@ tdx
 │   ├── comment / status / assign / update / log
 │   ├── types / statuses / groups → list
 │   └── task             → list / show / feed / update / log
+├── project
+│   ├── list / search / show
+│   ├── plan             → list
+│   ├── task             → list (--mine) / show
+│   └── log
 ├── time
 │   ├── entry            → list / show / add / update / delete
 │   ├── template         → derive / list / show / edit / clone / delete / apply / compare
@@ -53,6 +58,7 @@ tdx
 - [tdx time](guide/time.md) — time entries, week drafts, templates, reports
 - [tdx people](guide/people.md) — find users, accounts, resource pools
 - [tdx ticket](guide/ticket.md) — search, show, comment, status/assign, log time
+- [tdx project](guide/project.md) — list/search projects, plans, tasks (incl. tasks assigned to you), log time
 - [tdx mcp](guide/mcp.md) — MCP server for AI agents
 
 ---
