@@ -33,7 +33,7 @@ func RegisterReportTools(srv *sdkmcp.Server, svcs Services) {
 
 Selectors (exactly one): userUIDs, manager, account, resourcePool, all.
 Date: week (single) or from/to (range).
-Filters: incomplete=true keeps only rows below threshold (default 40h);
+Filters: incomplete=true keeps only rows below threshold (default 40h, or each user's WorkableHours if threshold is omitted);
 permission-denied rows are dropped under the filter.
 Read-only — no confirm required.`,
 	}, getTimeStatusReportHandler(svcs))
@@ -56,6 +56,7 @@ func getTimeStatusReportHandler(svcs Services) func(context.Context, *sdkmcp.Cal
 			IncludeZero:   args.IncludeZero,
 			Incomplete:    args.Incomplete,
 			Threshold:     args.Threshold,
+			ThresholdSet:  args.Threshold > 0,
 			Limit:         args.Limit,
 			TimeSvc:       svcs.Time,
 			PeopleSvc:     svcs.People,
