@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -807,14 +808,19 @@ func (m *mockProjectsvc) ListResources(_ context.Context, _ string, _ int) ([]do
 }
 
 // mockEntriesSvc implements timesvcEntriesAPI for runner project-filter tests.
+// SearchEntries is called concurrently by the runner; the lastFilter capture
+// is guarded by a mutex.
 type mockEntriesSvc struct {
 	entries    []domain.TimeEntry
 	err        error
+	mu         sync.Mutex
 	lastFilter domain.EntryFilter
 }
 
 func (m *mockEntriesSvc) SearchEntries(_ context.Context, _ string, filter domain.EntryFilter) ([]domain.TimeEntry, error) {
+	m.mu.Lock()
 	m.lastFilter = filter
+	m.mu.Unlock()
 	return m.entries, m.err
 }
 

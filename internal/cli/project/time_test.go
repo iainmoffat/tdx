@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -14,15 +15,20 @@ import (
 )
 
 // stubTimesvcTime implements timesvcTimeAPI for project-time tests.
+// SearchEntries is invoked concurrently when more than one user is in scope,
+// so the lastFilter capture is guarded.
 type stubTimesvcTime struct {
 	entries []domain.TimeEntry
 	err     error
 	// Capture last filter for assertions.
+	mu         sync.Mutex
 	lastFilter domain.EntryFilter
 }
 
 func (s *stubTimesvcTime) SearchEntries(_ context.Context, _ string, filter domain.EntryFilter) ([]domain.TimeEntry, error) {
+	s.mu.Lock()
 	s.lastFilter = filter
+	s.mu.Unlock()
 	return s.entries, s.err
 }
 
