@@ -55,6 +55,32 @@ type getProjectTaskArgs struct {
 	TaskID    int    `json:"taskID"`
 }
 
+type getProjectFeedArgs struct {
+	Profile   string `json:"profile,omitempty"`
+	ProjectID int    `json:"projectID"`
+	Limit     int    `json:"limit,omitempty"`
+}
+
+type getProjectTaskFeedArgs struct {
+	Profile   string `json:"profile,omitempty"`
+	ProjectID int    `json:"projectID"`
+	PlanID    int    `json:"planID"`
+	TaskID    int    `json:"taskID"`
+	Limit     int    `json:"limit,omitempty"`
+}
+
+type projectFeedEntryJSON struct {
+	ID            int    `json:"id"`
+	CreatedByUID  string `json:"createdByUID,omitempty"`
+	CreatedByName string `json:"createdByName,omitempty"`
+	CreatedDate   string `json:"createdDate,omitempty"`
+	UpdateType    string `json:"updateType,omitempty"`
+	Body          string `json:"body"`
+	IsPrivate     bool   `json:"isPrivate"`
+	LikesCount    int    `json:"likesCount,omitempty"`
+	RepliesCount  int    `json:"repliesCount,omitempty"`
+}
+
 // --- JSON row types ---
 
 type projectPlanRowJSON struct {
@@ -200,7 +226,7 @@ func formatProjectDate(t time.Time) string {
 	return t.Format("2006-01-02")
 }
 
-// RegisterProjectTools registers the 6 read-only project MCP tools.
+// RegisterProjectTools registers the 8 read-only project MCP tools.
 func RegisterProjectTools(srv *sdkmcp.Server, svcs Services) {
 	sdkmcp.AddTool(srv, &sdkmcp.Tool{
 		Name:        "list_my_projects",
@@ -231,6 +257,16 @@ func RegisterProjectTools(srv *sdkmcp.Server, svcs Services) {
 		Name:        "get_project_task",
 		Description: "Get full detail for one project task. Read-only.",
 	}, getProjectTaskHandler(svcs))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name:        "get_project_feed",
+		Description: "Get the feed (activity + comments) for a project. Read-only.",
+	}, getProjectFeedHandler(svcs))
+
+	sdkmcp.AddTool(srv, &sdkmcp.Tool{
+		Name:        "get_project_task_feed",
+		Description: "Get the feed (activity + comments) for a project task. Read-only.",
+	}, getProjectTaskFeedHandler(svcs))
 }
 
 // --- Handlers ---
@@ -407,5 +443,91 @@ func getProjectTaskHandler(svcs Services) func(context.Context, *sdkmcp.CallTool
 			Schema string                `json:"schema"`
 			Task   projectTaskDetailJSON `json:"task"`
 		}{Schema: "tdx.v1.projectTask", Task: toProjectTaskDetailJSON(task)})
+	}
+}
+
+func getProjectFeedHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, getProjectFeedArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, args getProjectFeedArgs) (*sdkmcp.CallToolResult, any, error) {
+		if args.ProjectID <= 0 {
+			return errorResult("get_project_feed: projectID is required"), nil, nil
+		}
+		profile := resolveProfile(svcs, args.Profile)
+		entries, err := svcs.Projects.GetFeed(ctx, profile, args.ProjectID)
+		if err != nil {
+			return errorResult("get_project_feed: " + err.Error()), nil, nil
+		}
+		if args.Limit > 0 && len(entries) > args.Limit {
+			entries = entries[:args.Limit]
+		}
+		out := make([]projectFeedEntryJSON, 0, len(entries))
+		for _, e := range entries {
+			ts := ""
+			if !e.CreatedDate.IsZero() {
+				ts = e.CreatedDate.Format(time.RFC3339)
+			}
+			out = append(out, projectFeedEntryJSON{
+				ID:            e.ID,
+				CreatedByUID:  e.CreatedByUID,
+				CreatedByName: e.CreatedByName,
+				CreatedDate:   ts,
+				UpdateType:    e.UpdateTypeLabel(),
+				Body:          e.Body,
+				IsPrivate:     e.IsPrivate,
+				LikesCount:    e.LikesCount,
+				RepliesCount:  e.RepliesCount,
+			})
+		}
+		return jsonResult(struct {
+			Schema    string                 `json:"schema"`
+			ProjectID int                    `json:"projectID"`
+			Entries   []projectFeedEntryJSON `json:"entries"`
+		}{Schema: "tdx.v1.projectFeed", ProjectID: args.ProjectID, Entries: out})
+	}
+}
+
+func getProjectTaskFeedHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, getProjectTaskFeedArgs) (*sdkmcp.CallToolResult, any, error) {
+	return func(ctx context.Context, _ *sdkmcp.CallToolRequest, args getProjectTaskFeedArgs) (*sdkmcp.CallToolResult, any, error) {
+		if args.ProjectID <= 0 || args.PlanID <= 0 || args.TaskID <= 0 {
+			return errorResult("get_project_task_feed: projectID, planID, and taskID are all required"), nil, nil
+		}
+		profile := resolveProfile(svcs, args.Profile)
+		entries, err := svcs.Projects.GetTaskFeed(ctx, profile, args.ProjectID, args.PlanID, args.TaskID)
+		if err != nil {
+			return errorResult("get_project_task_feed: " + err.Error()), nil, nil
+		}
+		if args.Limit > 0 && len(entries) > args.Limit {
+			entries = entries[:args.Limit]
+		}
+		out := make([]projectFeedEntryJSON, 0, len(entries))
+		for _, e := range entries {
+			ts := ""
+			if !e.CreatedDate.IsZero() {
+				ts = e.CreatedDate.Format(time.RFC3339)
+			}
+			out = append(out, projectFeedEntryJSON{
+				ID:            e.ID,
+				CreatedByUID:  e.CreatedByUID,
+				CreatedByName: e.CreatedByName,
+				CreatedDate:   ts,
+				UpdateType:    e.UpdateTypeLabel(),
+				Body:          e.Body,
+				IsPrivate:     e.IsPrivate,
+				LikesCount:    e.LikesCount,
+				RepliesCount:  e.RepliesCount,
+			})
+		}
+		return jsonResult(struct {
+			Schema    string                 `json:"schema"`
+			ProjectID int                    `json:"projectID"`
+			PlanID    int                    `json:"planID"`
+			TaskID    int                    `json:"taskID"`
+			Entries   []projectFeedEntryJSON `json:"entries"`
+		}{
+			Schema:    "tdx.v1.projectTaskFeed",
+			ProjectID: args.ProjectID,
+			PlanID:    args.PlanID,
+			TaskID:    args.TaskID,
+			Entries:   out,
+		})
 	}
 }
