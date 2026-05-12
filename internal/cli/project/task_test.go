@@ -195,6 +195,70 @@ func TestTaskShow_JSONEnvelope(t *testing.T) {
 	require.Contains(t, out, `4938`)
 }
 
+func TestTaskFeed_HappyPath(t *testing.T) {
+	stub := &stubProjectsvc{
+		feed: []domain.ProjectFeedEntry{
+			{ID: 1782260, CreatedByName: "Dev User", UpdateType: 1, Body: "task comment here"},
+		},
+	}
+	var buf bytes.Buffer
+	err := runProjectTaskFeed(context.Background(), &buf, stub, "default", 259, 1292, 4938, 0, false)
+	require.NoError(t, err)
+	out := buf.String()
+	require.Contains(t, out, "1782260")
+	require.Contains(t, out, "task comment here")
+	require.Equal(t, 259, stub.lastProjectID)
+	require.Equal(t, 1292, stub.lastPlanID)
+	require.Equal(t, 4938, stub.lastTaskID)
+}
+
+func TestTaskFeed_JSONEnvelope(t *testing.T) {
+	stub := &stubProjectsvc{
+		feed: []domain.ProjectFeedEntry{
+			{ID: 1782260, Body: "note"},
+		},
+	}
+	var buf bytes.Buffer
+	err := runProjectTaskFeed(context.Background(), &buf, stub, "default", 259, 1292, 4938, 0, true)
+	require.NoError(t, err)
+	out := buf.String()
+	require.Contains(t, out, "tdx.v1.projectTaskFeed")
+	require.Contains(t, out, `"planID"`)
+	require.Contains(t, out, `"taskID"`)
+}
+
+func TestTaskComment_HappyPath(t *testing.T) {
+	stub := &stubProjectsvc{feedAddedID: 8888}
+	var buf bytes.Buffer
+	err := runProjectTaskComment(context.Background(), &buf, stub, "default", 259, 1292, 4938, "my task comment", false, nil)
+	require.NoError(t, err)
+	out := buf.String()
+	require.Contains(t, out, "feed entry 8888")
+	require.Contains(t, out, "task #4938")
+	require.Contains(t, out, "project 259")
+	require.Contains(t, out, "plan 1292")
+}
+
+func TestTaskComment_RequiresYes(t *testing.T) {
+	cmd := newTaskCommentCmd(&stubProjectsvc{})
+	cmd.SetArgs([]string{"259", "4938", "--plan", "1292", "--message", "hi"})
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&bytes.Buffer{})
+	err := cmd.Execute()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "--yes")
+}
+
+func TestTaskComment_RequiresMessage(t *testing.T) {
+	cmd := newTaskCommentCmd(&stubProjectsvc{})
+	cmd.SetArgs([]string{"259", "4938", "--plan", "1292", "--yes"})
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&bytes.Buffer{})
+	err := cmd.Execute()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "--message")
+}
+
 // callTrackingStub implements projectsvcAPI for task --mine tests.
 type callTrackingStub struct {
 	plans       []domain.ProjectPlan
@@ -229,4 +293,16 @@ func (s *callTrackingStub) ListProjectTypes(_ context.Context, _ string, _ bool)
 }
 func (s *callTrackingStub) ResolveTypeByName(_ context.Context, _ string, _ string) (domain.ProjectType, error) {
 	return domain.ProjectType{}, nil
+}
+func (s *callTrackingStub) GetFeed(_ context.Context, _ string, _ int) ([]domain.ProjectFeedEntry, error) {
+	return nil, nil
+}
+func (s *callTrackingStub) AddFeed(_ context.Context, _ string, _ int, _ string, _ bool, _ []string) (int, error) {
+	return 0, nil
+}
+func (s *callTrackingStub) GetTaskFeed(_ context.Context, _ string, _, _, _ int) ([]domain.ProjectFeedEntry, error) {
+	return nil, nil
+}
+func (s *callTrackingStub) AddTaskFeed(_ context.Context, _ string, _, _, _ int, _ string, _ bool, _ []string) (int, error) {
+	return 0, nil
 }

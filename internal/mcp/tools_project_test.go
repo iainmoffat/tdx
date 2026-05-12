@@ -298,3 +298,169 @@ func TestLogProjectTaskTime_MissingIDs(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, res.IsError, "missing planID and taskID should return error")
 }
+
+// TestGetProjectFeed_SchemaName verifies the projectFeed schema envelope.
+func TestGetProjectFeed_SchemaName(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/TDWebApi/api/auth/getuser":
+			_, _ = w.Write([]byte(`{"UID":"u","FullName":"T"}`))
+		case "/TDWebApi/api/projects/259/feed":
+			_, _ = w.Write([]byte(`[
+				{"ID":1782210,"Body":"Changed Portfolio","CreatedUid":"uid-sys","CreatedFullName":"API User","CreatedDate":"2026-05-07T18:35:38","UpdateType":3}
+			]`))
+		default:
+			t.Errorf("unexpected request: %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	svcs := mcpHarness(t, ts.URL)
+	res, _, err := getProjectFeedHandler(svcs)(context.Background(), &sdkmcp.CallToolRequest{}, getProjectFeedArgs{ProjectID: 259})
+	require.NoError(t, err)
+	require.False(t, res.IsError)
+
+	var got map[string]any
+	require.NoError(t, json.Unmarshal([]byte(extractText(t, res)), &got))
+	require.Equal(t, "tdx.v1.projectFeed", got["schema"])
+	require.Equal(t, float64(259), got["projectID"])
+	entries, ok := got["entries"].([]any)
+	require.True(t, ok)
+	require.Len(t, entries, 1)
+	first, ok := entries[0].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "system", first["updateType"])
+}
+
+// TestGetProjectFeed_MissingProjectID verifies that projectID=0 returns error.
+func TestGetProjectFeed_MissingProjectID(t *testing.T) {
+	svcs := mcpHarness(t, "http://localhost:0")
+	res, _, err := getProjectFeedHandler(svcs)(context.Background(), &sdkmcp.CallToolRequest{}, getProjectFeedArgs{ProjectID: 0})
+	require.NoError(t, err)
+	require.True(t, res.IsError)
+}
+
+// TestGetProjectTaskFeed_SchemaName verifies the projectTaskFeed schema envelope.
+func TestGetProjectTaskFeed_SchemaName(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/TDWebApi/api/auth/getuser":
+			_, _ = w.Write([]byte(`{"UID":"u","FullName":"T"}`))
+		case "/TDWebApi/api/projects/259/plans/1292/tasks/4938/feed":
+			_, _ = w.Write([]byte(`[
+				{"ID":1782260,"Body":"Task note","CreatedUid":"uid-dev","CreatedFullName":"Dev","CreatedDate":"2026-05-10T10:00:00","UpdateType":1}
+			]`))
+		default:
+			t.Errorf("unexpected request: %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	svcs := mcpHarness(t, ts.URL)
+	res, _, err := getProjectTaskFeedHandler(svcs)(context.Background(), &sdkmcp.CallToolRequest{}, getProjectTaskFeedArgs{
+		ProjectID: 259, PlanID: 1292, TaskID: 4938,
+	})
+	require.NoError(t, err)
+	require.False(t, res.IsError)
+
+	var got map[string]any
+	require.NoError(t, json.Unmarshal([]byte(extractText(t, res)), &got))
+	require.Equal(t, "tdx.v1.projectTaskFeed", got["schema"])
+	require.Equal(t, float64(259), got["projectID"])
+	require.Equal(t, float64(1292), got["planID"])
+	require.Equal(t, float64(4938), got["taskID"])
+	entries, ok := got["entries"].([]any)
+	require.True(t, ok)
+	require.Len(t, entries, 1)
+}
+
+// TestGetProjectTaskFeed_MissingIDs verifies that missing IDs return error.
+func TestGetProjectTaskFeed_MissingIDs(t *testing.T) {
+	svcs := mcpHarness(t, "http://localhost:0")
+	res, _, err := getProjectTaskFeedHandler(svcs)(context.Background(), &sdkmcp.CallToolRequest{}, getProjectTaskFeedArgs{
+		ProjectID: 259, // missing PlanID and TaskID
+	})
+	require.NoError(t, err)
+	require.True(t, res.IsError)
+}
+
+// TestAddProjectComment_RequiresConfirm verifies the confirm gate.
+func TestAddProjectComment_RequiresConfirm(t *testing.T) {
+	svcs := mcpHarness(t, "http://localhost:0")
+	res, _, err := addProjectCommentHandler(svcs)(context.Background(), &sdkmcp.CallToolRequest{}, addProjectCommentArgs{
+		ProjectID: 259,
+		Message:   "hello",
+		Confirm:   false,
+	})
+	require.NoError(t, err)
+	require.True(t, res.IsError, "should error when confirm=false")
+}
+
+// TestAddProjectComment_RequiresMessage verifies that empty message returns error.
+func TestAddProjectComment_RequiresMessage(t *testing.T) {
+	svcs := mcpHarness(t, "http://localhost:0")
+	res, _, err := addProjectCommentHandler(svcs)(context.Background(), &sdkmcp.CallToolRequest{}, addProjectCommentArgs{
+		ProjectID: 259,
+		Message:   "",
+		Confirm:   true,
+	})
+	require.NoError(t, err)
+	require.True(t, res.IsError, "should error when message is empty")
+}
+
+// TestAddProjectComment_HappyPath verifies successful comment posting.
+func TestAddProjectComment_HappyPath(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/TDWebApi/api/auth/getuser":
+			_, _ = w.Write([]byte(`{"UID":"u","FullName":"T"}`))
+		case "/TDWebApi/api/projects/259/feed":
+			_, _ = w.Write([]byte(`{"ID":9999,"Body":"hello"}`))
+		default:
+			t.Errorf("unexpected request: %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	svcs := mcpHarness(t, ts.URL)
+	res, _, err := addProjectCommentHandler(svcs)(context.Background(), &sdkmcp.CallToolRequest{}, addProjectCommentArgs{
+		ProjectID: 259,
+		Message:   "hello",
+		Confirm:   true,
+	})
+	require.NoError(t, err)
+	require.False(t, res.IsError)
+
+	var got map[string]any
+	require.NoError(t, json.Unmarshal([]byte(extractText(t, res)), &got))
+	require.Equal(t, "tdx.v1.projectFeedEntry", got["schema"])
+	require.Equal(t, true, got["ok"])
+	require.Equal(t, float64(9999), got["entryID"])
+}
+
+// TestAddProjectTaskComment_RequiresConfirm verifies the confirm gate.
+func TestAddProjectTaskComment_RequiresConfirm(t *testing.T) {
+	svcs := mcpHarness(t, "http://localhost:0")
+	res, _, err := addProjectTaskCommentHandler(svcs)(context.Background(), &sdkmcp.CallToolRequest{}, addProjectTaskCommentArgs{
+		ProjectID: 259, PlanID: 1292, TaskID: 4938,
+		Message: "hello",
+		Confirm: false,
+	})
+	require.NoError(t, err)
+	require.True(t, res.IsError)
+}
+
+// TestAddProjectTaskComment_RequiresMessage verifies empty message returns error.
+func TestAddProjectTaskComment_RequiresMessage(t *testing.T) {
+	svcs := mcpHarness(t, "http://localhost:0")
+	res, _, err := addProjectTaskCommentHandler(svcs)(context.Background(), &sdkmcp.CallToolRequest{}, addProjectTaskCommentArgs{
+		ProjectID: 259, PlanID: 1292, TaskID: 4938,
+		Message: "  ",
+		Confirm: true,
+	})
+	require.NoError(t, err)
+	require.True(t, res.IsError)
+}

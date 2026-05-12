@@ -101,6 +101,38 @@ type wireProjectType struct {
 	IsActive bool   `json:"IsActive,omitempty"`
 }
 
+type wireFeedEntry struct {
+	ID              int    `json:"ID"`
+	Body            string `json:"Body"`
+	CreatedUid      string `json:"CreatedUid,omitempty"`
+	CreatedFullName string `json:"CreatedFullName,omitempty"`
+	CreatedDate     string `json:"CreatedDate,omitempty"`
+	LastUpdatedDate string `json:"LastUpdatedDate,omitempty"`
+	UpdateType      int    `json:"UpdateType,omitempty"`
+	IsPrivate       bool   `json:"IsPrivate,omitempty"`
+	LikesCount      int    `json:"LikesCount,omitempty"`
+	RepliesCount    int    `json:"RepliesCount,omitempty"`
+}
+
+// wireProjectFeedAdd is the POST body for /api/projects/{id}/feed.
+// TD's project-level feed POST uses "Body" for the comment text, not
+// "Comments" as on the ticket/task feed endpoints. Confirmed by live
+// probe 2026-05-12: a POST with "Comments" returns ID:-1 and silently
+// no-ops; the same body with "Body" returns a real entry ID.
+type wireProjectFeedAdd struct {
+	Body      string   `json:"Body"`
+	Notify    []string `json:"Notify,omitempty"`
+	IsPrivate bool     `json:"IsPrivate"`
+}
+
+// wireTaskFeedAdd is the POST body for /api/projects/{p}/plans/{pl}/tasks/{t}/feed.
+// Task-level feeds use the same "Comments" field as ticket feeds.
+type wireTaskFeedAdd struct {
+	Comments  string   `json:"Comments"`
+	Notify    []string `json:"Notify,omitempty"`
+	IsPrivate bool     `json:"IsPrivate"`
+}
+
 // parseTD parses TD's ISO-ish timestamp; returns zero time on empty/sentinel.
 func parseTD(s string) time.Time {
 	if s == "" || strings.HasPrefix(s, "0001-01-01") || strings.HasPrefix(s, "1900-01-01") {
