@@ -327,3 +327,158 @@ func TestSearchEntries_ResolveSkippedWhenNamesAlreadyPresent(t *testing.T) {
 	require.Len(t, entries, 1)
 	require.Equal(t, "Already Set", entries[0].TimeType.Name)
 }
+
+// mixedEntriesFixture returns a JSON array of 5 mixed time entries used
+// across the project-filter tests.
+//
+// Entry layout:
+//
+//	0: TargetProject,      ProjectID=259 (Component 1, ItemID=259)
+//	1: TargetProjectTask,  ProjectID=259, PlanID=1292, TaskID=4938 (Component 2)
+//	2: TargetProjectTask,  ProjectID=52  (different project)
+//	3: TargetTicket,       unrelated
+//	4: TargetWorkspace,    unrelated
+const mixedEntriesFixture = `[
+	{"TimeID":1,"Component":1,"ProjectID":259,"ItemID":259,"ProjectName":"P259","TimeDate":"2026-05-06T00:00:00Z","Minutes":60,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0},
+	{"TimeID":2,"Component":2,"ProjectID":259,"PlanID":1292,"ItemID":1292,"TicketID":0,"TimeDate":"2026-05-07T00:00:00Z","Minutes":120,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0},
+	{"TimeID":3,"Component":2,"ProjectID":52,"PlanID":9999,"ItemID":9999,"TimeDate":"2026-05-07T00:00:00Z","Minutes":90,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0},
+	{"TimeID":4,"Component":9,"AppID":42,"TicketID":12345,"ItemID":12345,"TimeDate":"2026-05-08T00:00:00Z","Minutes":60,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0},
+	{"TimeID":5,"Component":45,"ProjectID":10,"ItemID":10,"TimeDate":"2026-05-09T00:00:00Z","Minutes":30,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0}
+]`
+
+// Note: Component=2 (TargetProjectTask) wire decode puts PlanID into ItemID and
+// TaskID into wireTimeEntry.ItemID. Looking at decodeTarget: for componentTaskTime,
+// t.ItemID = w.PlanID and t.TaskID = w.ItemID. So for entry 1:
+//   wire: PlanID=1292, ItemID=1292 → decoded: Target.ItemID=1292 (planID), Target.TaskID=1292
+// We need TaskID to be distinct; let's use ItemID=4938 for the actual task.
+
+const mixedEntriesFixtureV2 = `[
+	{"TimeID":1,"Component":1,"ProjectID":259,"ItemID":259,"ProjectName":"P259","TimeDate":"2026-05-06T00:00:00Z","Minutes":60,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0},
+	{"TimeID":2,"Component":2,"ProjectID":259,"PlanID":1292,"ItemID":4938,"TimeDate":"2026-05-07T00:00:00Z","Minutes":120,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0},
+	{"TimeID":3,"Component":2,"ProjectID":52,"PlanID":9999,"ItemID":8888,"TimeDate":"2026-05-07T00:00:00Z","Minutes":90,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0},
+	{"TimeID":4,"Component":9,"AppID":42,"TicketID":12345,"ItemID":12345,"TimeDate":"2026-05-08T00:00:00Z","Minutes":60,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0},
+	{"TimeID":5,"Component":45,"ProjectID":10,"ItemID":10,"TimeDate":"2026-05-09T00:00:00Z","Minutes":30,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0}
+]`
+
+func newMixedEntriesServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(mixedEntriesFixtureV2))
+	}))
+}
+
+func TestSearchEntries_ProjectIDFiltersOnlyProjectKinds(t *testing.T) {
+	srv := newMixedEntriesServer(t)
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	entries, err := svc.SearchEntries(context.Background(), profile, domain.EntryFilter{
+		ProjectID: 259,
+	})
+	require.NoError(t, err)
+	// Entry 0 (TargetProject ID=259) + Entry 1 (TargetProjectTask ProjectID=259)
+	require.Len(t, entries, 2)
+	require.Equal(t, 1, entries[0].ID)
+	require.Equal(t, 2, entries[1].ID)
+}
+
+func TestSearchEntries_PlanIDNarrowsWithinProject(t *testing.T) {
+	srv := newMixedEntriesServer(t)
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	// PlanID filter narrows TargetProjectTask entries; TargetProject entries
+	// still pass through (plan/task filter only applies to TargetProjectTask).
+	entries, err := svc.SearchEntries(context.Background(), profile, domain.EntryFilter{
+		ProjectID: 259,
+		PlanID:    1292,
+	})
+	require.NoError(t, err)
+	// Entry 0 (TargetProject, ItemID=259) + Entry 1 (TargetProjectTask, wire.PlanID=1292 → Target.ItemID=1292)
+	require.Len(t, entries, 2)
+	ids := []int{entries[0].ID, entries[1].ID}
+	require.Contains(t, ids, 1)
+	require.Contains(t, ids, 2)
+}
+
+func TestSearchEntries_PlanIDDropsMismatchedTask(t *testing.T) {
+	srv := newMixedEntriesServer(t)
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	// PlanID=9999 does not match wire entry 1 (PlanID=1292); entry 3 (project 52) is also excluded.
+	entries, err := svc.SearchEntries(context.Background(), profile, domain.EntryFilter{
+		ProjectID: 259,
+		PlanID:    9999, // doesn't match any task in project 259
+	})
+	require.NoError(t, err)
+	// Only entry 0 (TargetProject, no plan sub-filter)
+	require.Len(t, entries, 1)
+	require.Equal(t, 1, entries[0].ID)
+}
+
+func TestSearchEntries_TaskIDNarrowsWithinProject(t *testing.T) {
+	srv := newMixedEntriesServer(t)
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	// TaskID filter: Target.TaskID == taskID for TargetProjectTask
+	// wire entry 1: Component=2, PlanID=1292, ItemID=4938 → decoded Target.ItemID=1292, Target.TaskID=4938
+	// TargetProject entry still passes (no task sub-filter for that kind)
+	entries, err := svc.SearchEntries(context.Background(), profile, domain.EntryFilter{
+		ProjectID: 259,
+		TaskID:    4938,
+	})
+	require.NoError(t, err)
+	// Entry 0 (TargetProject) + Entry 1 (TargetProjectTask, TaskID=4938)
+	require.Len(t, entries, 2)
+	ids := []int{entries[0].ID, entries[1].ID}
+	require.Contains(t, ids, 1)
+	require.Contains(t, ids, 2)
+}
+
+func TestSearchEntries_TaskIDDropsMismatchedTask(t *testing.T) {
+	srv := newMixedEntriesServer(t)
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	entries, err := svc.SearchEntries(context.Background(), profile, domain.EntryFilter{
+		ProjectID: 259,
+		TaskID:    9999, // doesn't match entry 1's TaskID=4938
+	})
+	require.NoError(t, err)
+	// Only entry 0 (TargetProject, task filter doesn't apply)
+	require.Len(t, entries, 1)
+	require.Equal(t, 1, entries[0].ID)
+}
+
+func TestSearchEntries_ProjectIDIgnoredWhenZero(t *testing.T) {
+	srv := newMixedEntriesServer(t)
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	entries, err := svc.SearchEntries(context.Background(), profile, domain.EntryFilter{})
+	require.NoError(t, err)
+	require.Len(t, entries, 5, "no project filter → all 5 entries returned")
+}
+
+func TestSearchEntries_PostsExpectedBodyWithProjectID(t *testing.T) {
+	var seenBody map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(b, &seenBody)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	svc, profile := harness(t, srv.URL)
+	_, err := svc.SearchEntries(context.Background(), profile, domain.EntryFilter{
+		ProjectID: 259,
+		PlanID:    1292,
+	})
+	require.NoError(t, err)
+	require.Equal(t, float64(259), seenBody["ProjectID"], "ProjectID should be sent in wire body")
+	require.Equal(t, float64(1292), seenBody["PlanID"], "PlanID should be sent in wire body")
+}

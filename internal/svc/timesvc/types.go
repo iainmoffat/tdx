@@ -144,6 +144,9 @@ type wireTimeReport struct {
 // wireTimeSearch is the request body for POST /TDWebApi/api/time/search.
 // All fields are optional on the server side; send only the ones the caller
 // actually wants filtered.
+// Note: ProjectID and PlanID are sent defensively for forward-compatibility —
+// the test tenant silently ignores them, so a client-side post-filter is
+// required when these fields are set.
 type wireTimeSearch struct {
 	EntryDateFrom  *time.Time `json:"EntryDateFrom,omitempty"`
 	EntryDateTo    *time.Time `json:"EntryDateTo,omitempty"`
@@ -152,6 +155,8 @@ type wireTimeSearch struct {
 	ApplicationIDs []int      `json:"ApplicationIDs,omitempty"`
 	PersonUIDs     []string   `json:"PersonUIDs,omitempty"`
 	MaxResults     int        `json:"MaxResults,omitempty"`
+	ProjectID      int        `json:"ProjectID,omitempty"` // defensive; TD silently ignores
+	PlanID         int        `json:"PlanID,omitempty"`    // defensive; TD silently ignores
 }
 
 // wireTimeEntryWrite is the request body for POST/PUT /api/time.
