@@ -13,6 +13,16 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// timesvcEntriesAPI is the subset of timesvc for SearchEntries (project post-filter).
+type timesvcEntriesAPI interface {
+	SearchEntries(ctx context.Context, profile string, filter domain.EntryFilter) ([]domain.TimeEntry, error)
+}
+
+// reportProjectsvcAPI is the subset of projectsvc the runner needs for --project.
+type reportProjectsvcAPI interface {
+	ListResources(ctx context.Context, profile string, projectID int) ([]domain.ProjectResource, error)
+}
+
 // timesvcAPI is the subset of timesvc.Service the runner needs.
 type timesvcAPI interface {
 	GetWeekReportForUser(ctx context.Context, profile string, date time.Time, uid string) (domain.WeekReport, error)
@@ -35,8 +45,10 @@ type authsvcAPI interface {
 // can inject mocks via the interfaces above.
 type runnerDeps struct {
 	Time    timesvcAPI
+	Entries timesvcEntriesAPI
 	People  peoplesvcAPI
 	Auth    authsvcAPI
+	Project reportProjectsvcAPI
 	Profile string
 }
 
@@ -111,6 +123,53 @@ func assembleReport(ctx context.Context, deps runnerDeps, f statusFlags) (domain
 		return domain.TimeStatusReport{}, err
 	}
 
+	// When --project is set, re-derive totals for each row by fetching that
+	// user's project-specific entries and summing. GetWeekReportForUser gives
+	// all-project totals; the project post-filter scopes them to one project.
+	if f.projectID > 0 && deps.Entries != nil {
+		g2, gctx2 := errgroup.WithContext(ctx)
+		g2.SetLimit(maxConcurrency)
+		for i := range results {
+			i := i
+			if results[i].Status == domain.ReportStatus("permission-denied") {
+				continue
+			}
+			g2.Go(func() error {
+				row := &results[i]
+				rng := domain.DateRange{
+					From: row.WeekRef.StartDate,
+					To:   row.WeekRef.EndDate,
+				}
+				entries, err := deps.Entries.SearchEntries(gctx2, deps.Profile, domain.EntryFilter{
+					DateRange: rng,
+					UserUID:   row.User.UID,
+					ProjectID: f.projectID,
+				})
+				if err != nil {
+					return fmt.Errorf("search entries for %s: %w", row.User.UID, err)
+				}
+				var bill, nonBill, total int
+				for _, e := range entries {
+					total += e.Minutes
+					if e.Billable {
+						bill += e.Minutes
+					} else {
+						nonBill += e.Minutes
+					}
+				}
+				resultsMu.Lock()
+				row.BillableMin = bill
+				row.NonBillableMin = nonBill
+				row.TotalMin = total
+				resultsMu.Unlock()
+				return nil
+			})
+		}
+		if err := g2.Wait(); err != nil {
+			return domain.TimeStatusReport{}, err
+		}
+	}
+
 	// Apply --include-zero filter.
 	if !f.includeZero {
 		filtered := results[:0]
@@ -181,14 +240,17 @@ type MCPInputs struct {
 	Accounts      []string
 	ResourcePools []string
 	All           bool
+	ProjectID     int
 	IncludeZero   bool
 	Incomplete    bool
 	Threshold     float64
 	ThresholdSet  bool // mirror of statusFlags.thresholdSet — populated by handler from `Threshold > 0`
 	Limit         int
 	TimeSvc       timesvcAPI
+	EntriesSvc    timesvcEntriesAPI
 	PeopleSvc     peoplesvcAPI
 	AuthSvc       authsvcAPI
+	ProjectSvc    reportProjectsvcAPI
 }
 
 // RunForMCP builds, validates, and runs a Time Status Report for MCP
@@ -207,6 +269,7 @@ func RunForMCP(ctx context.Context, in MCPInputs) (any, error) {
 		resourcePools: in.ResourcePools,
 		all:           in.All,
 		yes:           in.All, // bypass --yes guard for MCP
+		projectID:     in.ProjectID,
 		includeZero:   in.IncludeZero,
 		incomplete:    in.Incomplete,
 		threshold:     in.Threshold,
@@ -218,8 +281,10 @@ func RunForMCP(ctx context.Context, in MCPInputs) (any, error) {
 	}
 	deps := runnerDeps{
 		Time:    in.TimeSvc,
+		Entries: in.EntriesSvc,
 		People:  in.PeopleSvc,
 		Auth:    in.AuthSvc,
+		Project: in.ProjectSvc,
 		Profile: in.Profile,
 	}
 	rep, err := assembleReport(ctx, deps, f)
@@ -358,6 +423,20 @@ func resolveUsers(ctx context.Context, deps runnerDeps, f statusFlags) ([]domain
 			if _, ok := poolIDs[u.ResourcePoolID]; ok {
 				out = append(out, u)
 			}
+		}
+		return out, nil
+
+	case f.projectID > 0:
+		if deps.Project == nil {
+			return nil, fmt.Errorf("project service not configured (internal error)")
+		}
+		resources, err := deps.Project.ListResources(ctx, deps.Profile, f.projectID)
+		if err != nil {
+			return nil, fmt.Errorf("list project %d resources: %w", f.projectID, err)
+		}
+		out := make([]domain.User, 0, len(resources))
+		for _, r := range resources {
+			out = append(out, domain.User{UID: r.UID, FullName: r.FullName})
 		}
 		return out, nil
 	}

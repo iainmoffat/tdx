@@ -6,6 +6,7 @@ import (
 	"github.com/iainmoffat/tdx/internal/config"
 	"github.com/iainmoffat/tdx/internal/svc/authsvc"
 	"github.com/iainmoffat/tdx/internal/svc/peoplesvc"
+	"github.com/iainmoffat/tdx/internal/svc/projectsvc"
 	"github.com/iainmoffat/tdx/internal/svc/timesvc"
 	"github.com/spf13/cobra"
 )
@@ -29,6 +30,7 @@ type statusFlags struct {
 	json          bool
 	csv           bool
 	xlsx          string
+	projectID     int // --project selector: resolve team via ListResources, post-filter totals
 }
 
 func newStatusCmd() *cobra.Command {
@@ -78,6 +80,7 @@ Output formats (mutually exclusive; default: human table):
 	cmd.Flags().StringSliceVar(&f.resourcePools, "resource-pool", nil, "TD resource pool names (repeatable / comma-separated)")
 	cmd.Flags().BoolVar(&f.all, "all", false, "every active employee (requires --yes)")
 	cmd.Flags().BoolVar(&f.yes, "yes", false, "confirm --all")
+	cmd.Flags().IntVar(&f.projectID, "project", 0, "project selector: resolves team via project resources, post-filters totals to project entries")
 	cmd.Flags().BoolVar(&f.includeZero, "include-zero", true, "include user-weeks with zero total minutes (default: include)")
 	cmd.Flags().BoolVar(&f.incomplete, "incomplete", false, "filter to user-weeks below --threshold (excludes permission-denied rows)")
 	cmd.Flags().Float64Var(&f.threshold, "threshold", 40, "hours threshold for --incomplete (default 40)")
@@ -108,11 +111,14 @@ func validateStatusFlags(f statusFlags) error {
 	if f.all {
 		selectors++
 	}
+	if f.projectID > 0 {
+		selectors++
+	}
 	switch {
 	case selectors == 0:
-		return fmt.Errorf("a selector is required: --user, --manager, --account, --resource-pool, or --all")
+		return fmt.Errorf("a selector is required: --user, --manager, --account, --resource-pool, --project, or --all")
 	case selectors > 1:
-		return fmt.Errorf("exactly one of --user, --manager, --account, --resource-pool, --all may be set")
+		return fmt.Errorf("exactly one of --user, --manager, --account, --resource-pool, --project, --all may be set")
 	}
 
 	if f.all && !f.yes {
@@ -166,8 +172,10 @@ func runStatus(cmd *cobra.Command, f statusFlags) error {
 
 	deps := runnerDeps{
 		Time:    timesvc.New(paths),
+		Entries: timesvc.New(paths),
 		People:  peoplesvc.New(paths),
 		Auth:    auth,
+		Project: projectsvc.New(paths),
 		Profile: profile,
 	}
 
