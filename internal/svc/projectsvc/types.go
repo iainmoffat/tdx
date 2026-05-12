@@ -101,6 +101,25 @@ type wireProjectType struct {
 	IsActive bool   `json:"IsActive,omitempty"`
 }
 
+type wireFeedEntry struct {
+	ID              int    `json:"ID"`
+	Body            string `json:"Body"`
+	CreatedUid      string `json:"CreatedUid,omitempty"`
+	CreatedFullName string `json:"CreatedFullName,omitempty"`
+	CreatedDate     string `json:"CreatedDate,omitempty"`
+	LastUpdatedDate string `json:"LastUpdatedDate,omitempty"`
+	UpdateType      int    `json:"UpdateType,omitempty"`
+	IsPrivate       bool   `json:"IsPrivate,omitempty"`
+	LikesCount      int    `json:"LikesCount,omitempty"`
+	RepliesCount    int    `json:"RepliesCount,omitempty"`
+}
+
+type wireFeedAdd struct {
+	Comments  string   `json:"Comments"`
+	Notify    []string `json:"Notify,omitempty"`
+	IsPrivate bool     `json:"IsPrivate"`
+}
+
 // parseTD parses TD's ISO-ish timestamp; returns zero time on empty/sentinel.
 func parseTD(s string) time.Time {
 	if s == "" || strings.HasPrefix(s, "0001-01-01") || strings.HasPrefix(s, "1900-01-01") {
