@@ -6,6 +6,7 @@ import (
 	"io"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/spf13/cobra"
@@ -15,6 +16,7 @@ import (
 	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/iainmoffat/tdx/internal/render"
 	"github.com/iainmoffat/tdx/internal/svc/authsvc"
+	"github.com/iainmoffat/tdx/internal/svc/peoplesvc"
 	"github.com/iainmoffat/tdx/internal/svc/projectsvc"
 )
 
@@ -28,6 +30,8 @@ func newTaskCmd(svc projectsvcAPI) *cobra.Command {
 	}
 	cmd.AddCommand(newTaskListCmd(svc))
 	cmd.AddCommand(newTaskShowCmd(svc))
+	cmd.AddCommand(newTaskFeedCmd(svc))
+	cmd.AddCommand(newTaskCommentCmd(svc))
 	return cmd
 }
 
@@ -348,6 +352,160 @@ func printTaskShowJSON(w io.Writer, t domain.ProjectTask) error {
 		Schema string   `json:"schema"`
 		Task   taskJSON `json:"task"`
 	}{Schema: "tdx.v1.projectTask", Task: out})
+}
+
+func newTaskFeedCmd(svc projectsvcAPI) *cobra.Command {
+	var (
+		planIDFlag  int
+		limit       int
+		jsonFlag    bool
+		profileFlag string
+	)
+	cmd := &cobra.Command{
+		Use:   "feed <project-id> <task-id>",
+		Short: "Read the feed for a project task",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			projectID, err := strconv.Atoi(args[0])
+			if err != nil || projectID <= 0 {
+				return fmt.Errorf("project id must be a positive integer, got %q", args[0])
+			}
+			taskID, err := strconv.Atoi(args[1])
+			if err != nil || taskID <= 0 {
+				return fmt.Errorf("task id must be a positive integer, got %q", args[1])
+			}
+			if planIDFlag == 0 {
+				return fmt.Errorf("--plan is required (run `tdx project plan list %d` to find plan IDs)", projectID)
+			}
+			if limit < 0 {
+				limit = 0
+			}
+			if limit > 500 {
+				limit = 500
+			}
+			paths, err := config.ResolvePaths()
+			if err != nil {
+				return err
+			}
+			auth := authsvc.New(paths)
+			profile, err := auth.ResolveProfile(profileFlag)
+			if err != nil {
+				return err
+			}
+			s := svc
+			if s == nil {
+				s = projectsvc.New(paths)
+			}
+			return runProjectTaskFeed(cmd.Context(), cmd.OutOrStdout(), s, profile, projectID, planIDFlag, taskID, limit, jsonFlag)
+		},
+	}
+	cmd.Flags().IntVar(&planIDFlag, "plan", 0, "plan ID (required)")
+	cmd.Flags().IntVar(&limit, "limit", 50, "max entries (0 = all, max 500)")
+	cmd.Flags().BoolVar(&jsonFlag, "json", false, "emit JSON output")
+	cmd.Flags().StringVar(&profileFlag, "profile", "", "profile name")
+	return cmd
+}
+
+func runProjectTaskFeed(ctx context.Context, w io.Writer, svc projectsvcAPI, profile string, projectID, planID, taskID, limit int, jsonOut bool) error {
+	entries, err := svc.GetTaskFeed(ctx, profile, projectID, planID, taskID)
+	if err != nil {
+		return err
+	}
+	if limit > 0 && len(entries) > limit {
+		entries = entries[:limit]
+	}
+	return printProjectFeed(w, entries, jsonOut, "tdx.v1.projectTaskFeed", map[string]any{
+		"projectID": projectID,
+		"planID":    planID,
+		"taskID":    taskID,
+	})
+}
+
+func newTaskCommentCmd(svc projectsvcAPI) *cobra.Command {
+	var (
+		planIDFlag  int
+		message     string
+		notify      []string
+		isPrivate   bool
+		yesFlag     bool
+		profileFlag string
+	)
+	cmd := &cobra.Command{
+		Use:   "comment <project-id> <task-id>",
+		Short: "Post a comment to a project task feed (--yes required)",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Validate BEFORE config.ResolvePaths.
+			if !yesFlag {
+				return fmt.Errorf("pass --yes to post comment")
+			}
+			if strings.TrimSpace(message) == "" {
+				return fmt.Errorf("specify --message")
+			}
+			projectID, err := strconv.Atoi(args[0])
+			if err != nil || projectID <= 0 {
+				return fmt.Errorf("project id must be a positive integer, got %q", args[0])
+			}
+			taskID, err := strconv.Atoi(args[1])
+			if err != nil || taskID <= 0 {
+				return fmt.Errorf("task id must be a positive integer, got %q", args[1])
+			}
+			if planIDFlag == 0 {
+				return fmt.Errorf("--plan is required (run `tdx project plan list %d` to find plan IDs)", projectID)
+			}
+
+			paths, err := config.ResolvePaths()
+			if err != nil {
+				return err
+			}
+			auth := authsvc.New(paths)
+			profile, err := auth.ResolveProfile(profileFlag)
+			if err != nil {
+				return err
+			}
+			s := svc
+			if s == nil {
+				s = projectsvc.New(paths)
+			}
+
+			// Resolve --notify values.
+			var resolvedNotify []string
+			if len(notify) > 0 {
+				var authedUID string
+				for _, n := range notify {
+					if n == "me" && authedUID == "" {
+						authedUID, err = authedUIDFor(cmd.Context(), auth, profile)
+						if err != nil {
+							return err
+						}
+					}
+					uid, err := resolvePrincipal(cmd.Context(), peoplesvc.New(paths), profile, authedUID, n)
+					if err != nil {
+						return fmt.Errorf("resolve notify %q: %w", n, err)
+					}
+					resolvedNotify = append(resolvedNotify, uid)
+				}
+			}
+
+			return runProjectTaskComment(cmd.Context(), cmd.OutOrStdout(), s, profile, projectID, planIDFlag, taskID, message, isPrivate, resolvedNotify)
+		},
+	}
+	cmd.Flags().IntVar(&planIDFlag, "plan", 0, "plan ID (required)")
+	cmd.Flags().StringVarP(&message, "message", "m", "", "comment text (required)")
+	cmd.Flags().StringArrayVar(&notify, "notify", nil, "additional UID to notify (repeatable; 'me' = authed user)")
+	cmd.Flags().BoolVar(&isPrivate, "private", false, "mark as private/internal note")
+	cmd.Flags().BoolVar(&yesFlag, "yes", false, "required to post")
+	cmd.Flags().StringVar(&profileFlag, "profile", "", "profile name")
+	return cmd
+}
+
+func runProjectTaskComment(ctx context.Context, w io.Writer, svc projectsvcAPI, profile string, projectID, planID, taskID int, message string, isPrivate bool, notify []string) error {
+	entryID, err := svc.AddTaskFeed(ctx, profile, projectID, planID, taskID, message, isPrivate, notify)
+	if err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintf(w, "posted comment on task #%d / project %d / plan %d (feed entry %d)\n", taskID, projectID, planID, entryID)
+	return nil
 }
 
 func splitDescription(s string) []string {
