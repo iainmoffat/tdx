@@ -25,6 +25,9 @@ type stubProjectsvc struct {
 	feed        []domain.ProjectFeedEntry
 	feedAddedID int
 
+	// Phase 4: resources
+	resources []domain.ProjectResource
+
 	// Capture last-call arguments for assertion.
 	lastProjectID   int
 	lastPlanID      int
@@ -96,4 +99,9 @@ func (s *stubProjectsvc) AddTaskFeed(_ context.Context, _ string, projectID, pla
 	s.lastFeedPrivate = isPrivate
 	s.lastFeedNotify = notify
 	return s.feedAddedID, s.err
+}
+
+func (s *stubProjectsvc) ListResources(_ context.Context, _ string, projectID int) ([]domain.ProjectResource, error) {
+	s.lastProjectID = projectID
+	return s.resources, s.err
 }
