@@ -95,21 +95,56 @@ func assembleReport(ctx context.Context, deps runnerDeps, f statusFlags) (domain
 		for _, u := range users {
 			u := u
 			g.Go(func() error {
-				rep, err := deps.Time.GetWeekReportForUser(gctx, deps.Profile, week.StartDate, u.UID)
 				row := domain.WeekStatusRow{
 					WeekRef: week,
 					User:    u,
 				}
-				switch {
-				case err == nil:
-					row.Status = rep.Status
-					row.BillableMin = rep.MinutesBillable
-					row.NonBillableMin = rep.MinutesNonBillable
-					row.TotalMin = rep.TotalMinutes
-				case errors.Is(err, domain.ErrPermission):
-					row.Status = domain.ReportStatus("permission-denied")
-				default:
-					return fmt.Errorf("get report for %s/%s: %w", u.UID, week.StartDate.Format("2006-01-02"), err)
+				if f.projectID > 0 && deps.Entries != nil {
+					// Project-scoped mode: fetch the user's project entries
+					// directly and sum. Skips GetWeekReportForUser to keep API
+					// call count to N (not 2N) — important for big projects
+					// where TD's 60/min/IP rate limit becomes a hazard.
+					// Trade-off: row.Status is left empty (week submission
+					// status is per-user-week, not per-project, so it's not
+					// meaningful in this mode).
+					rng := domain.DateRange{From: week.StartDate, To: week.EndDate}
+					entries, err := deps.Entries.SearchEntries(gctx, deps.Profile, domain.EntryFilter{
+						DateRange: rng,
+						UserUID:   u.UID,
+						ProjectID: f.projectID,
+					})
+					switch {
+					case err == nil:
+						var bill, nonBill, total int
+						for _, e := range entries {
+							total += e.Minutes
+							if e.Billable {
+								bill += e.Minutes
+							} else {
+								nonBill += e.Minutes
+							}
+						}
+						row.BillableMin = bill
+						row.NonBillableMin = nonBill
+						row.TotalMin = total
+					case errors.Is(err, domain.ErrPermission):
+						row.Status = domain.ReportStatus("permission-denied")
+					default:
+						return fmt.Errorf("search entries for %s/%s: %w", u.UID, week.StartDate.Format("2006-01-02"), err)
+					}
+				} else {
+					rep, err := deps.Time.GetWeekReportForUser(gctx, deps.Profile, week.StartDate, u.UID)
+					switch {
+					case err == nil:
+						row.Status = rep.Status
+						row.BillableMin = rep.MinutesBillable
+						row.NonBillableMin = rep.MinutesNonBillable
+						row.TotalMin = rep.TotalMinutes
+					case errors.Is(err, domain.ErrPermission):
+						row.Status = domain.ReportStatus("permission-denied")
+					default:
+						return fmt.Errorf("get report for %s/%s: %w", u.UID, week.StartDate.Format("2006-01-02"), err)
+					}
 				}
 				resultsMu.Lock()
 				results = append(results, row)
@@ -121,53 +156,6 @@ func assembleReport(ctx context.Context, deps runnerDeps, f statusFlags) (domain
 
 	if err := g.Wait(); err != nil {
 		return domain.TimeStatusReport{}, err
-	}
-
-	// When --project is set, re-derive totals for each row by fetching that
-	// user's project-specific entries and summing. GetWeekReportForUser gives
-	// all-project totals; the project post-filter scopes them to one project.
-	if f.projectID > 0 && deps.Entries != nil {
-		g2, gctx2 := errgroup.WithContext(ctx)
-		g2.SetLimit(maxConcurrency)
-		for i := range results {
-			i := i
-			if results[i].Status == domain.ReportStatus("permission-denied") {
-				continue
-			}
-			g2.Go(func() error {
-				row := &results[i]
-				rng := domain.DateRange{
-					From: row.WeekRef.StartDate,
-					To:   row.WeekRef.EndDate,
-				}
-				entries, err := deps.Entries.SearchEntries(gctx2, deps.Profile, domain.EntryFilter{
-					DateRange: rng,
-					UserUID:   row.User.UID,
-					ProjectID: f.projectID,
-				})
-				if err != nil {
-					return fmt.Errorf("search entries for %s: %w", row.User.UID, err)
-				}
-				var bill, nonBill, total int
-				for _, e := range entries {
-					total += e.Minutes
-					if e.Billable {
-						bill += e.Minutes
-					} else {
-						nonBill += e.Minutes
-					}
-				}
-				resultsMu.Lock()
-				row.BillableMin = bill
-				row.NonBillableMin = nonBill
-				row.TotalMin = total
-				resultsMu.Unlock()
-				return nil
-			})
-		}
-		if err := g2.Wait(); err != nil {
-			return domain.TimeStatusReport{}, err
-		}
 	}
 
 	// Apply --include-zero filter.
