@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -794,4 +795,125 @@ func TestRunner_JSONEnvelopeNoFilterMode(t *testing.T) {
 	require.Len(t, env.Weeks, 1)
 	require.Len(t, env.Weeks[0].Rows, 1)
 	require.Equal(t, float64(0), env.Weeks[0].Rows[0].Threshold, "per-row threshold absent when incomplete=false")
+}
+
+// mockProjectsvc implements reportProjectsvcAPI for runner tests.
+type mockProjectsvc struct {
+	resources []domain.ProjectResource
+	err       error
+}
+
+func (m *mockProjectsvc) ListResources(_ context.Context, _ string, _ int) ([]domain.ProjectResource, error) {
+	return m.resources, m.err
+}
+
+// mockEntriesSvc implements timesvcEntriesAPI for runner project-filter tests.
+// SearchEntries is called concurrently by the runner; the lastFilter capture
+// is guarded by a mutex.
+type mockEntriesSvc struct {
+	entries    []domain.TimeEntry
+	err        error
+	mu         sync.Mutex
+	lastFilter domain.EntryFilter
+}
+
+func (m *mockEntriesSvc) SearchEntries(_ context.Context, _ string, filter domain.EntryFilter) ([]domain.TimeEntry, error) {
+	m.mu.Lock()
+	m.lastFilter = filter
+	m.mu.Unlock()
+	return m.entries, m.err
+}
+
+func TestRunner_ProjectSelectorResolvesViaResources(t *testing.T) {
+	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	resources := []domain.ProjectResource{
+		{UID: "u1", FullName: "Alice"},
+		{UID: "u2", FullName: "Bob"},
+	}
+	reports := map[string]domain.WeekReport{
+		"u1": {WeekRef: week, UserUID: "u1", TotalMinutes: 120, MinutesBillable: 120},
+		"u2": {WeekRef: week, UserUID: "u2", TotalMinutes: 60},
+	}
+	// No project-specific entries (entries svc returns empty for simplicity
+	// since project filter happens in the entries svc post-filter).
+	projEntries := []domain.TimeEntry{
+		{ID: 1, UserUID: "u1", Minutes: 120, Target: domain.Target{Kind: domain.TargetProjectTask, ProjectID: 259}},
+	}
+
+	deps := runnerDeps{
+		Time:    &mockTimesvc{reports: reports},
+		Entries: &mockEntriesSvc{entries: projEntries},
+		People:  &mockPeoplesvc{},
+		Auth:    &mockAuthsvc{},
+		Project: &mockProjectsvc{resources: resources},
+	}
+	out, err := assembleReport(context.Background(), deps, statusFlags{
+		projectID:   259,
+		week:        "2026-04-14",
+		includeZero: true,
+		limit:       100,
+	})
+	require.NoError(t, err)
+	// Both resources should be resolved as users.
+	uids := make([]string, 0, len(out.Rows))
+	for _, r := range out.Rows {
+		uids = append(uids, r.User.UID)
+	}
+	require.Contains(t, uids, "u1")
+	require.Contains(t, uids, "u2")
+}
+
+func TestRunner_ProjectFilterScopesTotalsToProjectEntries(t *testing.T) {
+	week := domain.WeekRefContaining(time.Date(2026, 4, 14, 0, 0, 0, 0, domain.EasternTZ))
+	resources := []domain.ProjectResource{{UID: "u1", FullName: "Alice"}}
+	reports := map[string]domain.WeekReport{
+		// GetWeekReportForUser returns all-project totals (4h).
+		"u1": {WeekRef: week, UserUID: "u1", TotalMinutes: 240, MinutesBillable: 120, MinutesNonBillable: 120},
+	}
+	// SearchEntries returns only project-259-scoped entries (1.5h).
+	projEntries := []domain.TimeEntry{
+		{ID: 1, UserUID: "u1", Minutes: 60, Billable: true, Target: domain.Target{Kind: domain.TargetProjectTask, ProjectID: 259}},
+		{ID: 2, UserUID: "u1", Minutes: 30, Target: domain.Target{Kind: domain.TargetProjectTask, ProjectID: 259}},
+	}
+
+	entriesSvc := &mockEntriesSvc{entries: projEntries}
+	deps := runnerDeps{
+		Time:    &mockTimesvc{reports: reports},
+		Entries: entriesSvc,
+		People:  &mockPeoplesvc{},
+		Auth:    &mockAuthsvc{},
+		Project: &mockProjectsvc{resources: resources},
+	}
+	out, err := assembleReport(context.Background(), deps, statusFlags{
+		projectID:   259,
+		week:        "2026-04-14",
+		includeZero: true,
+		limit:       100,
+	})
+	require.NoError(t, err)
+	require.Len(t, out.Rows, 1)
+	// Totals should be scoped to project entries (90 min = 1.5h), not the full week (240 min).
+	require.Equal(t, 90, out.Rows[0].TotalMin)
+	require.Equal(t, 60, out.Rows[0].BillableMin)
+	require.Equal(t, 30, out.Rows[0].NonBillableMin)
+	// Verify SearchEntries was called with the correct ProjectID.
+	require.Equal(t, 259, entriesSvc.lastFilter.ProjectID)
+}
+
+func TestValidateStatusFlags_ProjectMutexWithUser(t *testing.T) {
+	err := validateStatusFlags(statusFlags{
+		users:     []string{"u1"},
+		projectID: 259,
+		week:      "2026-04-14",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "exactly one of")
+}
+
+func TestValidateStatusFlags_ProjectAloneIsValid(t *testing.T) {
+	err := validateStatusFlags(statusFlags{
+		projectID: 259,
+		week:      "2026-04-14",
+	})
+	require.NoError(t, err)
 }

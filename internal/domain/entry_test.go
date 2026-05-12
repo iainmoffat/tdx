@@ -67,3 +67,17 @@ func TestEntryFilter_DefaultLimit(t *testing.T) {
 	f := EntryFilter{}
 	require.Equal(t, 0, f.Limit, "zero means unset; caller decides default")
 }
+
+func TestEntryFilter_ProjectIDFieldsZeroByDefault(t *testing.T) {
+	f := EntryFilter{}
+	require.Equal(t, 0, f.ProjectID, "ProjectID zero means no project filter")
+	require.Equal(t, 0, f.PlanID)
+	require.Equal(t, 0, f.TaskID)
+}
+
+func TestEntryFilter_ProjectIDRoundTrip(t *testing.T) {
+	f := EntryFilter{ProjectID: 259, PlanID: 1292, TaskID: 4938}
+	require.Equal(t, 259, f.ProjectID)
+	require.Equal(t, 1292, f.PlanID)
+	require.Equal(t, 4938, f.TaskID)
+}

@@ -263,3 +263,30 @@ func TestDeleteEntry_WithConfirm(t *testing.T) {
 	require.Contains(t, text, "999")
 	require.Contains(t, text, "deleted")
 }
+
+func TestListEntries_ProjectAndTicketMutex(t *testing.T) {
+	svcs := mcpHarness(t, "http://localhost:0")
+	handler := listEntriesHandler(svcs)
+	result, _, err := handler(context.Background(), nil, listEntriesArgs{
+		From:      "2026-05-05",
+		To:        "2026-05-11",
+		ProjectID: 259,
+		TicketID:  12345,
+	})
+	require.NoError(t, err)
+	require.True(t, result.IsError)
+	require.Contains(t, extractText(t, result), "mutually exclusive")
+}
+
+func TestListEntries_PlanRequiresProject(t *testing.T) {
+	svcs := mcpHarness(t, "http://localhost:0")
+	handler := listEntriesHandler(svcs)
+	result, _, err := handler(context.Background(), nil, listEntriesArgs{
+		From:   "2026-05-05",
+		To:     "2026-05-11",
+		PlanID: 1292,
+	})
+	require.NoError(t, err)
+	require.True(t, result.IsError)
+	require.Contains(t, extractText(t, result), "require projectID")
+}

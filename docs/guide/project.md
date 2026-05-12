@@ -19,6 +19,7 @@ All commands accept `--profile <name>` to override the active profile.
 - [tdx project task feed](#tdx-project-task-feed)
 - [tdx project task comment](#tdx-project-task-comment)
 - [tdx project log](#tdx-project-log)
+- [tdx project time](#tdx-project-time)
 
 ---
 
@@ -269,6 +270,35 @@ The new entry's ID is printed on success. To roll back: `tdx time entry delete <
 
 ---
 
+## tdx project time
+
+Show time entries logged against a project. Defaults to your entries for the current week; use `--all-users` for the team view, or `--user UID|email|me` (repeatable) for specific people. Filters down to specific plans/tasks within the project via `--plan` / `--task`.
+
+```bash
+tdx project time 259                               # my entries this week
+tdx project time 259 --week 2026-05-04
+tdx project time 259 --from 2026-04-01 --to 2026-04-30
+tdx project time 259 --all-users --week 2026-05-04
+tdx project time 259 --plan 1292 --task 4938 --week 2026-05-04
+tdx project time 259 --user user1@example.com --user user2@example.com
+tdx project time 259 --all-users --week 2026-05-04 --json   # schema: tdx.v1.projectTimeReview
+```
+
+**Flags:**
+
+- `--week YYYY-MM-DD` — any date inside the target week (Sunday-Saturday, Eastern time)
+- `--from / --to` — explicit date range (mutually exclusive with `--week`)
+- `--user me|UID|email` — repeatable; default is `me`
+- `--all-users` — resolve the project's team via TD's resources list (mutually exclusive with `--user`)
+- `--plan N` — narrow to a specific plan
+- `--task N` — narrow to a specific task
+- `--limit N` — max rows (default 200)
+- `--json` — emit JSON
+
+**Implementation note:** TD's time-search endpoint silently ignores its `ProjectID` body field on the test tenant. tdx works around this with a client-side filter after fetching the user's entries in the date range. For per-user views this is one quick fetch; for `--all-users`, tdx fetches the project's resource list first, then one search per resource. Large project teams may bump against TD's 60-call-per-minute rate limit — back off and retry if you see a 429.
+
+---
+
 ## MCP
 
 The same operations are exposed as MCP tools for AI agents:
@@ -283,8 +313,14 @@ The same operations are exposed as MCP tools for AI agents:
 | `get_project_task` | no |
 | `get_project_feed` | no |
 | `get_project_task_feed` | no |
+| `get_project_time_review` | no |
 | `add_project_comment` | yes — requires `confirm: true` |
 | `add_project_task_comment` | yes — requires `confirm: true` |
 | `log_project_task_time` | yes — requires `confirm: true` |
 
-The `mine: true` input on `list_project_tasks` is mutually exclusive with `projectID` + `planID`. All mutating tools mirror the CLI's `--yes` semantics — they return an error envelope if `confirm` is absent or `message` is empty.
+Time-namespace tools also gained project inputs in this phase:
+
+- `list_time_entries` now accepts `projectID? int`, `planID? int`, `taskID? int` (mutually exclusive with `ticketID`)
+- `get_time_status_report` now accepts `projectID? int` as a peer of the existing `userUIDs?`/`managers?`/`accounts?`/`resourcePools?`/`all?` selectors
+
+The `mine: true` input on `list_project_tasks` is mutually exclusive with `projectID` + `planID`. The `allUsers: true` input on `get_project_time_review` is mutually exclusive with `userUIDs`. All mutating tools mirror the CLI's `--yes` semantics — they return an error envelope if `confirm` is absent or `message` is empty.

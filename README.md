@@ -80,7 +80,8 @@ tdx
 │   ├── plan             → list
 │   ├── task             → list (--mine) / show / feed / comment
 │   ├── feed / comment
-│   └── log
+│   ├── log
+│   └── time             (--user / --all-users / --plan / --task)
 ├── time
 │   ├── entry            → list / show / add / update / delete
 │   ├── template         → derive / list / show / edit / clone / delete / apply / compare

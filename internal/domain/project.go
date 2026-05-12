@@ -129,6 +129,17 @@ type ProjectTask struct {
 	TicketID    int `json:"ticketID,omitempty"`
 }
 
+// ProjectResource is one row from /api/projects/{id}/resources.
+// Minimal Phase 4 shape — only the fields needed for the time-review
+// "team" path. Wire UID field is lowercase ("UID", not "UserUID").
+type ProjectResource struct {
+	UID      string `json:"uid"                yaml:"uid"`
+	FullName string `json:"fullName,omitempty" yaml:"fullName,omitempty"`
+	RoleID   int    `json:"roleID,omitempty"   yaml:"roleID,omitempty"`
+	RoleName string `json:"roleName,omitempty" yaml:"roleName,omitempty"`
+	IsActive bool   `json:"isActive,omitempty" yaml:"isActive,omitempty"`
+}
+
 // AssignedTo reports whether the given UID is among the task's resources
 // (case-insensitive — TD returns task resource UIDs in UPPERCASE but
 // the User UID is lowercase).

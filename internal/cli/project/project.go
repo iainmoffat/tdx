@@ -26,6 +26,8 @@ type projectsvcAPI interface {
 	AddFeed(ctx context.Context, profile string, projectID int, message string, isPrivate bool, notify []string) (int, error)
 	GetTaskFeed(ctx context.Context, profile string, projectID, planID, taskID int) ([]domain.ProjectFeedEntry, error)
 	AddTaskFeed(ctx context.Context, profile string, projectID, planID, taskID int, message string, isPrivate bool, notify []string) (int, error)
+	// Phase 4: project team membership
+	ListResources(ctx context.Context, profile string, projectID int) ([]domain.ProjectResource, error)
 }
 
 // New returns the top-level `tdx project` command.
@@ -42,5 +44,6 @@ func New() *cobra.Command {
 	cmd.AddCommand(newLogCmd(nil))
 	cmd.AddCommand(newFeedCmd(nil))
 	cmd.AddCommand(newCommentCmd(nil))
+	cmd.AddCommand(newTimeCmd(nil, nil))
 	return cmd
 }

@@ -50,6 +50,16 @@ Filter by ticket (requires `--app` for the TD application ID):
 tdx time entry list --ticket 12345 --app 42
 ```
 
+Filter by project (optionally narrowed by plan and/or task):
+
+```bash
+tdx time entry list --project 259
+tdx time entry list --project 259 --plan 1292
+tdx time entry list --project 259 --plan 1292 --task 4938
+```
+
+`--project` is mutually exclusive with `--ticket`. `--plan` and `--task` require `--project`. The project filter is applied client-side after fetch (TD's time-search endpoint silently ignores the `ProjectID` body field on some tenants).
+
 ### tdx time entry show
 
 ```bash
@@ -979,11 +989,18 @@ When permission is denied for a user, that row's `Status` becomes
 --manager UID         direct reports of one or more managers; "me" = authenticated user
 --account NAME        users in one or more accounts/departments by name
 --resource-pool NAME  users in one or more TD resource pools by name
+--project N           every resource on a project (single-value)
 --all                 every active employee (requires --yes)
 
-Each selector flag is repeatable or comma-separated; values within a
-flag are unioned. Selector *types* remain mutually exclusive — you
-cannot mix `--manager X --resource-pool Y` in a single run.
+Each selector flag (except --project and --all) is repeatable or
+comma-separated; values within a flag are unioned. Selector *types*
+remain mutually exclusive — you cannot mix `--manager X --resource-pool Y`
+in a single run.
+
+With `--project N`, the row totals are computed from the user's
+project-scoped entries only (via TD's time-search endpoint with a
+client-side project filter). The `Status` column is left empty in
+this mode — week-submission status is per-user-week, not per-project.
 ```
 
 #### Date range

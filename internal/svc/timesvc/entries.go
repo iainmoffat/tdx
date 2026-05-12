@@ -42,6 +42,13 @@ func (s *Service) SearchEntries(ctx context.Context, profileName string, filter 
 	if filter.TimeTypeID > 0 {
 		req.TimeTypeIDs = []int{filter.TimeTypeID}
 	}
+	if filter.ProjectID > 0 {
+		req.ProjectID = filter.ProjectID
+		if filter.PlanID > 0 {
+			req.PlanID = filter.PlanID
+		}
+		// TaskID has no dedicated wire field; client-side filter handles it.
+	}
 
 	var wire []wireTimeEntry
 	if err := client.DoJSON(ctx, "POST", "/TDWebApi/api/time/search", req, &wire); err != nil {
@@ -56,10 +63,49 @@ func (s *Service) SearchEntries(ctx context.Context, profileName string, filter 
 		}
 		out = append(out, entry)
 	}
+	if filter.ProjectID > 0 {
+		out = filterEntriesByProject(out, filter.ProjectID, filter.PlanID, filter.TaskID)
+	}
 	if err := s.resolveTimeTypeNames(ctx, profileName, out); err != nil {
 		return nil, err
 	}
 	return out, nil
+}
+
+// filterEntriesByProject keeps only entries whose target matches the given
+// project (and optionally plan/task). Match rules:
+//   - TargetProject: Target.ItemID == projectID
+//   - TargetProjectTask: Target.ProjectID == projectID; if planID>0 then also
+//     Target.ItemID == planID; if taskID>0 then also Target.TaskID == taskID
+//   - TargetProjectIssue: Target.ProjectID == projectID
+//
+// All other target kinds are dropped.
+func filterEntriesByProject(entries []domain.TimeEntry, projectID, planID, taskID int) []domain.TimeEntry {
+	out := entries[:0]
+	for _, e := range entries {
+		switch e.Target.Kind {
+		case domain.TargetProject:
+			if e.Target.ItemID == projectID {
+				out = append(out, e)
+			}
+		case domain.TargetProjectTask:
+			if e.Target.ProjectID != projectID {
+				continue
+			}
+			if planID > 0 && e.Target.ItemID != planID {
+				continue
+			}
+			if taskID > 0 && e.Target.TaskID != taskID {
+				continue
+			}
+			out = append(out, e)
+		case domain.TargetProjectIssue:
+			if e.Target.ProjectID == projectID {
+				out = append(out, e)
+			}
+		}
+	}
+	return out
 }
 
 // decodeTimeEntry maps a TD wire entry into the idiomatic domain type.

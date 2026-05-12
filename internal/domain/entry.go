@@ -106,5 +106,8 @@ type EntryFilter struct {
 	UserUID    string
 	Target     *Target
 	TimeTypeID int
+	ProjectID  int // client-side project filter (TD silent-ignores wire field)
+	PlanID     int // narrows project filter to a specific plan
+	TaskID     int // narrows project filter to a specific task
 	Limit      int
 }

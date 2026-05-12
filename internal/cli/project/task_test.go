@@ -306,3 +306,6 @@ func (s *callTrackingStub) GetTaskFeed(_ context.Context, _ string, _, _, _ int)
 func (s *callTrackingStub) AddTaskFeed(_ context.Context, _ string, _, _, _ int, _ string, _ bool, _ []string) (int, error) {
 	return 0, nil
 }
+func (s *callTrackingStub) ListResources(_ context.Context, _ string, _ int) ([]domain.ProjectResource, error) {
+	return nil, nil
+}

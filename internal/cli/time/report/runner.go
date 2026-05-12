@@ -13,6 +13,16 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// timesvcEntriesAPI is the subset of timesvc for SearchEntries (project post-filter).
+type timesvcEntriesAPI interface {
+	SearchEntries(ctx context.Context, profile string, filter domain.EntryFilter) ([]domain.TimeEntry, error)
+}
+
+// reportProjectsvcAPI is the subset of projectsvc the runner needs for --project.
+type reportProjectsvcAPI interface {
+	ListResources(ctx context.Context, profile string, projectID int) ([]domain.ProjectResource, error)
+}
+
 // timesvcAPI is the subset of timesvc.Service the runner needs.
 type timesvcAPI interface {
 	GetWeekReportForUser(ctx context.Context, profile string, date time.Time, uid string) (domain.WeekReport, error)
@@ -35,8 +45,10 @@ type authsvcAPI interface {
 // can inject mocks via the interfaces above.
 type runnerDeps struct {
 	Time    timesvcAPI
+	Entries timesvcEntriesAPI
 	People  peoplesvcAPI
 	Auth    authsvcAPI
+	Project reportProjectsvcAPI
 	Profile string
 }
 
@@ -83,21 +95,56 @@ func assembleReport(ctx context.Context, deps runnerDeps, f statusFlags) (domain
 		for _, u := range users {
 			u := u
 			g.Go(func() error {
-				rep, err := deps.Time.GetWeekReportForUser(gctx, deps.Profile, week.StartDate, u.UID)
 				row := domain.WeekStatusRow{
 					WeekRef: week,
 					User:    u,
 				}
-				switch {
-				case err == nil:
-					row.Status = rep.Status
-					row.BillableMin = rep.MinutesBillable
-					row.NonBillableMin = rep.MinutesNonBillable
-					row.TotalMin = rep.TotalMinutes
-				case errors.Is(err, domain.ErrPermission):
-					row.Status = domain.ReportStatus("permission-denied")
-				default:
-					return fmt.Errorf("get report for %s/%s: %w", u.UID, week.StartDate.Format("2006-01-02"), err)
+				if f.projectID > 0 && deps.Entries != nil {
+					// Project-scoped mode: fetch the user's project entries
+					// directly and sum. Skips GetWeekReportForUser to keep API
+					// call count to N (not 2N) — important for big projects
+					// where TD's 60/min/IP rate limit becomes a hazard.
+					// Trade-off: row.Status is left empty (week submission
+					// status is per-user-week, not per-project, so it's not
+					// meaningful in this mode).
+					rng := domain.DateRange{From: week.StartDate, To: week.EndDate}
+					entries, err := deps.Entries.SearchEntries(gctx, deps.Profile, domain.EntryFilter{
+						DateRange: rng,
+						UserUID:   u.UID,
+						ProjectID: f.projectID,
+					})
+					switch {
+					case err == nil:
+						var bill, nonBill, total int
+						for _, e := range entries {
+							total += e.Minutes
+							if e.Billable {
+								bill += e.Minutes
+							} else {
+								nonBill += e.Minutes
+							}
+						}
+						row.BillableMin = bill
+						row.NonBillableMin = nonBill
+						row.TotalMin = total
+					case errors.Is(err, domain.ErrPermission):
+						row.Status = domain.ReportStatus("permission-denied")
+					default:
+						return fmt.Errorf("search entries for %s/%s: %w", u.UID, week.StartDate.Format("2006-01-02"), err)
+					}
+				} else {
+					rep, err := deps.Time.GetWeekReportForUser(gctx, deps.Profile, week.StartDate, u.UID)
+					switch {
+					case err == nil:
+						row.Status = rep.Status
+						row.BillableMin = rep.MinutesBillable
+						row.NonBillableMin = rep.MinutesNonBillable
+						row.TotalMin = rep.TotalMinutes
+					case errors.Is(err, domain.ErrPermission):
+						row.Status = domain.ReportStatus("permission-denied")
+					default:
+						return fmt.Errorf("get report for %s/%s: %w", u.UID, week.StartDate.Format("2006-01-02"), err)
+					}
 				}
 				resultsMu.Lock()
 				results = append(results, row)
@@ -181,14 +228,17 @@ type MCPInputs struct {
 	Accounts      []string
 	ResourcePools []string
 	All           bool
+	ProjectID     int
 	IncludeZero   bool
 	Incomplete    bool
 	Threshold     float64
 	ThresholdSet  bool // mirror of statusFlags.thresholdSet — populated by handler from `Threshold > 0`
 	Limit         int
 	TimeSvc       timesvcAPI
+	EntriesSvc    timesvcEntriesAPI
 	PeopleSvc     peoplesvcAPI
 	AuthSvc       authsvcAPI
+	ProjectSvc    reportProjectsvcAPI
 }
 
 // RunForMCP builds, validates, and runs a Time Status Report for MCP
@@ -207,6 +257,7 @@ func RunForMCP(ctx context.Context, in MCPInputs) (any, error) {
 		resourcePools: in.ResourcePools,
 		all:           in.All,
 		yes:           in.All, // bypass --yes guard for MCP
+		projectID:     in.ProjectID,
 		includeZero:   in.IncludeZero,
 		incomplete:    in.Incomplete,
 		threshold:     in.Threshold,
@@ -218,8 +269,10 @@ func RunForMCP(ctx context.Context, in MCPInputs) (any, error) {
 	}
 	deps := runnerDeps{
 		Time:    in.TimeSvc,
+		Entries: in.EntriesSvc,
 		People:  in.PeopleSvc,
 		Auth:    in.AuthSvc,
+		Project: in.ProjectSvc,
 		Profile: in.Profile,
 	}
 	rep, err := assembleReport(ctx, deps, f)
@@ -358,6 +411,20 @@ func resolveUsers(ctx context.Context, deps runnerDeps, f statusFlags) ([]domain
 			if _, ok := poolIDs[u.ResourcePoolID]; ok {
 				out = append(out, u)
 			}
+		}
+		return out, nil
+
+	case f.projectID > 0:
+		if deps.Project == nil {
+			return nil, fmt.Errorf("project service not configured (internal error)")
+		}
+		resources, err := deps.Project.ListResources(ctx, deps.Profile, f.projectID)
+		if err != nil {
+			return nil, fmt.Errorf("list project %d resources: %w", f.projectID, err)
+		}
+		out := make([]domain.User, 0, len(resources))
+		for _, r := range resources {
+			out = append(out, domain.User{UID: r.UID, FullName: r.FullName})
 		}
 		return out, nil
 	}

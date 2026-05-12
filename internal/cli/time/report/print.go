@@ -13,9 +13,16 @@ import (
 func printText(w io.Writer, rep domain.TimeStatusReport, f statusFlags) error {
 	groups := rep.RowsByWeek()
 	for _, g := range groups {
-		_, _ = fmt.Fprintf(w, "WEEK %s — %s\n",
-			g.Week.StartDate.Format("2006-01-02"),
-			g.Week.EndDate.Format("2006-01-02"))
+		if f.projectID > 0 {
+			_, _ = fmt.Fprintf(w, "WEEK %s — %s  (project %d)\n",
+				g.Week.StartDate.Format("2006-01-02"),
+				g.Week.EndDate.Format("2006-01-02"),
+				f.projectID)
+		} else {
+			_, _ = fmt.Fprintf(w, "WEEK %s — %s\n",
+				g.Week.StartDate.Format("2006-01-02"),
+				g.Week.EndDate.Format("2006-01-02"))
+		}
 
 		headers := []string{"NAME", "EMAIL", "REPORTS TO", "STATUS", "BILL", "NON-BILL", "TOTAL"}
 		rows := make([][]string, 0, len(g.Rows))
@@ -64,6 +71,7 @@ func buildJSONEnvelope(rep domain.TimeStatusReport, f statusFlags) any {
 		Managers      []string `json:"managers,omitempty"`
 		Accounts      []string `json:"accounts,omitempty"`
 		ResourcePools []string `json:"resourcePools,omitempty"`
+		ProjectID     int      `json:"projectID,omitempty"`
 		Incomplete    bool     `json:"incomplete,omitempty"`
 		ThresholdMode string   `json:"thresholdMode,omitempty"`
 		Threshold     float64  `json:"threshold,omitempty"`
@@ -109,6 +117,8 @@ func buildJSONEnvelope(rep domain.TimeStatusReport, f statusFlags) any {
 		filter.Accounts = f.accounts
 	case "resource-pool":
 		filter.ResourcePools = f.resourcePools
+	case "project":
+		filter.ProjectID = f.projectID
 	}
 	if f.incomplete {
 		filter.Incomplete = true
@@ -179,6 +189,8 @@ func selectorOf(f statusFlags) string {
 		return "account"
 	case len(f.resourcePools) > 0:
 		return "resource-pool"
+	case f.projectID > 0:
+		return "project"
 	case f.all:
 		return "all"
 	}

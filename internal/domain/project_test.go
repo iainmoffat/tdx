@@ -14,6 +14,29 @@ func TestProjectPlanType_String(t *testing.T) {
 	require.Equal(t, "unknown(99)", ProjectPlanType(99).String())
 }
 
+func TestProjectResource_ZeroValue(t *testing.T) {
+	var r ProjectResource
+	require.Equal(t, "", r.UID)
+	require.Equal(t, "", r.FullName)
+	require.Equal(t, 0, r.RoleID)
+	require.False(t, r.IsActive)
+}
+
+func TestProjectResource_RoundTrip(t *testing.T) {
+	r := ProjectResource{
+		UID:      "abc-123",
+		FullName: "Alice Smith",
+		RoleID:   7,
+		RoleName: "Developer",
+		IsActive: true,
+	}
+	require.Equal(t, "abc-123", r.UID)
+	require.Equal(t, "Alice Smith", r.FullName)
+	require.Equal(t, 7, r.RoleID)
+	require.Equal(t, "Developer", r.RoleName)
+	require.True(t, r.IsActive)
+}
+
 func TestProjectTask_AssignedTo_CaseInsensitive(t *testing.T) {
 	me := "aaaaaaaa-1234-5678-9abc-def012345678"
 	task := ProjectTask{

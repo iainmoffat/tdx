@@ -464,3 +464,97 @@ func TestAddProjectTaskComment_RequiresMessage(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, res.IsError)
 }
+
+// --- get_project_time_review tests ---
+
+func TestGetProjectTimeReview_RequiresProjectID(t *testing.T) {
+	svcs := mcpHarness(t, "http://localhost:0")
+	res, _, err := getProjectTimeReviewHandler(svcs)(context.Background(), &sdkmcp.CallToolRequest{}, getProjectTimeReviewArgs{})
+	require.NoError(t, err)
+	require.True(t, res.IsError)
+	require.Contains(t, extractText(t, res), "projectID is required")
+}
+
+func TestGetProjectTimeReview_UserUIDsAndAllUsersMutex(t *testing.T) {
+	svcs := mcpHarness(t, "http://localhost:0")
+	res, _, err := getProjectTimeReviewHandler(svcs)(context.Background(), &sdkmcp.CallToolRequest{}, getProjectTimeReviewArgs{
+		ProjectID: 259,
+		UserUIDs:  []string{"uid-alice"},
+		AllUsers:  true,
+	})
+	require.NoError(t, err)
+	require.True(t, res.IsError)
+	require.Contains(t, extractText(t, res), "mutually exclusive")
+}
+
+func TestGetProjectTimeReview_WeekAndFromToMutex(t *testing.T) {
+	svcs := mcpHarness(t, "http://localhost:0")
+	res, _, err := getProjectTimeReviewHandler(svcs)(context.Background(), &sdkmcp.CallToolRequest{}, getProjectTimeReviewArgs{
+		ProjectID: 259,
+		UserUIDs:  []string{"uid-alice"},
+		Week:      "2026-05-05",
+		From:      "2026-05-05",
+		To:        "2026-05-11",
+	})
+	require.NoError(t, err)
+	require.True(t, res.IsError)
+	require.Contains(t, extractText(t, res), "mutually exclusive")
+}
+
+func TestGetProjectTimeReview_DefaultsToMeThisWeek(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/TDWebApi/api/auth/getuser":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"UID":"uid-me","FullName":"Me"}`))
+		case "/TDWebApi/api/time/search":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[]`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	svcs := mcpHarness(t, ts.URL)
+	// Neither userUIDs nor allUsers — should default to authed user.
+	res, _, err := getProjectTimeReviewHandler(svcs)(context.Background(), &sdkmcp.CallToolRequest{}, getProjectTimeReviewArgs{
+		ProjectID: 259,
+	})
+	require.NoError(t, err)
+	require.False(t, res.IsError, "should succeed (even with no entries)")
+	var envelope map[string]any
+	require.NoError(t, json.Unmarshal([]byte(extractText(t, res)), &envelope))
+	require.Equal(t, "tdx.v1.projectTimeReview", envelope["schema"])
+	require.Equal(t, float64(259), envelope["projectID"])
+}
+
+func TestGetProjectTimeReview_JSONSchemaEnvelope(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/TDWebApi/api/time/search":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[
+				{"TimeID":101,"Component":2,"ProjectID":259,"PlanID":1292,"ItemID":4938,
+				 "TimeDate":"2026-05-06T00:00:00Z","Minutes":120,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0,"Uid":"uid-alice"}
+			]`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	svcs := mcpHarness(t, ts.URL)
+	res, _, err := getProjectTimeReviewHandler(svcs)(context.Background(), &sdkmcp.CallToolRequest{}, getProjectTimeReviewArgs{
+		ProjectID: 259,
+		UserUIDs:  []string{"uid-alice"},
+		Week:      "2026-05-05",
+	})
+	require.NoError(t, err)
+	require.False(t, res.IsError, extractText(t, res))
+
+	var envelope map[string]any
+	require.NoError(t, json.Unmarshal([]byte(extractText(t, res)), &envelope))
+	require.Equal(t, "tdx.v1.projectTimeReview", envelope["schema"])
+	require.InDelta(t, 2.0, envelope["totalHours"], 0.001)
+}
