@@ -51,3 +51,24 @@ func TestGetTimeStatusReport_RejectsBothFormats(t *testing.T) {
 		t.Errorf("expected error result for multiple selectors")
 	}
 }
+
+func TestGetTimeStatusReport_ProjectAndManagerMutex(t *testing.T) {
+	stub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	t.Cleanup(stub.Close)
+
+	svcs := mcpHarness(t, stub.URL)
+	handler := getTimeStatusReportHandler(svcs)
+	res, _, err := handler(context.Background(), &sdkmcp.CallToolRequest{}, getTimeStatusReportArgs{
+		Week:      "2026-04-14",
+		ProjectID: 259,
+		Managers:  []string{"me"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.IsError {
+		t.Errorf("expected error result for project+manager selector conflict")
+	}
+}

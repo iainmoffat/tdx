@@ -12,14 +12,17 @@ import (
 )
 
 type listEntriesArgs struct {
-	From     string `json:"from" jsonschema:"start date YYYY-MM-DD"`
-	To       string `json:"to" jsonschema:"end date YYYY-MM-DD"`
-	TicketID int    `json:"ticketID,omitempty" jsonschema:"filter by ticket ID"`
-	AppID    int    `json:"appID,omitempty" jsonschema:"app ID (with ticketID)"`
-	TypeID   int    `json:"typeID,omitempty" jsonschema:"filter by time type ID"`
-	UserUID  string `json:"userUID,omitempty" jsonschema:"filter by user UID"`
-	Limit    int    `json:"limit,omitempty" jsonschema:"max results (default 100)"`
-	Profile  string `json:"profile,omitempty" jsonschema:"profile name"`
+	From      string `json:"from" jsonschema:"start date YYYY-MM-DD"`
+	To        string `json:"to" jsonschema:"end date YYYY-MM-DD"`
+	TicketID  int    `json:"ticketID,omitempty" jsonschema:"filter by ticket ID (mutually exclusive with projectID)"`
+	AppID     int    `json:"appID,omitempty" jsonschema:"app ID (with ticketID)"`
+	TypeID    int    `json:"typeID,omitempty" jsonschema:"filter by time type ID"`
+	UserUID   string `json:"userUID,omitempty" jsonschema:"filter by user UID"`
+	Limit     int    `json:"limit,omitempty" jsonschema:"max results (default 100)"`
+	Profile   string `json:"profile,omitempty" jsonschema:"profile name"`
+	ProjectID int    `json:"projectID,omitempty" jsonschema:"filter by project ID (mutually exclusive with ticketID)"`
+	PlanID    int    `json:"planID,omitempty" jsonschema:"narrow project filter to a specific plan (requires projectID)"`
+	TaskID    int    `json:"taskID,omitempty" jsonschema:"narrow project filter to a specific task (requires projectID)"`
 }
 
 type getEntryArgs struct {
@@ -90,6 +93,14 @@ func RegisterEntryTools(srv *sdkmcp.Server, svcs Services) {
 
 func listEntriesHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, listEntriesArgs) (*sdkmcp.CallToolResult, any, error) {
 	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args listEntriesArgs) (*sdkmcp.CallToolResult, any, error) {
+		// Validate mutex.
+		if args.ProjectID > 0 && args.TicketID > 0 {
+			return errorResult("projectID and ticketID are mutually exclusive"), nil, nil
+		}
+		if (args.PlanID > 0 || args.TaskID > 0) && args.ProjectID <= 0 {
+			return errorResult("planID and taskID require projectID"), nil, nil
+		}
+
 		profile := resolveProfile(svcs, args.Profile)
 
 		from, err := time.ParseInLocation("2006-01-02", args.From, domain.EasternTZ)
@@ -106,6 +117,9 @@ func listEntriesHandler(svcs Services) func(context.Context, *sdkmcp.CallToolReq
 			UserUID:    args.UserUID,
 			TimeTypeID: args.TypeID,
 			Limit:      args.Limit,
+			ProjectID:  args.ProjectID,
+			PlanID:     args.PlanID,
+			TaskID:     args.TaskID,
 		}
 		if filter.Limit == 0 {
 			filter.Limit = 100

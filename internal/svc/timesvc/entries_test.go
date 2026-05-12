@@ -328,7 +328,7 @@ func TestSearchEntries_ResolveSkippedWhenNamesAlreadyPresent(t *testing.T) {
 	require.Equal(t, "Already Set", entries[0].TimeType.Name)
 }
 
-// mixedEntriesFixture returns a JSON array of 5 mixed time entries used
+// mixedEntriesFixtureV2 is a JSON array of 5 mixed time entries used
 // across the project-filter tests.
 //
 // Entry layout:
@@ -338,20 +338,9 @@ func TestSearchEntries_ResolveSkippedWhenNamesAlreadyPresent(t *testing.T) {
 //	2: TargetProjectTask,  ProjectID=52  (different project)
 //	3: TargetTicket,       unrelated
 //	4: TargetWorkspace,    unrelated
-const mixedEntriesFixture = `[
-	{"TimeID":1,"Component":1,"ProjectID":259,"ItemID":259,"ProjectName":"P259","TimeDate":"2026-05-06T00:00:00Z","Minutes":60,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0},
-	{"TimeID":2,"Component":2,"ProjectID":259,"PlanID":1292,"ItemID":1292,"TicketID":0,"TimeDate":"2026-05-07T00:00:00Z","Minutes":120,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0},
-	{"TimeID":3,"Component":2,"ProjectID":52,"PlanID":9999,"ItemID":9999,"TimeDate":"2026-05-07T00:00:00Z","Minutes":90,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0},
-	{"TimeID":4,"Component":9,"AppID":42,"TicketID":12345,"ItemID":12345,"TimeDate":"2026-05-08T00:00:00Z","Minutes":60,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0},
-	{"TimeID":5,"Component":45,"ProjectID":10,"ItemID":10,"TimeDate":"2026-05-09T00:00:00Z","Minutes":30,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0}
-]`
-
-// Note: Component=2 (TargetProjectTask) wire decode puts PlanID into ItemID and
-// TaskID into wireTimeEntry.ItemID. Looking at decodeTarget: for componentTaskTime,
-// t.ItemID = w.PlanID and t.TaskID = w.ItemID. So for entry 1:
-//   wire: PlanID=1292, ItemID=1292 → decoded: Target.ItemID=1292 (planID), Target.TaskID=1292
-// We need TaskID to be distinct; let's use ItemID=4938 for the actual task.
-
+//
+// Note: Component=2 (TargetProjectTask) wire decode puts PlanID into Target.ItemID and
+// ItemID (wire) into Target.TaskID. Entry 1: PlanID=1292 → Target.ItemID=1292; ItemID=4938 → Target.TaskID=4938.
 const mixedEntriesFixtureV2 = `[
 	{"TimeID":1,"Component":1,"ProjectID":259,"ItemID":259,"ProjectName":"P259","TimeDate":"2026-05-06T00:00:00Z","Minutes":60,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0},
 	{"TimeID":2,"Component":2,"ProjectID":259,"PlanID":1292,"ItemID":4938,"TimeDate":"2026-05-07T00:00:00Z","Minutes":120,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0},

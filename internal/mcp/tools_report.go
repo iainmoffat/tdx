@@ -19,6 +19,7 @@ type getTimeStatusReportArgs struct {
 	Accounts      []string `json:"accounts,omitempty"`
 	ResourcePools []string `json:"resourcePools,omitempty"`
 	All           bool     `json:"all,omitempty"`
+	ProjectID     int      `json:"projectID,omitempty"`
 	IncludeZero   bool     `json:"includeZero,omitempty"`
 	Incomplete    bool     `json:"incomplete,omitempty"`
 	Threshold     float64  `json:"threshold,omitempty"`
@@ -53,14 +54,17 @@ func getTimeStatusReportHandler(svcs Services) func(context.Context, *sdkmcp.Cal
 			Accounts:      args.Accounts,
 			ResourcePools: args.ResourcePools,
 			All:           args.All,
+			ProjectID:     args.ProjectID,
 			IncludeZero:   args.IncludeZero,
 			Incomplete:    args.Incomplete,
 			Threshold:     args.Threshold,
 			ThresholdSet:  args.Threshold > 0,
 			Limit:         args.Limit,
 			TimeSvc:       svcs.Time,
+			EntriesSvc:    svcs.Time,
 			PeopleSvc:     svcs.People,
 			AuthSvc:       svcs.Auth,
+			ProjectSvc:    svcs.Projects,
 		})
 		if err != nil {
 			return errorResult(fmt.Sprintf("time-status-report: %v", err)), nil, nil
