@@ -78,7 +78,8 @@ tdx
 ├── project
 │   ├── list / search / show
 │   ├── plan             → list
-│   ├── task             → list (--mine) / show
+│   ├── task             → list (--mine) / show / feed / comment
+│   ├── feed / comment
 │   └── log
 ├── time
 │   ├── entry            → list / show / add / update / delete

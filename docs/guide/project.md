@@ -14,6 +14,10 @@ All commands accept `--profile <name>` to override the active profile.
 - [tdx project plan list](#tdx-project-plan-list)
 - [tdx project task list](#tdx-project-task-list)
 - [tdx project task show](#tdx-project-task-show)
+- [tdx project feed](#tdx-project-feed)
+- [tdx project comment](#tdx-project-comment)
+- [tdx project task feed](#tdx-project-task-feed)
+- [tdx project task comment](#tdx-project-task-comment)
 - [tdx project log](#tdx-project-log)
 
 ---
@@ -165,6 +169,84 @@ tdx project task show 259 4938 --plan 1292 --json   # schema: tdx.v1.projectTask
 
 ---
 
+## tdx project feed
+
+Read the activity feed for a project. Shows system events (status changes, resource updates, percent-complete changes) and user comments interleaved by date.
+
+```bash
+tdx project feed 259
+tdx project feed 259 --limit 100 --json   # schema: tdx.v1.projectFeed
+```
+
+**Flags:**
+
+- `--limit N` — max rows (default 50, cap 500)
+- `--json` — emit JSON
+
+Sample output:
+
+```
+ID       DATE              BY            TYPE     BODY
+1798321  2026-05-12 17:23  Sample User   comment  Backup config review complete — all checks passed.
+1782210  2026-05-07 18:35  Pat Manager   system   Changed Portfolio(s) from "" to "Sample Portfolio".
+```
+
+The `TYPE` column shows `comment` for user-posted comments (TD's `UpdateType=1`) and `system` for everything else (status changes, edits, resource adds). Body is truncated at 80 chars in the human table; embedded newlines render as `↵`. Use `--json` for the full body.
+
+---
+
+## tdx project comment
+
+Post a comment to a project feed. Requires `--yes`.
+
+```bash
+tdx project comment 259 --message "Backup config review complete — all checks passed." --yes
+tdx project comment 259 --message "Private status update" --private --yes
+tdx project comment 259 --message "Pinging the team" --notify me --notify some-uid --yes
+```
+
+**Flags:**
+
+- `--message "..."` — comment text (required)
+- `--notify me|UID|email` — repeatable; `me` resolves to your authed UID
+- `--private` — mark the comment as private
+- `--yes` — **required** to actually post
+
+The new feed entry's ID is printed on success.
+
+**TD wire-format note:** Project feed POST uses TD's `Body` field for the comment text (not `Comments` like ticket / task feed endpoints). This is transparent to users — both `tdx project comment` and `tdx project task comment` accept `--message` and produce the right wire shape internally.
+
+---
+
+## tdx project task feed
+
+Read the activity feed for a specific project task. Same shape as `tdx project feed`.
+
+```bash
+tdx project task feed 259 4938 --plan 1292
+tdx project task feed 259 4938 --plan 1292 --limit 50 --json   # schema: tdx.v1.projectTaskFeed
+```
+
+**Flags:**
+
+- `--plan N` — plan ID (required)
+- `--limit N` — max rows (default 50, cap 500)
+- `--json` — emit JSON
+
+---
+
+## tdx project task comment
+
+Post a comment to a project task feed. Requires `--yes`.
+
+```bash
+tdx project task comment 259 4938 --plan 1292 --message "Started on backup tests." --yes
+```
+
+**Flags:** same as `tdx project comment` plus `--plan N` (required).
+
+---
+
 ## tdx project log
 
 Log time worked against a project task. Wraps `tdx time entry add` under the hood, so the entry shows up in `tdx time entry list`, week drafts, and reports.
@@ -199,6 +281,10 @@ The same operations are exposed as MCP tools for AI agents:
 | `list_project_plans` | no |
 | `list_project_tasks` (single-plan or `mine: true`) | no |
 | `get_project_task` | no |
+| `get_project_feed` | no |
+| `get_project_task_feed` | no |
+| `add_project_comment` | yes — requires `confirm: true` |
+| `add_project_task_comment` | yes — requires `confirm: true` |
 | `log_project_task_time` | yes — requires `confirm: true` |
 
-The `mine: true` input on `list_project_tasks` is mutually exclusive with `projectID` + `planID`. `log_project_task_time` mirrors the CLI's mutex and `--yes` semantics; it returns an error envelope if `confirm` is absent.
+The `mine: true` input on `list_project_tasks` is mutually exclusive with `projectID` + `planID`. All mutating tools mirror the CLI's `--yes` semantics — they return an error envelope if `confirm` is absent or `message` is empty.
