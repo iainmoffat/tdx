@@ -21,12 +21,19 @@ type stubProjectsvc struct {
 	types        []domain.ProjectType
 	resolvedType domain.ProjectType
 
+	// Feed fields
+	feed        []domain.ProjectFeedEntry
+	feedAddedID int
+
 	// Capture last-call arguments for assertion.
-	lastProjectID int
-	lastPlanID    int
-	lastTaskID    int
-	lastFilter    domain.ProjectSearchFilter
-	lastNameLike  string
+	lastProjectID   int
+	lastPlanID      int
+	lastTaskID      int
+	lastFilter      domain.ProjectSearchFilter
+	lastNameLike    string
+	lastFeedMessage string
+	lastFeedPrivate bool
+	lastFeedNotify  []string
 
 	err error
 }
@@ -63,4 +70,30 @@ func (s *stubProjectsvc) ListProjectTypes(_ context.Context, _ string, _ bool) (
 }
 func (s *stubProjectsvc) ResolveTypeByName(_ context.Context, _ string, _ string) (domain.ProjectType, error) {
 	return s.resolvedType, s.err
+}
+func (s *stubProjectsvc) GetFeed(_ context.Context, _ string, projectID int) ([]domain.ProjectFeedEntry, error) {
+	s.lastProjectID = projectID
+	return s.feed, s.err
+}
+func (s *stubProjectsvc) AddFeed(_ context.Context, _ string, projectID int, message string, isPrivate bool, notify []string) (int, error) {
+	s.lastProjectID = projectID
+	s.lastFeedMessage = message
+	s.lastFeedPrivate = isPrivate
+	s.lastFeedNotify = notify
+	return s.feedAddedID, s.err
+}
+func (s *stubProjectsvc) GetTaskFeed(_ context.Context, _ string, projectID, planID, taskID int) ([]domain.ProjectFeedEntry, error) {
+	s.lastProjectID = projectID
+	s.lastPlanID = planID
+	s.lastTaskID = taskID
+	return s.feed, s.err
+}
+func (s *stubProjectsvc) AddTaskFeed(_ context.Context, _ string, projectID, planID, taskID int, message string, isPrivate bool, notify []string) (int, error) {
+	s.lastProjectID = projectID
+	s.lastPlanID = planID
+	s.lastTaskID = taskID
+	s.lastFeedMessage = message
+	s.lastFeedPrivate = isPrivate
+	s.lastFeedNotify = notify
+	return s.feedAddedID, s.err
 }

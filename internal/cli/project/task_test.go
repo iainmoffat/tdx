@@ -230,3 +230,15 @@ func (s *callTrackingStub) ListProjectTypes(_ context.Context, _ string, _ bool)
 func (s *callTrackingStub) ResolveTypeByName(_ context.Context, _ string, _ string) (domain.ProjectType, error) {
 	return domain.ProjectType{}, nil
 }
+func (s *callTrackingStub) GetFeed(_ context.Context, _ string, _ int) ([]domain.ProjectFeedEntry, error) {
+	return nil, nil
+}
+func (s *callTrackingStub) AddFeed(_ context.Context, _ string, _ int, _ string, _ bool, _ []string) (int, error) {
+	return 0, nil
+}
+func (s *callTrackingStub) GetTaskFeed(_ context.Context, _ string, _, _, _ int) ([]domain.ProjectFeedEntry, error) {
+	return nil, nil
+}
+func (s *callTrackingStub) AddTaskFeed(_ context.Context, _ string, _, _, _ int, _ string, _ bool, _ []string) (int, error) {
+	return 0, nil
+}

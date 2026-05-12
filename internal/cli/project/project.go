@@ -21,6 +21,11 @@ type projectsvcAPI interface {
 	GetTask(ctx context.Context, profile string, projectID, planID, taskID int) (domain.ProjectTask, error)
 	ListProjectTypes(ctx context.Context, profile string, includeInactive bool) ([]domain.ProjectType, error)
 	ResolveTypeByName(ctx context.Context, profile string, name string) (domain.ProjectType, error)
+	// Feed / comment methods (Phase 2)
+	GetFeed(ctx context.Context, profile string, projectID int) ([]domain.ProjectFeedEntry, error)
+	AddFeed(ctx context.Context, profile string, projectID int, message string, isPrivate bool, notify []string) (int, error)
+	GetTaskFeed(ctx context.Context, profile string, projectID, planID, taskID int) ([]domain.ProjectFeedEntry, error)
+	AddTaskFeed(ctx context.Context, profile string, projectID, planID, taskID int, message string, isPrivate bool, notify []string) (int, error)
 }
 
 // New returns the top-level `tdx project` command.
@@ -35,5 +40,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(newPlanCmd(nil))
 	cmd.AddCommand(newTaskCmd(nil))
 	cmd.AddCommand(newLogCmd(nil))
+	cmd.AddCommand(newFeedCmd(nil))
+	cmd.AddCommand(newCommentCmd(nil))
 	return cmd
 }
