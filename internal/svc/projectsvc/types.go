@@ -95,6 +95,14 @@ type wireTask struct {
 	TicketID        int                `json:"TicketID,omitempty"`
 }
 
+type wireProjectResource struct {
+	UID      string `json:"UID"`
+	FullName string `json:"FullName,omitempty"`
+	RoleID   int    `json:"RoleID,omitempty"`
+	RoleName string `json:"RoleName,omitempty"`
+	IsActive bool   `json:"IsActive,omitempty"`
+}
+
 type wireProjectType struct {
 	ID       int    `json:"ID"`
 	Name     string `json:"Name"`
