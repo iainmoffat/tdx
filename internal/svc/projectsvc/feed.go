@@ -31,8 +31,8 @@ func (s *Service) AddFeed(ctx context.Context, profileName string, projectID int
 	if err != nil {
 		return 0, err
 	}
-	req := wireFeedAdd{
-		Comments:  message,
+	req := wireProjectFeedAdd{
+		Body:      message,
 		Notify:    notify,
 		IsPrivate: isPrivate,
 	}
@@ -68,7 +68,7 @@ func (s *Service) AddTaskFeed(ctx context.Context, profileName string, projectID
 	if err != nil {
 		return 0, err
 	}
-	req := wireFeedAdd{
+	req := wireTaskFeedAdd{
 		Comments:  message,
 		Notify:    notify,
 		IsPrivate: isPrivate,

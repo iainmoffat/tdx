@@ -3,6 +3,8 @@
 **Date:** 2026-05-12
 **Goal:** Read feed activity and post comments on projects and project tasks. Closes the daily-flow loop for `tdx project` by adding the mutating commands that Phase 1 deliberately deferred. Mirrors `tdx ticket feed` / `tdx ticket comment` / `tdx ticket task feed` and the existing task-feed POST pattern.
 
+> **Post-implementation correction (2026-05-12):** Live verification revealed that TD's project feed POST uses a different field name than the ticket/task feed POST. `POST /api/projects/{id}/feed` requires `{"Body": "...", "Notify": [...], "IsPrivate": ...}` — NOT `{"Comments": ...}` as the ticket and task feed endpoints use. Posting with `"Comments"` returns a stub response (`ID: -1`, body null) and silently no-ops; posting with `"Body"` returns a real entry ID and the comment is persisted. The implementation splits the wire body into two distinct structs: `wireProjectFeedAdd { Body, Notify, IsPrivate }` for project-level POST and `wireTaskFeedAdd { Comments, Notify, IsPrivate }` for task-level POST. Task-level feed POST continues to use `Comments` (matching ticket/task feed). Both verified live.
+
 ## Motivation
 
 Phase 1 made projects/plans/tasks visible but read-only. Daily flows want two more things:

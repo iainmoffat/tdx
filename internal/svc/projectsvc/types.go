@@ -114,7 +114,20 @@ type wireFeedEntry struct {
 	RepliesCount    int    `json:"RepliesCount,omitempty"`
 }
 
-type wireFeedAdd struct {
+// wireProjectFeedAdd is the POST body for /api/projects/{id}/feed.
+// TD's project-level feed POST uses "Body" for the comment text, not
+// "Comments" as on the ticket/task feed endpoints. Confirmed by live
+// probe 2026-05-12: a POST with "Comments" returns ID:-1 and silently
+// no-ops; the same body with "Body" returns a real entry ID.
+type wireProjectFeedAdd struct {
+	Body      string   `json:"Body"`
+	Notify    []string `json:"Notify,omitempty"`
+	IsPrivate bool     `json:"IsPrivate"`
+}
+
+// wireTaskFeedAdd is the POST body for /api/projects/{p}/plans/{pl}/tasks/{t}/feed.
+// Task-level feeds use the same "Comments" field as ticket feeds.
+type wireTaskFeedAdd struct {
 	Comments  string   `json:"Comments"`
 	Notify    []string `json:"Notify,omitempty"`
 	IsPrivate bool     `json:"IsPrivate"`

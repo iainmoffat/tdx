@@ -63,7 +63,9 @@ func TestAddFeed_PostsExpectedBody(t *testing.T) {
 
 	var sent map[string]interface{}
 	require.NoError(t, json.Unmarshal(capturedBody, &sent))
-	require.Equal(t, "hello world", sent["Comments"])
+	// Project feed POST uses "Body" field, not "Comments" — confirmed by live probe.
+	require.Equal(t, "hello world", sent["Body"])
+	require.Nil(t, sent["Comments"], "project feed POST must NOT send Comments")
 	require.Equal(t, false, sent["IsPrivate"])
 	notify, _ := sent["Notify"].([]interface{})
 	require.Len(t, notify, 2)
