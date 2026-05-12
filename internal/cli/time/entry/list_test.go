@@ -115,6 +115,57 @@ func TestEntryList_TicketRequiresApp(t *testing.T) {
 	require.Contains(t, err.Error()+out.String(), "--ticket requires --app")
 }
 
+func TestEntryList_ProjectAndTicketMutex(t *testing.T) {
+	// This validation fires before config.ResolvePaths, so no profile needed.
+	cmd := NewCmd()
+	cmd.SetArgs([]string{"list", "--project", "259", "--ticket", "12345", "--app", "42"})
+	err := cmd.Execute()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "--project and --ticket are mutually exclusive")
+}
+
+func TestEntryList_PlanRequiresProject(t *testing.T) {
+	cmd := NewCmd()
+	cmd.SetArgs([]string{"list", "--plan", "1292"})
+	err := cmd.Execute()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "--plan and --task require --project")
+}
+
+func TestEntryList_TaskRequiresProject(t *testing.T) {
+	cmd := NewCmd()
+	cmd.SetArgs([]string{"list", "--task", "4938"})
+	err := cmd.Execute()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "--plan and --task require --project")
+}
+
+func TestEntryList_ProjectFilterZeroIsNoOp(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/TDWebApi/api/auth/getuser":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"ReferenceID":1,"UID":"u1","FullName":"User","PrimaryEmail":"u@x"}`))
+		case "/TDWebApi/api/time/search":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[{"TimeID":1,"Component":9,"AppID":42,"TicketID":1,"ItemID":1,"TimeDate":"2026-05-06T00:00:00Z","Minutes":60,"TimeTypeID":1,"TimeTypeName":"Dev","Status":0}]`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+
+	seedProfile(t, srv.URL)
+
+	var out bytes.Buffer
+	cmd := NewCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"list", "--project", "0", "--from", "2026-05-05", "--to", "2026-05-11"})
+	// --project 0 is treated as "no project filter" — should succeed normally
+	require.NoError(t, cmd.Execute())
+	require.Contains(t, out.String(), "TOTAL")
+}
+
 func TestEntryList_DefaultFilterUsesWhoami(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {

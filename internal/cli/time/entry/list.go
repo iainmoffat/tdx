@@ -41,12 +41,24 @@ func newListCmd() *cobra.Command {
 		userFlag    string
 		limitFlag   int
 		jsonFlag    bool
+		projectFlag int
+		planFlag    int
+		taskFlag    int
 	)
 
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List time entries, default this week for the current user",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Pre-config validation: flag combinations that error before
+			// touching the config on disk. CI runs without a profile config.
+			if projectFlag > 0 && ticketFlag > 0 {
+				return fmt.Errorf("--project and --ticket are mutually exclusive")
+			}
+			if (planFlag > 0 || taskFlag > 0) && projectFlag <= 0 {
+				return fmt.Errorf("--plan and --task require --project")
+			}
+
 			paths, err := config.ResolvePaths()
 			if err != nil {
 				return err
@@ -109,6 +121,9 @@ func newListCmd() *cobra.Command {
 				DateRange: rng,
 				UserUID:   userUID,
 				Limit:     limitFlag,
+				ProjectID: projectFlag,
+				PlanID:    planFlag,
+				TaskID:    taskFlag,
 			}
 			if ticketFlag > 0 {
 				filter.Target = &domain.Target{
@@ -184,6 +199,9 @@ func newListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&userFlag, "user", "", "filter by user UID (defaults to whoami)")
 	cmd.Flags().IntVar(&limitFlag, "limit", defaultListLimit, "maximum results")
 	cmd.Flags().BoolVar(&jsonFlag, "json", false, "emit JSON output")
+	cmd.Flags().IntVar(&projectFlag, "project", 0, "filter by project ID (mutually exclusive with --ticket)")
+	cmd.Flags().IntVar(&planFlag, "plan", 0, "narrow --project to a specific plan ID (requires --project)")
+	cmd.Flags().IntVar(&taskFlag, "task", 0, "narrow --project to a specific task ID (requires --project)")
 	return cmd
 }
 
