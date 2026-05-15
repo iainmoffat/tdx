@@ -35,4 +35,9 @@ var (
 	// ErrPermission indicates the API rejected the request because the
 	// caller lacks the necessary role/app/approver relationship.
 	ErrPermission = errors.New("permission denied")
+
+	// ErrFanoutLimitExceeded indicates a per-user × per-week fan-out request
+	// would exceed the hard caps defined in caps.go. Wrap with details about
+	// which limit (weeks or users), the requested value, and the max.
+	ErrFanoutLimitExceeded = errors.New("fanout_limit_exceeded")
 )
