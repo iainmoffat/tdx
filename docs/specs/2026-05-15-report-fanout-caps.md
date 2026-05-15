@@ -46,7 +46,7 @@ Two independent caps. Either one trips → refuse.
 
 Worst-case allowed call is 52 × 1000 = 52,000 requests — still big, but bounded.
 
-Both exported as package-level consts in `internal/cli/time/report/runner.go` so tests can reference them directly.
+Both exported as package-level consts in `internal/domain` (alongside `ErrFanoutLimitExceeded`) so all three call sites — `internal/cli/time/report`, `internal/cli/project`, and `internal/mcp` — can reference them without cross-CLI imports.
 
 ## Where the checks live
 
@@ -92,21 +92,27 @@ For `--json`: stderr gets the same message; stdout stays empty. Matches existing
 
 ### MCP
 
-Structured error returned from `RunForMCP` before assembly:
+MCP error responses use the existing `errorResult(string)` convention — there is no structured-error envelope in this codebase. So the error reaches the LLM as text. To keep it parseable and consistent, we use a sentinel error:
 
-```json
-{
-  "error": {
-    "code": "fanout_limit_exceeded",
-    "limit": "weeks",
-    "max": 52,
-    "requested": 522,
-    "hint": "Reduce the from/to range. The 52-week cap protects the TD API from accidental wide-range fan-out."
-  }
-}
+```go
+// internal/domain/errors.go (additive)
+var ErrFanoutLimitExceeded = errors.New("fanout_limit_exceeded")
 ```
 
-User cap returns the same shape with `"limit": "users"`.
+Wrapped at the throw site as:
+
+```go
+return nil, fmt.Errorf("%w: weeks=%d max=%d; narrow the from/to range",
+    domain.ErrFanoutLimitExceeded, span, MaxReportWeeks)
+```
+
+The MCP handler renders it via `err.Error()`, so the LLM sees:
+
+```
+fanout_limit_exceeded: weeks=522 max=52; narrow the from/to range
+```
+
+User cap is the same shape with `users=N max=1000`. Tests assert `errors.Is(err, domain.ErrFanoutLimitExceeded)` rather than string matching.
 
 ## Tests
 
