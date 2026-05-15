@@ -58,16 +58,13 @@ Implementation note: `resolveWeeks` already iterates weeks DST-safely (uses Sund
 
 ### User cap
 
-In `Run` / `RunForMCP` after user resolution and before the fan-out loop (`runner.go:80-84`). Today the code silently truncates: `if len(users) > cap { users = users[:cap] }`.
+Two complementary checks:
 
-New policy, applied in this order:
+1. **Existing flag check (unchanged):** `validateStatusFlags` already refuses `--limit > 1000` with `--limit cannot exceed 1000` (`status.go:144-146`). We keep this exactly as-is for source-compat — both CLI and MCP go through this path. We do upgrade the message to match the new structured error shape so MCP gets a parseable code (see [Error shapes](#error-shapes)).
 
-1. **Resolved-set ceiling.** Let `resolved` = the user count immediately after selector expansion (`--user`/`--manager`/`--account`/`--resource-pool`/`--all`/`--project`), before any `--limit` truncation. If `resolved > MaxReportUsers` (1000): refuse with `fanout_limit_exceeded`, limit=users. The user must narrow their selectors.
-2. **`--limit N` user-explicit.**
-   - `N ≤ 1000`: truncate to `min(N, resolved)` as today. No change.
-   - `N > 1000`: clamp `N` to 1000 with a stderr warning (e.g. `warning: --limit 5000 clamped to 1000 (max)`). The user typed it, so we don't refuse — but we tell them what actually happened. JSON output suppresses the warning to keep stdout clean; MCP returns the clamped value in the response envelope.
+2. **New resolved-set ceiling:** In `assembleReport` after `resolveUsers`, before the fan-out (`runner.go:77-84`). Today the code silently truncates: `if len(users) > cap { users = users[:cap] }`. We change this so when the *resolved* user set exceeds `MaxReportUsers` (1000), the call refuses with `fanout_limit_exceeded`, limit=users. This is the case where the user typed no explicit `--limit` but a wide selector (e.g. `--all` on a 2000-staff tenant) expands beyond the cap.
 
-This ordering means a runaway selector expansion (e.g. accidental `--all` on a large tenant) is refused at step 1, while user-explicit large `--limit` values produce a friendly clamp at step 2.
+After both checks, the existing `--limit N` truncation (for user-explicit narrowing where `N ≤ 1000`) continues unchanged. Net effect: by the time we reach the fan-out loop, both `len(users) ≤ 1000` and `--limit ≤ 1000` are guaranteed.
 
 ### `tdx project time`
 
@@ -125,7 +122,7 @@ Unit tests, no live tenant calls.
   - 1001 users ✗ — boundary
 - `RunForMCP` mirrors above and asserts the structured error shape (JSON marshaling matches the spec).
 - DST clarity: a 52-week range that crosses spring-forward is still 52 weeks. Existing `resolveWeeks` iteration already DST-safe.
-- `--limit N > 1000`: assert clamp to 1000 and stderr warning ("warning: --limit ... clamped to 1000 (max)"); JSON mode asserts no stderr noise.
+- `--limit N > 1000`: assert refusal at flag-validation (existing behavior preserved); assert error message now carries `fanout_limit_exceeded` shape.
 
 Test fixtures: stub `peoplesvc` returns 1001 synthetic users for the over-cap path.
 
