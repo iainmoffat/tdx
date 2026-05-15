@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/iainmoffat/tdx/internal/config"
 	"github.com/iainmoffat/tdx/internal/domain"
 )
 
@@ -238,6 +240,20 @@ func TestProjectTime_RefusesOverMaxWeekSpan(t *testing.T) {
 }
 
 func TestProjectTime_RefusesOverMaxUsers(t *testing.T) {
+	// User-cap fires AFTER profile resolution (ListResources needs profile in
+	// prod). Seed a minimal profile via TDX_CONFIG_HOME so config.ResolvePaths
+	// succeeds in CI environments without an on-disk profile.
+	dir := t.TempDir()
+	t.Setenv("TDX_CONFIG_HOME", dir)
+	paths := config.Paths{
+		Root:       dir,
+		ConfigFile: filepath.Join(dir, "config.yaml"),
+	}
+	require.NoError(t, config.NewProfileStore(paths).AddProfile(domain.Profile{
+		Name:          "default",
+		TenantBaseURL: "https://example.com",
+	}))
+
 	// Build a project-resource list of 1001 synthetic resources.
 	resources := make([]domain.ProjectResource, domain.MaxReportUsers+1)
 	for i := range resources {

@@ -68,17 +68,9 @@ Use --all-users to show entries for all project team members.`,
 				return fmt.Errorf("--from and --to must be given together")
 			}
 
-			paths, err := config.ResolvePaths()
-			if err != nil {
-				return err
-			}
-			auth := authsvc.New(paths)
-			profile, err := auth.ResolveProfile(profileFlag)
-			if err != nil {
-				return err
-			}
-
-			// Resolve date range.
+			// Resolve date range (pre-config so the week-cap can fire in CI tests
+			// that have no profile on disk — matches the established pattern
+			// where flag-validation runs before config.ResolvePaths).
 			var rng domain.DateRange
 			switch {
 			case weekFlag != "":
@@ -108,6 +100,16 @@ Use --all-users to show entries for all project team members.`,
 			if span := domain.WeekSpan(rng.From, rng.To); span > domain.MaxReportWeeks {
 				return fmt.Errorf("%w: weeks=%d max=%d; narrow the --from/--to range",
 					domain.ErrFanoutLimitExceeded, span, domain.MaxReportWeeks)
+			}
+
+			paths, err := config.ResolvePaths()
+			if err != nil {
+				return err
+			}
+			auth := authsvc.New(paths)
+			profile, err := auth.ResolveProfile(profileFlag)
+			if err != nil {
+				return err
 			}
 
 			// Resolve services.
