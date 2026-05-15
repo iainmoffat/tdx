@@ -34,8 +34,8 @@ func TestWeekSpan_AcrossWeeks(t *testing.T) {
 func TestWeekSpan_DSTSpringForward(t *testing.T) {
 	// Spring-forward 2026-03-08: the Saturday→Sunday transition loses 1 hour
 	// but is still exactly 1 week. WeekSpan must not use Sub()/24 arithmetic.
-	from := time.Date(2026, 3, 1, 0, 0, 0, 0, EasternTZ)  // Sun (before DST)
-	to := time.Date(2026, 3, 15, 0, 0, 0, 0, EasternTZ)   // Sun (after DST)
+	from := time.Date(2026, 3, 1, 0, 0, 0, 0, EasternTZ) // Sun (before DST)
+	to := time.Date(2026, 3, 15, 0, 0, 0, 0, EasternTZ)  // Sun (after DST)
 	require.Equal(t, 3, WeekSpan(from, to))
 }
 
