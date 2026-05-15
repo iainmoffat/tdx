@@ -23,10 +23,10 @@ Expected: Exit 1; stderr contains `fanout_limit_exceeded: limit=5000 max=1000`.
 ## Step 3: `tdx time report status` boundary (52 weeks ✓)
 
 ```
-tdx time report status --user me --from 2026-01-04 --to 2026-12-26 --json
+tdx time report status --user me --from 2026-01-04 --to 2026-12-27 --json
 ```
 
-Expected: Exit 0; JSON envelope has 52 weeks × 1 user = 52 rows (or fewer with `--include-zero=false`).
+Expected: Exit 0; JSON envelope has 52 weeks × 1 user = 52 rows (or fewer with `--include-zero=false`). Both dates are Sundays so the inclusive Sunday-anchored span is exactly 52 weeks.
 
 ## Step 4: `tdx project time` week cap
 
