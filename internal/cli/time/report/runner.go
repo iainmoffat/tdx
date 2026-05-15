@@ -303,6 +303,10 @@ func resolveWeeks(f statusFlags) ([]domain.WeekRef, error) {
 	if to.Before(from) {
 		return nil, fmt.Errorf("--to (%s) before --from (%s)", to.Format("2006-01-02"), from.Format("2006-01-02"))
 	}
+	if span := domain.WeekSpan(from, to); span > domain.MaxReportWeeks {
+		return nil, fmt.Errorf("%w: weeks=%d max=%d; narrow the --from/--to range",
+			domain.ErrFanoutLimitExceeded, span, domain.MaxReportWeeks)
+	}
 	startWeek := domain.WeekRefContaining(from)
 	endWeek := domain.WeekRefContaining(to)
 	weeks := []domain.WeekRef{}

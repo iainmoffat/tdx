@@ -917,3 +917,27 @@ func TestValidateStatusFlags_ProjectAloneIsValid(t *testing.T) {
 	})
 	require.NoError(t, err)
 }
+
+func TestResolveWeeks_RefusesOverMaxSpan(t *testing.T) {
+	f := statusFlags{from: "2020-01-01", to: "2030-01-01"}
+	_, err := resolveWeeks(f)
+	require.Error(t, err)
+	require.ErrorIs(t, err, domain.ErrFanoutLimitExceeded)
+	require.Contains(t, err.Error(), "weeks=")
+	require.Contains(t, err.Error(), "max=52")
+}
+
+func TestResolveWeeks_Allows52Weeks(t *testing.T) {
+	// 52 weeks exactly is the boundary — must pass.
+	f := statusFlags{from: "2026-01-04", to: "2026-12-27"}
+	weeks, err := resolveWeeks(f)
+	require.NoError(t, err)
+	require.Equal(t, 52, len(weeks))
+}
+
+func TestResolveWeeks_Refuses53Weeks(t *testing.T) {
+	// 53 weeks — one over the cap.
+	f := statusFlags{from: "2026-01-04", to: "2027-01-03"}
+	_, err := resolveWeeks(f)
+	require.ErrorIs(t, err, domain.ErrFanoutLimitExceeded)
+}
