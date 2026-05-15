@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -940,4 +941,46 @@ func TestResolveWeeks_Refuses53Weeks(t *testing.T) {
 	f := statusFlags{from: "2026-01-04", to: "2027-01-03"}
 	_, err := resolveWeeks(f)
 	require.ErrorIs(t, err, domain.ErrFanoutLimitExceeded)
+}
+
+func TestRunner_RefusesOverMaxUsers(t *testing.T) {
+	// Build 1001 synthetic users — one over the cap.
+	const n = domain.MaxReportUsers + 1
+	users := make([]domain.User, n)
+	for i := 0; i < n; i++ {
+		uid := fmt.Sprintf("u%04d", i)
+		users[i] = domain.User{UID: uid, FullName: uid, IsEmployee: true}
+	}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{},
+		People: &mockPeoplesvc{search: users},
+		Auth:   &mockAuthsvc{me: domain.User{UID: "me"}},
+	}
+	f := statusFlags{week: "2026-04-12", all: true, yes: true}
+	_, err := assembleReport(context.Background(), deps, f)
+	require.Error(t, err)
+	require.ErrorIs(t, err, domain.ErrFanoutLimitExceeded)
+	require.Contains(t, err.Error(), "users=1001")
+	require.Contains(t, err.Error(), "max=1000")
+}
+
+func TestRunner_Allows1000Users(t *testing.T) {
+	// 1000 users exactly — boundary, must pass.
+	const n = domain.MaxReportUsers
+	users := make([]domain.User, n)
+	reports := make(map[string]domain.WeekReport, n)
+	for i := 0; i < n; i++ {
+		uid := fmt.Sprintf("u%04d", i)
+		users[i] = domain.User{UID: uid, FullName: uid, IsEmployee: true}
+		reports[uid] = domain.WeekReport{}
+	}
+	deps := runnerDeps{
+		Time:   &mockTimesvc{reports: reports},
+		People: &mockPeoplesvc{search: users},
+		Auth:   &mockAuthsvc{me: domain.User{UID: "me"}},
+	}
+	f := statusFlags{week: "2026-04-12", all: true, yes: true, includeZero: true, limit: 1000}
+	rep, err := assembleReport(context.Background(), deps, f)
+	require.NoError(t, err)
+	require.Equal(t, 1000, len(rep.Rows))
 }
