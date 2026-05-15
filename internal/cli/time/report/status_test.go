@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
 )
 
@@ -94,4 +95,13 @@ func TestStatus_ResourcePoolMutuallyExclusiveWithOthers(t *testing.T) {
 	err := validateStatusFlags(f)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "exactly one")
+}
+
+func TestStatus_LimitOver1000WrapsSentinel(t *testing.T) {
+	f := statusFlags{week: "2026-04-12", users: []string{"u1"}, limit: 1500}
+	err := validateStatusFlags(f)
+	require.Error(t, err)
+	require.ErrorIs(t, err, domain.ErrFanoutLimitExceeded)
+	require.Contains(t, err.Error(), "limit=1500")
+	require.Contains(t, err.Error(), "max=1000")
 }

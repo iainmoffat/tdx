@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/iainmoffat/tdx/internal/svc/authsvc"
 	"github.com/iainmoffat/tdx/internal/svc/peoplesvc"
 	"github.com/iainmoffat/tdx/internal/svc/projectsvc"
@@ -84,7 +85,7 @@ Output formats (mutually exclusive; default: human table):
 	cmd.Flags().BoolVar(&f.includeZero, "include-zero", true, "include user-weeks with zero total minutes (default: include)")
 	cmd.Flags().BoolVar(&f.incomplete, "incomplete", false, "filter to user-weeks below --threshold (excludes permission-denied rows)")
 	cmd.Flags().Float64Var(&f.threshold, "threshold", 40, "hours threshold for --incomplete (default 40)")
-	cmd.Flags().IntVar(&f.limit, "limit", 200, "cap user count (hard cap: 1000)")
+	cmd.Flags().IntVar(&f.limit, "limit", 200, "cap user count (hard cap: 1000; resolved sets over 1000 are also refused)")
 	cmd.Flags().BoolVar(&f.json, "json", false, "emit JSON to stdout")
 	cmd.Flags().BoolVar(&f.csv, "csv", false, "emit CSV to stdout")
 	cmd.Flags().StringVar(&f.xlsx, "xlsx", "", "write XLSX to this file path")
@@ -140,9 +141,11 @@ func validateStatusFlags(f statusFlags) error {
 		return fmt.Errorf("only one output format flag may be set (--json, --csv, --xlsx)")
 	}
 
-	// Limit cap
-	if f.limit > 1000 {
-		return fmt.Errorf("--limit cannot exceed 1000")
+	// Limit cap (wraps domain.ErrFanoutLimitExceeded so MCP / tests can
+	// detect via errors.Is alongside the runtime resolved-user check).
+	if f.limit > domain.MaxReportUsers {
+		return fmt.Errorf("%w: limit=%d max=%d; --limit cannot exceed %d",
+			domain.ErrFanoutLimitExceeded, f.limit, domain.MaxReportUsers, domain.MaxReportUsers)
 	}
 
 	// Date range
