@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"strings"
 	"sync"
 	"testing"
@@ -222,4 +224,36 @@ func TestProjectTime_HumanTableHeaders(t *testing.T) {
 	for _, hdr := range []string{"DATE", "USER", "TYPE", "KIND", "REF", "HOURS", "DESCRIPTION"} {
 		require.True(t, strings.Contains(out, hdr), "expected header %q in output", hdr)
 	}
+}
+
+func TestProjectTime_RefusesOverMaxWeekSpan(t *testing.T) {
+	cmd := newTimeCmd(nil, nil)
+	cmd.SetArgs([]string{"259", "--from", "2020-01-01", "--to", "2030-01-01"})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+	err := cmd.Execute()
+	require.Error(t, err)
+	require.ErrorIs(t, err, domain.ErrFanoutLimitExceeded)
+	require.Contains(t, err.Error(), "weeks=")
+}
+
+func TestProjectTime_RefusesOverMaxUsers(t *testing.T) {
+	// Build a project-resource list of 1001 synthetic resources.
+	resources := make([]domain.ProjectResource, domain.MaxReportUsers+1)
+	for i := range resources {
+		resources[i] = domain.ProjectResource{
+			UID:      fmt.Sprintf("u%04d", i),
+			FullName: fmt.Sprintf("user %d", i),
+		}
+	}
+	psvc := &stubProjectsvc{resources: resources}
+	tsvc := &stubTimesvcTime{}
+	cmd := newTimeCmd(psvc, tsvc)
+	cmd.SetArgs([]string{"259", "--week", "2026-04-12", "--all-users"})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+	err := cmd.Execute()
+	require.Error(t, err)
+	require.ErrorIs(t, err, domain.ErrFanoutLimitExceeded)
+	require.Contains(t, err.Error(), "users=1001")
 }

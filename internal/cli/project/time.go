@@ -104,6 +104,12 @@ Use --all-users to show entries for all project team members.`,
 				rng = domain.DateRange{From: w.StartDate, To: w.EndDate}
 			}
 
+			// Refuse over-cap week ranges before any IO.
+			if span := domain.WeekSpan(rng.From, rng.To); span > domain.MaxReportWeeks {
+				return fmt.Errorf("%w: weeks=%d max=%d; narrow the --from/--to range",
+					domain.ErrFanoutLimitExceeded, span, domain.MaxReportWeeks)
+			}
+
 			// Resolve services.
 			ps := psvc
 			if ps == nil {
@@ -115,11 +121,6 @@ Use --all-users to show entries for all project team members.`,
 			}
 
 			// Resolve users.
-			authedUID, err := authedUIDFor(cmd.Context(), auth, profile)
-			if err != nil {
-				return err
-			}
-
 			var users []domain.User
 			switch {
 			case allUsersFlag:
@@ -132,6 +133,10 @@ Use --all-users to show entries for all project team members.`,
 					users = append(users, domain.User{UID: r.UID, FullName: r.FullName})
 				}
 			case len(userFlags) > 0:
+				authedUID, err := authedUIDFor(cmd.Context(), auth, profile)
+				if err != nil {
+					return err
+				}
 				peopleSvc := peoplesvc.New(paths)
 				users = make([]domain.User, 0, len(userFlags))
 				for _, arg := range userFlags {
@@ -153,6 +158,12 @@ Use --all-users to show entries for all project team members.`,
 					return fmt.Errorf("whoami: %w", err)
 				}
 				users = []domain.User{{UID: me.UID, FullName: me.FullName}}
+			}
+
+			// Refuse over-cap resolved user sets.
+			if len(users) > domain.MaxReportUsers {
+				return fmt.Errorf("%w: users=%d max=%d; narrow with --user or a smaller team",
+					domain.ErrFanoutLimitExceeded, len(users), domain.MaxReportUsers)
 			}
 
 			return runProjectTimeRender(cmd.Context(), cmd.OutOrStdout(), ts, profile,
