@@ -182,3 +182,25 @@ func TestStore_CanonicalYAML(t *testing.T) {
 	require.Contains(t, string(data), "name: default-week")
 	require.Contains(t, string(data), "description: Typical work week")
 }
+
+func TestTmplStore_Load_RejectsInvalidName(t *testing.T) {
+	dir := t.TempDir()
+	store := NewStore(config.Paths{Root: dir})
+	_, err := store.Load("default", "../../credentials")
+	require.Error(t, err)
+	require.ErrorIs(t, err, domain.ErrInvalidArtifactName)
+}
+
+func TestTmplStore_Delete_RejectsInvalidName(t *testing.T) {
+	dir := t.TempDir()
+	store := NewStore(config.Paths{Root: dir})
+	err := store.Delete("default", "../../credentials")
+	require.Error(t, err)
+	require.ErrorIs(t, err, domain.ErrInvalidArtifactName)
+}
+
+func TestTmplStore_Exists_FalseForInvalidName(t *testing.T) {
+	dir := t.TempDir()
+	store := NewStore(config.Paths{Root: dir})
+	require.False(t, store.Exists("default", "../../credentials"))
+}

@@ -55,6 +55,9 @@ func (s *Store) Save(profile string, tmpl domain.Template) error {
 // Load reads a template by name. Looks in the per-profile dir first, then
 // falls back to the legacy global dir.
 func (s *Store) Load(profile, name string) (domain.Template, error) {
+	if err := domain.ValidateArtifactName(name); err != nil {
+		return domain.Template{}, err
+	}
 	if data, err := os.ReadFile(s.profilePath(profile, name)); err == nil {
 		var tmpl domain.Template
 		if err := yaml.Unmarshal(data, &tmpl); err != nil {
@@ -80,6 +83,9 @@ func (s *Store) Load(profile, name string) (domain.Template, error) {
 
 // Exists reports whether a template exists at the per-profile or legacy path.
 func (s *Store) Exists(profile, name string) bool {
+	if err := domain.ValidateArtifactName(name); err != nil {
+		return false
+	}
 	if _, err := os.Stat(s.profilePath(profile, name)); err == nil {
 		return true
 	}
@@ -94,6 +100,9 @@ func (s *Store) Exists(profile, name string) bool {
 // Delete removes a template. Tries per-profile first; falls back to legacy if
 // not found there. Returns an error if the template doesn't exist in either.
 func (s *Store) Delete(profile, name string) error {
+	if err := domain.ValidateArtifactName(name); err != nil {
+		return err
+	}
 	if err := os.Remove(s.profilePath(profile, name)); err == nil {
 		return nil
 	} else if !os.IsNotExist(err) {
