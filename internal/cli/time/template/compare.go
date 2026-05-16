@@ -35,6 +35,9 @@ exactly like 'apply --dry-run', but is an explicit read-only command with
 no --yes or --dry-run flags.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := domain.ValidateArtifactName(args[0]); err != nil {
+				return err
+			}
 			name := args[0]
 
 			// --week is required.

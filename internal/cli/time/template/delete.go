@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/iainmoffat/tdx/internal/svc/authsvc"
 	"github.com/iainmoffat/tdx/internal/svc/tmplsvc"
 )
@@ -18,6 +19,9 @@ func newDeleteCmd() *cobra.Command {
 		Short: "Delete a saved template",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := domain.ValidateArtifactName(args[0]); err != nil {
+				return err
+			}
 			paths, err := config.ResolvePaths()
 			if err != nil {
 				return err

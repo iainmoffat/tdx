@@ -23,6 +23,9 @@ func newShowCmd() *cobra.Command {
 		Short: "Show a saved template",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := domain.ValidateArtifactName(args[0]); err != nil {
+				return err
+			}
 			paths, err := config.ResolvePaths()
 			if err != nil {
 				return err

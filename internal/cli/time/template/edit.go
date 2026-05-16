@@ -28,6 +28,9 @@ func newEditCmd() *cobra.Command {
 		Long:  "Edit template hours in an interactive grid.\nUse --web to open the editor in your browser instead of the terminal.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := domain.ValidateArtifactName(args[0]); err != nil {
+				return err
+			}
 			paths, err := config.ResolvePaths()
 			if err != nil {
 				return err
