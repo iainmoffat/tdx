@@ -95,8 +95,8 @@ func (d WeekDraft) Validate() error {
 	if d.Profile == "" {
 		return fmt.Errorf("draft profile is required")
 	}
-	if d.Name == "" {
-		return fmt.Errorf("draft name is required")
+	if err := ValidateArtifactName(d.Name); err != nil {
+		return fmt.Errorf("draft: %w", err)
 	}
 	if d.WeekStart.IsZero() {
 		return fmt.Errorf("draft weekStart is required")
