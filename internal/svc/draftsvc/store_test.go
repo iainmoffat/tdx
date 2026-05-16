@@ -1,12 +1,12 @@
 package draftsvc
 
 import (
-	"errors"
 	"testing"
 	"time"
 
 	"github.com/iainmoffat/tdx/internal/config"
 	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStore_SaveLoad(t *testing.T) {
@@ -105,9 +105,7 @@ func TestDraftStore_Load_RejectsInvalidName(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected error for invalid name")
 	}
-	if !isErrInvalidArtifactName(err) {
-		t.Errorf("expected ErrInvalidArtifactName, got %v", err)
-	}
+	require.ErrorIs(t, err, domain.ErrInvalidArtifactName)
 }
 
 func TestDraftStore_Delete_RejectsInvalidName(t *testing.T) {
@@ -118,9 +116,7 @@ func TestDraftStore_Delete_RejectsInvalidName(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected error for invalid name")
 	}
-	if !isErrInvalidArtifactName(err) {
-		t.Errorf("expected ErrInvalidArtifactName, got %v", err)
-	}
+	require.ErrorIs(t, err, domain.ErrInvalidArtifactName)
 }
 
 func TestDraftStore_Exists_FalseForInvalidName(t *testing.T) {
@@ -144,11 +140,5 @@ func TestDraftStore_SaveNew_RejectsInvalidName(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected error for invalid name")
 	}
-	if !isErrInvalidArtifactName(err) {
-		t.Errorf("expected ErrInvalidArtifactName, got %v", err)
-	}
-}
-
-func isErrInvalidArtifactName(err error) bool {
-	return errors.Is(err, domain.ErrInvalidArtifactName)
+	require.ErrorIs(t, err, domain.ErrInvalidArtifactName)
 }
