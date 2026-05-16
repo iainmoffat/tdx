@@ -40,4 +40,8 @@ var (
 	// would exceed the hard caps defined in caps.go. Wrap with details about
 	// which limit (weeks or users), the requested value, and the max.
 	ErrFanoutLimitExceeded = errors.New("fanout_limit_exceeded")
+
+	// ErrInvalidArtifactName indicates a template/draft/profile name failed
+	// validation. Wrap with the specific reason for the user.
+	ErrInvalidArtifactName = errors.New("invalid_artifact_name")
 )
