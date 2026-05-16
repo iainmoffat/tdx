@@ -22,6 +22,19 @@ var windowsReservedNames = map[string]struct{}{
 	"LPT6": {}, "LPT7": {}, "LPT8": {}, "LPT9": {},
 }
 
+// isAllowedNameRune reports whether r is an ASCII rune the allowlist permits
+// in a non-leading position: letters, digits, `.`, `_`, `-`.
+func isAllowedNameRune(r rune) bool {
+	switch {
+	case r >= 'A' && r <= 'Z',
+		r >= 'a' && r <= 'z',
+		r >= '0' && r <= '9',
+		r == '.', r == '_', r == '-':
+		return true
+	}
+	return false
+}
+
 // ValidateArtifactName returns nil if name is a safe filesystem component for
 // use as a template, draft, or profile name. See
 // docs/specs/2026-05-16-artifact-name-validation.md for the rule and threat
@@ -35,30 +48,28 @@ func ValidateArtifactName(name string) error {
 		return fmt.Errorf("%w: name exceeds 64 characters (got %d)", ErrInvalidArtifactName, len(name))
 	}
 	if !artifactNamePattern.MatchString(name) {
-		// Scan for invalid characters, prioritizing non-start-related issues.
-		var invalidCharPos int = -1
+		// Prefer reporting a non-leading invalid character over a leading-dot/hyphen
+		// reason — slashes and other unsafe characters are the security signal.
+		invalidPos := -1
+		var invalidRune rune
 		for i, r := range name {
-			if i > 0 {
-				// Check for invalid characters in non-first positions.
-				if r > 127 || (r != '.' && r != '_' && r != '-' &&
-					!(r >= 'A' && r <= 'Z') && !(r >= 'a' && r <= 'z') && !(r >= '0' && r <= '9')) {
-					invalidCharPos = i
-					break
-				}
+			if i > 0 && !isAllowedNameRune(r) {
+				invalidPos = i
+				invalidRune = r
+				break
 			}
 		}
-		if invalidCharPos >= 0 {
-			// Found an invalid character in a non-start position; report it.
+		if invalidPos >= 0 {
 			return fmt.Errorf("%w: name contains invalid character %q at position %d",
-				ErrInvalidArtifactName, rune(name[invalidCharPos]), invalidCharPos)
+				ErrInvalidArtifactName, invalidRune, invalidPos)
 		}
-		// No invalid character found in non-start positions; must be the first character.
 		if name[0] == '.' || name[0] == '-' {
 			return fmt.Errorf("%w: name may not start with %q", ErrInvalidArtifactName, string(name[0]))
 		}
-		// First character is invalid but not . or -.
-		return fmt.Errorf("%w: name contains invalid character %q at position %d",
-			ErrInvalidArtifactName, rune(name[0]), 0)
+		for _, r := range name[:1] {
+			return fmt.Errorf("%w: name contains invalid character %q at position %d",
+				ErrInvalidArtifactName, r, 0)
+		}
 	}
 	// Reserved-name check: match the substring before the first `.`.
 	head := name
