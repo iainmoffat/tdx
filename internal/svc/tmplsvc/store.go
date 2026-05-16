@@ -39,6 +39,9 @@ func (s *Store) legacyPath(name string) string {
 
 // Save writes a template into the per-profile templates directory.
 func (s *Store) Save(profile string, tmpl domain.Template) error {
+	if err := tmpl.Validate(); err != nil {
+		return fmt.Errorf("validate template: %w", err)
+	}
 	dir := s.paths.ProfileTemplatesDir(profile)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("create templates dir: %w", err)
