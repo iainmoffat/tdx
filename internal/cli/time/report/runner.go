@@ -54,7 +54,6 @@ type runnerDeps struct {
 
 const (
 	maxConcurrency = 5
-	hardLimit      = 1000
 	// employeeLimit caps the people search when filtering by IsEmployee.
 	// Tenants commonly have 1000-2000 employees; 5000 is well under TD's 10K behavior cap.
 	employeeLimit = 5000
@@ -74,10 +73,19 @@ func assembleReport(ctx context.Context, deps runnerDeps, f statusFlags) (domain
 		return domain.TimeStatusReport{}, err
 	}
 
-	// Apply --limit cap.
+	// Refuse if resolved user set exceeds the hard cap. This catches wide-
+	// selector cases (e.g. --all on a multi-thousand-staff tenant) that today
+	// would silently truncate. --limit N (user-explicit narrowing where
+	// N ≤ MaxReportUsers) is checked separately in validateStatusFlags.
+	if len(users) > domain.MaxReportUsers {
+		return domain.TimeStatusReport{}, fmt.Errorf("%w: users=%d max=%d; narrow with --resource-pool, --account, or --manager",
+			domain.ErrFanoutLimitExceeded, len(users), domain.MaxReportUsers)
+	}
+
+	// Apply --limit cap (user-explicit narrowing).
 	cap := f.limit
-	if cap <= 0 || cap > hardLimit {
-		cap = hardLimit
+	if cap <= 0 {
+		cap = domain.MaxReportUsers
 	}
 	if len(users) > cap {
 		users = users[:cap]
@@ -302,6 +310,10 @@ func resolveWeeks(f statusFlags) ([]domain.WeekRef, error) {
 	}
 	if to.Before(from) {
 		return nil, fmt.Errorf("--to (%s) before --from (%s)", to.Format("2006-01-02"), from.Format("2006-01-02"))
+	}
+	if span := domain.WeekSpan(from, to); span > domain.MaxReportWeeks {
+		return nil, fmt.Errorf("%w: weeks=%d max=%d; narrow the --from/--to range",
+			domain.ErrFanoutLimitExceeded, span, domain.MaxReportWeeks)
 	}
 	startWeek := domain.WeekRefContaining(from)
 	endWeek := domain.WeekRefContaining(to)

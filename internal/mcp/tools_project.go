@@ -547,6 +547,11 @@ func getProjectTimeReviewHandler(svcs Services) func(context.Context, *sdkmcp.Ca
 			rng = domain.DateRange{From: w.StartDate, To: w.EndDate}
 		}
 
+		if span := domain.WeekSpan(rng.From, rng.To); span > domain.MaxReportWeeks {
+			return errorResult(fmt.Sprintf("%v: weeks=%d max=%d; narrow the from/to range",
+				domain.ErrFanoutLimitExceeded, span, domain.MaxReportWeeks)), nil, nil
+		}
+
 		// Resolve users.
 		var users []domain.User
 		switch {
@@ -577,6 +582,11 @@ func getProjectTimeReviewHandler(svcs Services) func(context.Context, *sdkmcp.Ca
 				return errorResult(fmt.Sprintf("get_project_time_review: whoami: %v", err)), nil, nil
 			}
 			users = []domain.User{{UID: me.UID, FullName: me.FullName}}
+		}
+
+		if len(users) > domain.MaxReportUsers {
+			return errorResult(fmt.Sprintf("%v: users=%d max=%d; narrow with userUIDs or a smaller team",
+				domain.ErrFanoutLimitExceeded, len(users), domain.MaxReportUsers)), nil, nil
 		}
 
 		// Fan-out per user.
