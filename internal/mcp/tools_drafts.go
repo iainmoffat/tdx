@@ -829,6 +829,9 @@ func parseDraftRefMCP(s string) (time.Time, string, error) {
 	} else {
 		dateStr, name = s, "default"
 	}
+	if err := domain.ValidateArtifactName(name); err != nil {
+		return time.Time{}, "", err
+	}
 	d, err := time.ParseInLocation("2006-01-02", dateStr, domain.EasternTZ)
 	if err != nil {
 		return time.Time{}, "", err

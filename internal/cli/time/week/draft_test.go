@@ -96,3 +96,9 @@ func TestSingleArgWeekCommands_AcceptZeroArgs(t *testing.T) {
 		})
 	}
 }
+
+func TestParseDraftRef_RejectsInvalidName(t *testing.T) {
+	_, _, err := ParseDraftRef("2026-04-12/../../foo")
+	require.Error(t, err)
+	require.ErrorIs(t, err, domain.ErrInvalidArtifactName)
+}
