@@ -96,6 +96,10 @@ func listTemplatesHandler(svcs Services) func(context.Context, *sdkmcp.CallToolR
 
 func getTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, getTemplateArgs) (*sdkmcp.CallToolResult, any, error) {
 	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args getTemplateArgs) (*sdkmcp.CallToolResult, any, error) {
+		if err := domain.ValidateArtifactName(args.Name); err != nil {
+			return errorResult(err.Error()), nil, nil
+		}
+
 		profile := resolveProfile(svcs, args.Profile)
 		tmpl, err := svcs.Template.Store().Load(profile, args.Name)
 		if err != nil {
@@ -111,6 +115,10 @@ func getTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallToolReq
 
 func createTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, createTemplateArgs) (*sdkmcp.CallToolResult, any, error) {
 	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args createTemplateArgs) (*sdkmcp.CallToolResult, any, error) {
+		if err := domain.ValidateArtifactName(args.Name); err != nil {
+			return errorResult(err.Error()), nil, nil
+		}
+
 		if result, ok := confirmGate(args.Confirm, "Set confirm: true to create the template."); !ok {
 			return result, nil, nil
 		}
@@ -146,6 +154,10 @@ func createTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallTool
 
 func updateTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, updateTemplateArgs) (*sdkmcp.CallToolResult, any, error) {
 	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args updateTemplateArgs) (*sdkmcp.CallToolResult, any, error) {
+		if err := domain.ValidateArtifactName(args.Name); err != nil {
+			return errorResult(err.Error()), nil, nil
+		}
+
 		if result, ok := confirmGate(args.Confirm, "Set confirm: true to update the template."); !ok {
 			return result, nil, nil
 		}
@@ -173,6 +185,10 @@ func updateTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallTool
 
 func deleteTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, deleteTemplateArgs) (*sdkmcp.CallToolResult, any, error) {
 	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args deleteTemplateArgs) (*sdkmcp.CallToolResult, any, error) {
+		if err := domain.ValidateArtifactName(args.Name); err != nil {
+			return errorResult(err.Error()), nil, nil
+		}
+
 		if result, ok := confirmGate(args.Confirm, "Set confirm: true to delete the template."); !ok {
 			return result, nil, nil
 		}
@@ -192,6 +208,10 @@ func deleteTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallTool
 
 func deriveTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, deriveTemplateArgs) (*sdkmcp.CallToolResult, any, error) {
 	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args deriveTemplateArgs) (*sdkmcp.CallToolResult, any, error) {
+		if err := domain.ValidateArtifactName(args.Name); err != nil {
+			return errorResult(err.Error()), nil, nil
+		}
+
 		if result, ok := confirmGate(args.Confirm, "Set confirm: true to derive the template from the week."); !ok {
 			return result, nil, nil
 		}

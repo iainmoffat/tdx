@@ -84,6 +84,10 @@ type reconcileResult struct {
 
 func compareHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, compareArgs) (*sdkmcp.CallToolResult, any, error) {
 	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args compareArgs) (*sdkmcp.CallToolResult, any, error) {
+		if err := domain.ValidateArtifactName(args.Name); err != nil {
+			return errorResult(err.Error()), nil, nil
+		}
+
 		profile := resolveProfile(svcs, args.Profile)
 
 		tmpl, err := svcs.Template.Store().Load(profile, args.Name)
@@ -140,6 +144,10 @@ func compareHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest
 
 func previewHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, previewArgs) (*sdkmcp.CallToolResult, any, error) {
 	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args previewArgs) (*sdkmcp.CallToolResult, any, error) {
+		if err := domain.ValidateArtifactName(args.Name); err != nil {
+			return errorResult(err.Error()), nil, nil
+		}
+
 		profile := resolveProfile(svcs, args.Profile)
 
 		tmpl, err := svcs.Template.Store().Load(profile, args.Name)
@@ -270,6 +278,10 @@ func parseOverrides(strs []string) ([]tmplsvc.Override, error) {
 
 func applyTemplateHandler(svcs Services) func(context.Context, *sdkmcp.CallToolRequest, applyTemplateArgs) (*sdkmcp.CallToolResult, any, error) {
 	return func(ctx context.Context, req *sdkmcp.CallToolRequest, args applyTemplateArgs) (*sdkmcp.CallToolResult, any, error) {
+		if err := domain.ValidateArtifactName(args.Name); err != nil {
+			return errorResult(err.Error()), nil, nil
+		}
+
 		if result, ok := confirmGate(args.Confirm, "Call preview_apply_time_template first, then set confirm: true and pass the expectedDiffHash."); !ok {
 			return result, nil, nil
 		}

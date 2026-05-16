@@ -1,6 +1,7 @@
 package tmplsvc
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -38,6 +39,9 @@ func (s *Store) legacyPath(name string) string {
 
 // Save writes a template into the per-profile templates directory.
 func (s *Store) Save(profile string, tmpl domain.Template) error {
+	if err := tmpl.Validate(); err != nil {
+		return fmt.Errorf("validate template: %w", err)
+	}
 	dir := s.paths.ProfileTemplatesDir(profile)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("create templates dir: %w", err)
@@ -55,6 +59,9 @@ func (s *Store) Save(profile string, tmpl domain.Template) error {
 // Load reads a template by name. Looks in the per-profile dir first, then
 // falls back to the legacy global dir.
 func (s *Store) Load(profile, name string) (domain.Template, error) {
+	if err := domain.ValidateArtifactName(name); err != nil {
+		return domain.Template{}, err
+	}
 	if data, err := os.ReadFile(s.profilePath(profile, name)); err == nil {
 		var tmpl domain.Template
 		if err := yaml.Unmarshal(data, &tmpl); err != nil {
@@ -80,6 +87,9 @@ func (s *Store) Load(profile, name string) (domain.Template, error) {
 
 // Exists reports whether a template exists at the per-profile or legacy path.
 func (s *Store) Exists(profile, name string) bool {
+	if err := domain.ValidateArtifactName(name); err != nil {
+		return false
+	}
 	if _, err := os.Stat(s.profilePath(profile, name)); err == nil {
 		return true
 	}
@@ -94,6 +104,9 @@ func (s *Store) Exists(profile, name string) bool {
 // Delete removes a template. Tries per-profile first; falls back to legacy if
 // not found there. Returns an error if the template doesn't exist in either.
 func (s *Store) Delete(profile, name string) error {
+	if err := domain.ValidateArtifactName(name); err != nil {
+		return err
+	}
 	if err := os.Remove(s.profilePath(profile, name)); err == nil {
 		return nil
 	} else if !os.IsNotExist(err) {
@@ -125,6 +138,10 @@ func (s *Store) List(profile string) ([]domain.Template, error) {
 			name := strings.TrimSuffix(e.Name(), ".yaml")
 			t, err := s.Load(profile, name)
 			if err != nil {
+				if errors.Is(err, domain.ErrInvalidArtifactName) {
+					fmt.Fprintf(os.Stderr, "warning: skipping template with invalid name %q\n", name)
+					continue
+				}
 				return nil, fmt.Errorf("load template %q: %w", name, err)
 			}
 			seen[name] = struct{}{}
@@ -146,6 +163,10 @@ func (s *Store) List(profile string) ([]domain.Template, error) {
 				}
 				t, err := s.Load(profile, name)
 				if err != nil {
+					if errors.Is(err, domain.ErrInvalidArtifactName) {
+						fmt.Fprintf(os.Stderr, "warning: skipping template with invalid name %q\n", name)
+						continue
+					}
 					return nil, fmt.Errorf("load legacy template %q: %w", name, err)
 				}
 				out = append(out, t)

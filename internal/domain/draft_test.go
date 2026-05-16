@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
@@ -119,6 +120,17 @@ func TestWeekDraft_Validate(t *testing.T) {
 			t.Errorf("%s: expected error", c.name)
 		}
 	}
+}
+
+func TestWeekDraft_Validate_RejectsInvalidName(t *testing.T) {
+	d := WeekDraft{
+		Profile:   "default",
+		Name:      "../../foo",
+		WeekStart: time.Date(2026, 4, 12, 0, 0, 0, 0, EasternTZ),
+	}
+	err := d.Validate()
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrInvalidArtifactName)
 }
 
 func TestComputeCellState(t *testing.T) {

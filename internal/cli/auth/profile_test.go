@@ -2,8 +2,10 @@ package auth
 
 import (
 	"bytes"
+	"io"
 	"testing"
 
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
 )
 
@@ -81,4 +83,14 @@ func TestProfileUse_SwitchesDefault(t *testing.T) {
 	cmd.SetArgs([]string{"profile", "list"})
 	require.NoError(t, cmd.Execute())
 	require.Contains(t, out.String(), "* second")
+}
+
+func TestProfileUse_RejectsInvalidName(t *testing.T) {
+	cmd := newProfileCmd()
+	cmd.SetArgs([]string{"use", ".."})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+	err := cmd.Execute()
+	require.Error(t, err)
+	require.ErrorIs(t, err, domain.ErrInvalidArtifactName)
 }

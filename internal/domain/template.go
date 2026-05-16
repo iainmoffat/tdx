@@ -118,8 +118,8 @@ func (h WeekHours) ToMinutesExact(d time.Weekday) (int, bool) {
 
 // Validate checks structural integrity of a template.
 func (t Template) Validate() error {
-	if t.Name == "" {
-		return fmt.Errorf("template name is required")
+	if err := ValidateArtifactName(t.Name); err != nil {
+		return fmt.Errorf("template: %w", err)
 	}
 	if len(t.Rows) == 0 {
 		return fmt.Errorf("template %q must have at least one row", t.Name)

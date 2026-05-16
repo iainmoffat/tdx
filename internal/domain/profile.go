@@ -18,11 +18,8 @@ type Profile struct {
 
 // Validate returns nil if the profile is structurally sound.
 func (p Profile) Validate() error {
-	if strings.TrimSpace(p.Name) == "" {
-		return fmt.Errorf("%w: name is required", ErrInvalidProfile)
-	}
-	if strings.ContainsAny(p.Name, "/\\ \t") {
-		return fmt.Errorf("%w: name may not contain slashes or whitespace", ErrInvalidProfile)
+	if err := ValidateArtifactName(p.Name); err != nil {
+		return err
 	}
 	if strings.TrimSpace(p.TenantBaseURL) == "" {
 		return fmt.Errorf("%w: tenantBaseURL is required", ErrInvalidProfile)

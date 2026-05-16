@@ -191,3 +191,11 @@ func TestService_LogoutClearsCredentialsOnly(t *testing.T) {
 	_, err = creds.GetToken("ufl-test")
 	require.ErrorIs(t, err, domain.ErrNoCredentials)
 }
+
+func TestResolveProfile_RejectsInvalidExplicitName(t *testing.T) {
+	dir := t.TempDir()
+	svc := New(config.Paths{Root: dir, ConfigFile: filepath.Join(dir, "config.yaml")})
+	_, err := svc.ResolveProfile("..")
+	require.Error(t, err)
+	require.ErrorIs(t, err, domain.ErrInvalidArtifactName)
+}

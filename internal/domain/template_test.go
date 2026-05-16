@@ -95,7 +95,7 @@ func TestTemplate_Validate(t *testing.T) {
 
 	t.Run("valid", func(t *testing.T) {
 		tmpl := Template{
-			Name: "My Template",
+			Name: "MyTemplate",
 			Rows: []TemplateRow{makeRow("row-1"), makeRow("row-2")},
 		}
 		require.NoError(t, tmpl.Validate())
@@ -111,7 +111,7 @@ func TestTemplate_Validate(t *testing.T) {
 
 	t.Run("no rows", func(t *testing.T) {
 		tmpl := Template{
-			Name: "My Template",
+			Name: "MyTemplate",
 			Rows: nil,
 		}
 		require.Error(t, tmpl.Validate())
@@ -119,7 +119,7 @@ func TestTemplate_Validate(t *testing.T) {
 
 	t.Run("duplicate row IDs", func(t *testing.T) {
 		tmpl := Template{
-			Name: "My Template",
+			Name: "MyTemplate",
 			Rows: []TemplateRow{makeRow("row-1"), makeRow("row-1")},
 		}
 		require.Error(t, tmpl.Validate())
@@ -127,11 +127,21 @@ func TestTemplate_Validate(t *testing.T) {
 
 	t.Run("empty row ID", func(t *testing.T) {
 		tmpl := Template{
-			Name: "My Template",
+			Name: "MyTemplate",
 			Rows: []TemplateRow{makeRow("")},
 		}
 		require.Error(t, tmpl.Validate())
 	})
+}
+
+func TestTemplate_Validate_RejectsInvalidName(t *testing.T) {
+	tmpl := Template{
+		Name: "../../foo",
+		Rows: []TemplateRow{{ID: "r1"}},
+	}
+	err := tmpl.Validate()
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrInvalidArtifactName)
 }
 
 // ---------------------------------------------------------------------------

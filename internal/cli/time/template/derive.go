@@ -27,6 +27,9 @@ func newDeriveCmd() *cobra.Command {
 		Short: "Create a template from a live week's entries",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := domain.ValidateArtifactName(args[0]); err != nil {
+				return err
+			}
 			name := args[0]
 			if fromWeek == "" {
 				return fmt.Errorf("--from-week is required")

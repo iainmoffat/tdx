@@ -1,11 +1,14 @@
 package draftsvc
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/iainmoffat/tdx/internal/config"
 	"github.com/iainmoffat/tdx/internal/domain"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStore_SaveLoad(t *testing.T) {
@@ -94,4 +97,71 @@ func TestStore_SaveNew_RefusesCollision(t *testing.T) {
 	if err := s.SaveNew(d); err == nil {
 		t.Errorf("SaveNew should refuse to overwrite existing draft")
 	}
+}
+
+func TestDraftStore_Load_RejectsInvalidName(t *testing.T) {
+	dir := t.TempDir()
+	store := NewStore(config.Paths{Root: dir})
+	weekStart := time.Date(2026, 4, 12, 0, 0, 0, 0, domain.EasternTZ)
+	_, err := store.Load("default", weekStart, "../../credentials")
+	if err == nil {
+		t.Errorf("expected error for invalid name")
+	}
+	require.ErrorIs(t, err, domain.ErrInvalidArtifactName)
+}
+
+func TestDraftStore_Delete_RejectsInvalidName(t *testing.T) {
+	dir := t.TempDir()
+	store := NewStore(config.Paths{Root: dir})
+	weekStart := time.Date(2026, 4, 12, 0, 0, 0, 0, domain.EasternTZ)
+	err := store.Delete("default", weekStart, "../../credentials")
+	if err == nil {
+		t.Errorf("expected error for invalid name")
+	}
+	require.ErrorIs(t, err, domain.ErrInvalidArtifactName)
+}
+
+func TestDraftStore_Exists_FalseForInvalidName(t *testing.T) {
+	dir := t.TempDir()
+	store := NewStore(config.Paths{Root: dir})
+	weekStart := time.Date(2026, 4, 12, 0, 0, 0, 0, domain.EasternTZ)
+	if store.Exists("default", weekStart, "../../credentials") {
+		t.Errorf("expected Exists to return false for invalid name")
+	}
+}
+
+func TestDraftStore_SaveNew_RejectsInvalidName(t *testing.T) {
+	dir := t.TempDir()
+	store := NewStore(config.Paths{Root: dir})
+	d := domain.WeekDraft{
+		Profile:   "default",
+		Name:      "../../foo",
+		WeekStart: time.Date(2026, 4, 12, 0, 0, 0, 0, domain.EasternTZ),
+	}
+	err := store.SaveNew(d)
+	if err == nil {
+		t.Errorf("expected error for invalid name")
+	}
+	require.ErrorIs(t, err, domain.ErrInvalidArtifactName)
+}
+
+func TestDraftStore_List_SkipsInvalidNamesGracefully(t *testing.T) {
+	dir := t.TempDir()
+	paths := config.Paths{Root: dir}
+	store := NewStore(paths)
+
+	weekStart := time.Date(2026, 4, 12, 0, 0, 0, 0, domain.EasternTZ)
+	require.NoError(t, store.Save(domain.WeekDraft{
+		Profile: "default", Name: "valid", WeekStart: weekStart,
+	}))
+
+	// Drop a stray file with an invalid name into the same week dir.
+	dateDir := weekStart.In(domain.EasternTZ).Format("2006-01-02")
+	bogus := filepath.Join(paths.ProfileWeeksDir("default"), dateDir, "..bogus.yaml")
+	require.NoError(t, os.WriteFile(bogus, []byte("profile: default\nname: ..bogus\nweekStart: 2026-04-12T00:00:00-04:00\n"), 0o600))
+
+	drafts, err := store.List("default")
+	require.NoError(t, err)
+	require.Len(t, drafts, 1)
+	require.Equal(t, "valid", drafts[0].Name)
 }

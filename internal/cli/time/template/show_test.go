@@ -2,6 +2,7 @@ package template
 
 import (
 	"bytes"
+	"io"
 	"testing"
 
 	"github.com/iainmoffat/tdx/internal/domain"
@@ -56,6 +57,16 @@ func TestShowCmd_NotFound(t *testing.T) {
 	err := cmd.Execute()
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "not found")
+}
+
+func TestShow_RejectsInvalidName(t *testing.T) {
+	cmd := newShowCmd()
+	cmd.SetArgs([]string{"../../foo"})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+	err := cmd.Execute()
+	require.Error(t, err)
+	require.ErrorIs(t, err, domain.ErrInvalidArtifactName)
 }
 
 func TestShowCmd_JSON(t *testing.T) {

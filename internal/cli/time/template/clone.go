@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/iainmoffat/tdx/internal/config"
+	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/iainmoffat/tdx/internal/svc/authsvc"
 	"github.com/iainmoffat/tdx/internal/svc/tmplsvc"
 )
@@ -19,6 +20,12 @@ func newCloneCmd() *cobra.Command {
 		Short: "Clone a template under a new name",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := domain.ValidateArtifactName(args[0]); err != nil {
+				return fmt.Errorf("source name: %w", err)
+			}
+			if err := domain.ValidateArtifactName(args[1]); err != nil {
+				return fmt.Errorf("destination name: %w", err)
+			}
 			src, dst := args[0], args[1]
 
 			paths, err := config.ResolvePaths()

@@ -44,6 +44,9 @@ func newApplyCmd() *cobra.Command {
 		Short: "Apply a template to create time entries for a week",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := domain.ValidateArtifactName(args[0]); err != nil {
+				return err
+			}
 			name := args[0]
 
 			// --week is required.

@@ -104,6 +104,9 @@ func (s *ProfileStore) UpdateProfile(p domain.Profile) error {
 // RemoveProfile deletes a profile by name.
 // If the removed profile was the default, another remaining profile becomes default.
 func (s *ProfileStore) RemoveProfile(name string) error {
+	if err := domain.ValidateArtifactName(name); err != nil {
+		return err
+	}
 	cfg, err := s.Load()
 	if err != nil {
 		return err
@@ -131,6 +134,9 @@ func (s *ProfileStore) RemoveProfile(name string) error {
 
 // GetProfile returns a profile by name, or ErrProfileNotFound.
 func (s *ProfileStore) GetProfile(name string) (domain.Profile, error) {
+	if err := domain.ValidateArtifactName(name); err != nil {
+		return domain.Profile{}, err
+	}
 	cfg, err := s.Load()
 	if err != nil {
 		return domain.Profile{}, err
@@ -145,6 +151,9 @@ func (s *ProfileStore) GetProfile(name string) (domain.Profile, error) {
 
 // SetDefault sets the default profile, verifying it exists.
 func (s *ProfileStore) SetDefault(name string) error {
+	if err := domain.ValidateArtifactName(name); err != nil {
+		return err
+	}
 	cfg, err := s.Load()
 	if err != nil {
 		return err

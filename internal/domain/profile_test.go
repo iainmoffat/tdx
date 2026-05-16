@@ -20,7 +20,7 @@ func TestProfile_Validate_RejectsEmptyName(t *testing.T) {
 		Name:          "",
 		TenantBaseURL: "https://demotemplate.teamdynamix.com/",
 	}
-	require.ErrorIs(t, p.Validate(), ErrInvalidProfile)
+	require.ErrorIs(t, p.Validate(), ErrInvalidArtifactName)
 }
 
 func TestProfile_Validate_RejectsMissingURL(t *testing.T) {
@@ -55,7 +55,7 @@ func TestProfile_Validate_RejectsNameWithSlash(t *testing.T) {
 		Name:          "bad/name",
 		TenantBaseURL: "https://demotemplate.teamdynamix.com/",
 	}
-	require.ErrorIs(t, p.Validate(), ErrInvalidProfile)
+	require.ErrorIs(t, p.Validate(), ErrInvalidArtifactName)
 }
 
 func TestProfile_Validate_RejectsUnparseableURL(t *testing.T) {
@@ -114,4 +114,18 @@ func TestProfileTicketAppIDOmittedWhenZero(t *testing.T) {
 	// Verify the YAML output does not contain "ticketAppID"
 	yamlStr := string(data)
 	require.NotContains(t, yamlStr, "ticketAppID")
+}
+
+func TestProfile_Validate_RejectsDotDot(t *testing.T) {
+	p := Profile{Name: "..", TenantBaseURL: "https://example.com"}
+	err := p.Validate()
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrInvalidArtifactName)
+}
+
+func TestProfile_Validate_RejectsDotPrefix(t *testing.T) {
+	p := Profile{Name: ".hidden", TenantBaseURL: "https://example.com"}
+	err := p.Validate()
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrInvalidArtifactName)
 }
