@@ -134,3 +134,36 @@ func TestProfileStore_UpdateProfileNotFound(t *testing.T) {
 	err := store.UpdateProfile(domain.Profile{Name: "ghost", TenantBaseURL: "https://x.example.com/"})
 	require.ErrorIs(t, err, domain.ErrProfileNotFound)
 }
+
+func TestProfileStore_GetProfile_RejectsInvalidName(t *testing.T) {
+	dir := t.TempDir()
+	store := NewProfileStore(Paths{Root: dir, ConfigFile: filepath.Join(dir, "config.yaml")})
+	_, err := store.GetProfile("..")
+	require.Error(t, err)
+	require.ErrorIs(t, err, domain.ErrInvalidArtifactName)
+}
+
+func TestProfileStore_RemoveProfile_RejectsInvalidName(t *testing.T) {
+	dir := t.TempDir()
+	store := NewProfileStore(Paths{Root: dir, ConfigFile: filepath.Join(dir, "config.yaml")})
+	err := store.RemoveProfile("..")
+	require.Error(t, err)
+	require.ErrorIs(t, err, domain.ErrInvalidArtifactName)
+}
+
+func TestProfileStore_SetDefault_RejectsInvalidName(t *testing.T) {
+	dir := t.TempDir()
+	store := NewProfileStore(Paths{Root: dir, ConfigFile: filepath.Join(dir, "config.yaml")})
+	err := store.SetDefault("..")
+	require.Error(t, err)
+	require.ErrorIs(t, err, domain.ErrInvalidArtifactName)
+}
+
+func TestProfileStore_UpdateProfile_RejectsInvalidName(t *testing.T) {
+	dir := t.TempDir()
+	store := NewProfileStore(Paths{Root: dir, ConfigFile: filepath.Join(dir, "config.yaml")})
+	p := domain.Profile{Name: "..", TenantBaseURL: "https://example.com"}
+	err := store.UpdateProfile(p)
+	require.Error(t, err)
+	require.ErrorIs(t, err, domain.ErrInvalidArtifactName)
+}
