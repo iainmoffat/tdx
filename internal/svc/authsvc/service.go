@@ -149,6 +149,9 @@ func (s *Service) Status(ctx context.Context, profileName string) (Status, error
 // Used by commands that accept --profile.
 func (s *Service) ResolveProfile(explicit string) (string, error) {
 	if explicit != "" {
+		if err := domain.ValidateArtifactName(explicit); err != nil {
+			return "", err
+		}
 		return explicit, nil
 	}
 	cfg, err := s.profiles.Load()
@@ -157,6 +160,9 @@ func (s *Service) ResolveProfile(explicit string) (string, error) {
 	}
 	if cfg.DefaultProfile == "" {
 		return "", fmt.Errorf("%w: no default profile configured", domain.ErrProfileNotFound)
+	}
+	if err := domain.ValidateArtifactName(cfg.DefaultProfile); err != nil {
+		return "", fmt.Errorf("default profile invalid: %w", err)
 	}
 	return cfg.DefaultProfile, nil
 }
