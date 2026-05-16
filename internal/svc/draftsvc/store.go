@@ -1,6 +1,7 @@
 package draftsvc
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -177,6 +178,10 @@ func (s *Store) List(profile string) ([]domain.WeekDraft, error) {
 			name := strings.TrimSuffix(f.Name(), ".yaml")
 			d, err := s.Load(profile, weekStart, name)
 			if err != nil {
+				if errors.Is(err, domain.ErrInvalidArtifactName) {
+					fmt.Fprintf(os.Stderr, "warning: skipping draft with invalid name %q\n", name)
+					continue
+				}
 				return nil, err
 			}
 			drafts = append(drafts, d)

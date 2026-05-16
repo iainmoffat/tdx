@@ -204,3 +204,21 @@ func TestTmplStore_Exists_FalseForInvalidName(t *testing.T) {
 	store := NewStore(config.Paths{Root: dir})
 	require.False(t, store.Exists("default", "../../credentials"))
 }
+
+func TestTmplStore_List_SkipsInvalidNamesGracefully(t *testing.T) {
+	dir := t.TempDir()
+	paths := config.Paths{Root: dir}
+	store := NewStore(paths)
+
+	// Seed: one valid template via Save, then one invalid file written directly.
+	require.NoError(t, store.Save("default", domain.Template{
+		Name: "valid", Rows: []domain.TemplateRow{{ID: "r1"}},
+	}))
+	invalidDir := paths.ProfileTemplatesDir("default")
+	require.NoError(t, os.WriteFile(filepath.Join(invalidDir, "..invalid.yaml"), []byte("name: ..invalid\nrows: []\n"), 0o600))
+
+	templates, err := store.List("default")
+	require.NoError(t, err)
+	require.Len(t, templates, 1)
+	require.Equal(t, "valid", templates[0].Name)
+}

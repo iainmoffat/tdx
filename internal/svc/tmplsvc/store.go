@@ -1,6 +1,7 @@
 package tmplsvc
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -134,6 +135,10 @@ func (s *Store) List(profile string) ([]domain.Template, error) {
 			name := strings.TrimSuffix(e.Name(), ".yaml")
 			t, err := s.Load(profile, name)
 			if err != nil {
+				if errors.Is(err, domain.ErrInvalidArtifactName) {
+					fmt.Fprintf(os.Stderr, "warning: skipping template with invalid name %q\n", name)
+					continue
+				}
 				return nil, fmt.Errorf("load template %q: %w", name, err)
 			}
 			seen[name] = struct{}{}
@@ -155,6 +160,10 @@ func (s *Store) List(profile string) ([]domain.Template, error) {
 				}
 				t, err := s.Load(profile, name)
 				if err != nil {
+					if errors.Is(err, domain.ErrInvalidArtifactName) {
+						fmt.Fprintf(os.Stderr, "warning: skipping template with invalid name %q\n", name)
+						continue
+					}
 					return nil, fmt.Errorf("load legacy template %q: %w", name, err)
 				}
 				out = append(out, t)
