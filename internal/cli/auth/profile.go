@@ -57,6 +57,9 @@ func newProfileAddCmd() *cobra.Command {
 		Short: "Add a new profile",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := domain.ValidateArtifactName(args[0]); err != nil {
+				return err
+			}
 			store, err := newProfileStore()
 			if err != nil {
 				return err
@@ -80,6 +83,9 @@ func newProfileRemoveCmd() *cobra.Command {
 		Short: "Remove a profile",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := domain.ValidateArtifactName(args[0]); err != nil {
+				return err
+			}
 			store, err := newProfileStore()
 			if err != nil {
 				return err
@@ -99,6 +105,9 @@ func newProfileUseCmd() *cobra.Command {
 		Short: "Set the default profile",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := domain.ValidateArtifactName(args[0]); err != nil {
+				return err
+			}
 			store, err := newProfileStore()
 			if err != nil {
 				return err
