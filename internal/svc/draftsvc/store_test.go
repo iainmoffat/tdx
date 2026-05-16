@@ -1,6 +1,7 @@
 package draftsvc
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -94,4 +95,60 @@ func TestStore_SaveNew_RefusesCollision(t *testing.T) {
 	if err := s.SaveNew(d); err == nil {
 		t.Errorf("SaveNew should refuse to overwrite existing draft")
 	}
+}
+
+func TestDraftStore_Load_RejectsInvalidName(t *testing.T) {
+	dir := t.TempDir()
+	store := NewStore(config.Paths{Root: dir})
+	weekStart := time.Date(2026, 4, 12, 0, 0, 0, 0, domain.EasternTZ)
+	_, err := store.Load("default", weekStart, "../../credentials")
+	if err == nil {
+		t.Errorf("expected error for invalid name")
+	}
+	if !isErrInvalidArtifactName(err) {
+		t.Errorf("expected ErrInvalidArtifactName, got %v", err)
+	}
+}
+
+func TestDraftStore_Delete_RejectsInvalidName(t *testing.T) {
+	dir := t.TempDir()
+	store := NewStore(config.Paths{Root: dir})
+	weekStart := time.Date(2026, 4, 12, 0, 0, 0, 0, domain.EasternTZ)
+	err := store.Delete("default", weekStart, "../../credentials")
+	if err == nil {
+		t.Errorf("expected error for invalid name")
+	}
+	if !isErrInvalidArtifactName(err) {
+		t.Errorf("expected ErrInvalidArtifactName, got %v", err)
+	}
+}
+
+func TestDraftStore_Exists_FalseForInvalidName(t *testing.T) {
+	dir := t.TempDir()
+	store := NewStore(config.Paths{Root: dir})
+	weekStart := time.Date(2026, 4, 12, 0, 0, 0, 0, domain.EasternTZ)
+	if store.Exists("default", weekStart, "../../credentials") {
+		t.Errorf("expected Exists to return false for invalid name")
+	}
+}
+
+func TestDraftStore_SaveNew_RejectsInvalidName(t *testing.T) {
+	dir := t.TempDir()
+	store := NewStore(config.Paths{Root: dir})
+	d := domain.WeekDraft{
+		Profile:   "default",
+		Name:      "../../foo",
+		WeekStart: time.Date(2026, 4, 12, 0, 0, 0, 0, domain.EasternTZ),
+	}
+	err := store.SaveNew(d)
+	if err == nil {
+		t.Errorf("expected error for invalid name")
+	}
+	if !isErrInvalidArtifactName(err) {
+		t.Errorf("expected ErrInvalidArtifactName, got %v", err)
+	}
+}
+
+func isErrInvalidArtifactName(err error) bool {
+	return errors.Is(err, domain.ErrInvalidArtifactName)
 }

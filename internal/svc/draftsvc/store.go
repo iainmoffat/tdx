@@ -49,6 +49,9 @@ func (s *Store) Save(d domain.WeekDraft) error {
 
 // Load reads the draft. Returns a "not found" error if the file is absent.
 func (s *Store) Load(profile string, weekStart time.Time, name string) (domain.WeekDraft, error) {
+	if err := domain.ValidateArtifactName(name); err != nil {
+		return domain.WeekDraft{}, err
+	}
 	p := s.draftPath(profile, weekStart, name)
 	data, err := os.ReadFile(p)
 	if err != nil {
@@ -67,12 +70,18 @@ func (s *Store) Load(profile string, weekStart time.Time, name string) (domain.W
 
 // Exists reports whether a draft exists at (profile, weekStart, name).
 func (s *Store) Exists(profile string, weekStart time.Time, name string) bool {
+	if err := domain.ValidateArtifactName(name); err != nil {
+		return false
+	}
 	_, err := os.Stat(s.draftPath(profile, weekStart, name))
 	return err == nil
 }
 
 // Delete removes the draft file. Snapshots beside it are NOT removed.
 func (s *Store) Delete(profile string, weekStart time.Time, name string) error {
+	if err := domain.ValidateArtifactName(name); err != nil {
+		return err
+	}
 	p := s.draftPath(profile, weekStart, name)
 	if err := os.Remove(p); err != nil {
 		if os.IsNotExist(err) {
@@ -91,6 +100,9 @@ func (s *Store) pulledSnapshotPath(profile string, weekStart time.Time, name str
 
 // SavePulledSnapshot writes the at-pull-time draft to a sibling YAML file.
 func (s *Store) SavePulledSnapshot(d domain.WeekDraft) error {
+	if err := domain.ValidateArtifactName(d.Name); err != nil {
+		return err
+	}
 	p := s.pulledSnapshotPath(d.Profile, d.WeekStart, d.Name)
 	if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
 		return err
@@ -104,6 +116,9 @@ func (s *Store) SavePulledSnapshot(d domain.WeekDraft) error {
 
 // LoadPulledSnapshot reads the at-pull-time draft sibling, if it exists.
 func (s *Store) LoadPulledSnapshot(profile string, weekStart time.Time, name string) (domain.WeekDraft, error) {
+	if err := domain.ValidateArtifactName(name); err != nil {
+		return domain.WeekDraft{}, err
+	}
 	p := s.pulledSnapshotPath(profile, weekStart, name)
 	data, err := os.ReadFile(p)
 	if err != nil {

@@ -13,6 +13,12 @@ import (
 // Auto-snapshots before any file motion. Refuses on collision. Renames the YAML,
 // the pulled-snapshot sibling, and the snapshots directory.
 func (s *Service) Rename(profile string, weekStart time.Time, oldName, newName string) error {
+	if err := domain.ValidateArtifactName(oldName); err != nil {
+		return fmt.Errorf("rename old: %w", err)
+	}
+	if err := domain.ValidateArtifactName(newName); err != nil {
+		return fmt.Errorf("rename new: %w", err)
+	}
 	if oldName == newName {
 		return fmt.Errorf("rename: oldName == newName")
 	}

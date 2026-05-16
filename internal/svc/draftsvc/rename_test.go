@@ -1,6 +1,7 @@
 package draftsvc
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -86,5 +87,31 @@ func TestService_Rename_RefusesCollision(t *testing.T) {
 	}
 	if !s.store.Exists("work", week, "b") {
 		t.Errorf("destination disappeared on failed rename")
+	}
+}
+
+func TestRename_RejectsInvalidOldName(t *testing.T) {
+	paths := config.Paths{Root: t.TempDir()}
+	s := newServiceWithTimeWriter(paths, &mockTimeWriter{})
+	weekStart := time.Date(2026, 4, 12, 0, 0, 0, 0, domain.EasternTZ)
+	err := s.Rename("default", weekStart, "../../old", "newname")
+	if err == nil {
+		t.Errorf("expected error for invalid old name")
+	}
+	if !errors.Is(err, domain.ErrInvalidArtifactName) {
+		t.Errorf("expected ErrInvalidArtifactName, got %v", err)
+	}
+}
+
+func TestRename_RejectsInvalidNewName(t *testing.T) {
+	paths := config.Paths{Root: t.TempDir()}
+	s := newServiceWithTimeWriter(paths, &mockTimeWriter{})
+	weekStart := time.Date(2026, 4, 12, 0, 0, 0, 0, domain.EasternTZ)
+	err := s.Rename("default", weekStart, "default", "../../new")
+	if err == nil {
+		t.Errorf("expected error for invalid new name")
+	}
+	if !errors.Is(err, domain.ErrInvalidArtifactName) {
+		t.Errorf("expected ErrInvalidArtifactName, got %v", err)
 	}
 }
