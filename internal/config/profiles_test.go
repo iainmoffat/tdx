@@ -1,6 +1,8 @@
 package config
 
 import (
+	"io"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -166,4 +168,32 @@ func TestProfileStore_UpdateProfile_RejectsInvalidName(t *testing.T) {
 	err := store.UpdateProfile(p)
 	require.Error(t, err)
 	require.ErrorIs(t, err, domain.ErrInvalidArtifactName)
+}
+
+func TestProfileStore_Load_SkipsInvalidProfile(t *testing.T) {
+	dir := t.TempDir()
+	store := NewProfileStore(Paths{Root: dir, ConfigFile: filepath.Join(dir, "config.yaml")})
+
+	yamlBody := `defaultProfile: good
+profiles:
+  - name: good
+    tenantBaseURL: https://example.com/
+  - name: bad
+    tenantBaseURL: http://attacker.example/
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.yaml"), []byte(yamlBody), 0o600))
+
+	// Capture stderr to assert the warning.
+	oldStderr := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+	cfg, err := store.Load()
+	_ = w.Close()
+	os.Stderr = oldStderr
+	stderr, _ := io.ReadAll(r)
+
+	require.NoError(t, err)
+	require.Len(t, cfg.Profiles, 1)
+	require.Equal(t, "good", cfg.Profiles[0].Name)
+	require.Contains(t, string(stderr), `warning: skipping invalid profile "bad"`)
 }

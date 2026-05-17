@@ -26,6 +26,8 @@ func NewProfileStore(paths Paths) *ProfileStore {
 }
 
 // Load returns the current profile config, or an empty config if none exists.
+// Profiles that fail Validate are dropped with a stderr warning so a tampered
+// config.yaml cannot redirect later API calls to an attacker-controlled URL.
 func (s *ProfileStore) Load() (ProfileConfig, error) {
 	data, err := os.ReadFile(s.paths.ConfigFile)
 	if errors.Is(err, os.ErrNotExist) {
@@ -38,6 +40,15 @@ func (s *ProfileStore) Load() (ProfileConfig, error) {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return ProfileConfig{}, fmt.Errorf("parse config: %w", err)
 	}
+	valid := cfg.Profiles[:0]
+	for _, p := range cfg.Profiles {
+		if err := p.Validate(); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: skipping invalid profile %q: %v\n", p.Name, err)
+			continue
+		}
+		valid = append(valid, p)
+	}
+	cfg.Profiles = valid
 	return cfg, nil
 }
 
