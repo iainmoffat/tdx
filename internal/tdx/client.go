@@ -24,6 +24,10 @@ type Client struct {
 }
 
 // NewClient validates the base URL and returns a ready client.
+//
+// HTTPS is required. The only exception is http:// to a loopback host
+// (localhost / 127.0.0.1 / ::1) so httptest servers continue to work.
+// This mirrors the Profile.Validate scheme policy.
 func NewClient(baseURL, token string) (*Client, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
@@ -31,6 +35,10 @@ func NewClient(baseURL, token string) (*Client, error) {
 	}
 	if u.Scheme == "" || u.Host == "" {
 		return nil, fmt.Errorf("base url must be absolute: %q", baseURL)
+	}
+	allowed := u.Scheme == "https" || (u.Scheme == "http" && isLoopbackHost(u.Hostname()))
+	if !allowed {
+		return nil, fmt.Errorf("base url must use https: %q", baseURL)
 	}
 	return &Client{
 		base:          u,
@@ -40,6 +48,17 @@ func NewClient(baseURL, token string) (*Client, error) {
 		retryAfterCap: 30 * time.Second,
 		userAgent:     "tdx/0.1",
 	}, nil
+}
+
+// isLoopbackHost reports whether host is a loopback literal. Mirrors the
+// helper in internal/domain/profile.go — duplicated here so this package
+// doesn't import internal/domain. Update both if you add an entry.
+func isLoopbackHost(host string) bool {
+	switch host {
+	case "localhost", "127.0.0.1", "::1":
+		return true
+	}
+	return false
 }
 
 // Do performs an authenticated request and returns the response body on 2xx.

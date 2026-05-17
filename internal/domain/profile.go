@@ -39,6 +39,8 @@ func (p Profile) Validate() error {
 	return nil
 }
 
+// isLoopbackHost reports whether host is a loopback literal. Mirrored in
+// internal/tdx/client.go — update both if you add an entry.
 func isLoopbackHost(host string) bool {
 	switch host {
 	case "localhost", "127.0.0.1", "::1":

@@ -26,6 +26,8 @@ func NewProfileStore(paths Paths) *ProfileStore {
 }
 
 // Load returns the current profile config, or an empty config if none exists.
+// Profiles that fail Validate are dropped with a stderr warning so a tampered
+// config.yaml cannot redirect later API calls to an attacker-controlled URL.
 func (s *ProfileStore) Load() (ProfileConfig, error) {
 	data, err := os.ReadFile(s.paths.ConfigFile)
 	if errors.Is(err, os.ErrNotExist) {
@@ -38,6 +40,15 @@ func (s *ProfileStore) Load() (ProfileConfig, error) {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return ProfileConfig{}, fmt.Errorf("parse config: %w", err)
 	}
+	valid := cfg.Profiles[:0]
+	for _, p := range cfg.Profiles {
+		if err := p.Validate(); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: skipping invalid profile %q: %v\n", p.Name, err)
+			continue
+		}
+		valid = append(valid, p)
+	}
+	cfg.Profiles = valid
 	return cfg, nil
 }
 
@@ -132,7 +143,9 @@ func (s *ProfileStore) RemoveProfile(name string) error {
 	return s.Save(cfg)
 }
 
-// GetProfile returns a profile by name, or ErrProfileNotFound.
+// GetProfile returns a profile by name, or ErrProfileNotFound. The returned
+// profile is also re-validated (defense in depth — Load already filters, but
+// this guards against future code paths that bypass Load).
 func (s *ProfileStore) GetProfile(name string) (domain.Profile, error) {
 	if err := domain.ValidateArtifactName(name); err != nil {
 		return domain.Profile{}, err
@@ -143,6 +156,9 @@ func (s *ProfileStore) GetProfile(name string) (domain.Profile, error) {
 	}
 	for _, p := range cfg.Profiles {
 		if p.Name == name {
+			if err := p.Validate(); err != nil {
+				return domain.Profile{}, fmt.Errorf("stored profile %q is invalid: %w", name, err)
+			}
 			return p, nil
 		}
 	}
