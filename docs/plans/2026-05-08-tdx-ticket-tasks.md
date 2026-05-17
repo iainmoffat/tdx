@@ -2031,7 +2031,7 @@ go build -o tdx ./cmd/tdx
 (`tdx ticket task create` is out of scope; use curl directly.)
 
 ```bash
-TOKEN=$(grep "default:" ~/.config/tdx/credentials.yaml | awk '{print $2}')
+TOKEN="${TDX_WALKTHROUGH_TOKEN:?set TDX_WALKTHROUGH_TOKEN to a valid TD bearer JWT first}"
 TASK_ID=$(curl -s -H "Authorization: Bearer $TOKEN" -X POST -H "Content-Type: application/json" \
   -d '{"Title":"v0.16.2 verify task","Description":"probe","PercentComplete":0}' \
   "https://demotemplate.teamdynamix.com/TDWebApi/api/34/tickets/542034/tasks" | python3 -c "import json,sys; print(json.load(sys.stdin)['ID'])")
@@ -2058,7 +2058,7 @@ If any wire-format mismatch surfaces, fix and re-test.
 - [ ] **Step 5: Clean up the test task**
 
 ```bash
-TOKEN=$(grep "default:" ~/.config/tdx/credentials.yaml | awk '{print $2}')
+TOKEN="${TDX_WALKTHROUGH_TOKEN:?set TDX_WALKTHROUGH_TOKEN to a valid TD bearer JWT first}"
 curl -s -H "Authorization: Bearer $TOKEN" -X PUT -H "Content-Type: application/json" \
   -d "{\"ID\":$TASK_ID,\"TicketID\":542034,\"Title\":\"v0.16.2 verify task (CLEANUP)\",\"IsActive\":false,\"PercentComplete\":100}" \
   "https://demotemplate.teamdynamix.com/TDWebApi/api/34/tickets/542034/tasks/$TASK_ID" -o /dev/null -w "cleanup: HTTP %{http_code}\n"
