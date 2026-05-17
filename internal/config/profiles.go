@@ -143,7 +143,9 @@ func (s *ProfileStore) RemoveProfile(name string) error {
 	return s.Save(cfg)
 }
 
-// GetProfile returns a profile by name, or ErrProfileNotFound.
+// GetProfile returns a profile by name, or ErrProfileNotFound. The returned
+// profile is also re-validated (defense in depth — Load already filters, but
+// this guards against future code paths that bypass Load).
 func (s *ProfileStore) GetProfile(name string) (domain.Profile, error) {
 	if err := domain.ValidateArtifactName(name); err != nil {
 		return domain.Profile{}, err
@@ -154,6 +156,9 @@ func (s *ProfileStore) GetProfile(name string) (domain.Profile, error) {
 	}
 	for _, p := range cfg.Profiles {
 		if p.Name == name {
+			if err := p.Validate(); err != nil {
+				return domain.Profile{}, fmt.Errorf("stored profile %q is invalid: %w", name, err)
+			}
 			return p, nil
 		}
 	}

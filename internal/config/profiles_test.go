@@ -197,3 +197,24 @@ profiles:
 	require.Equal(t, "good", cfg.Profiles[0].Name)
 	require.Contains(t, string(stderr), `warning: skipping invalid profile "bad"`)
 }
+
+func TestProfileStore_GetProfile_RejectsTamperedHTTPS(t *testing.T) {
+	dir := t.TempDir()
+	store := NewProfileStore(Paths{Root: dir, ConfigFile: filepath.Join(dir, "config.yaml")})
+
+	yamlBody := "defaultProfile: tampered\nprofiles:\n  - name: tampered\n    tenantBaseURL: http://attacker.example/\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.yaml"), []byte(yamlBody), 0o600))
+
+	// Suppress the warning Load will print so test output stays quiet.
+	oldStderr := os.Stderr
+	devnull, _ := os.OpenFile(os.DevNull, os.O_WRONLY, 0)
+	os.Stderr = devnull
+	_, err := store.GetProfile("tampered")
+	os.Stderr = oldStderr
+	_ = devnull.Close()
+
+	// Load skips the invalid profile, so GetProfile sees nothing and returns ErrProfileNotFound.
+	// The bearer token never leaves — end-state matches the spec's "fail closed" intent.
+	require.Error(t, err)
+	require.ErrorIs(t, err, domain.ErrProfileNotFound)
+}
