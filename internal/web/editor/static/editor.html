@@ -311,6 +311,7 @@
 
   <script>
     const TEMPLATE_DATA = "__TEMPLATE_JSON__";
+    const TDX_SESSION = document.querySelector('meta[name="tdx-session"]').content;
 
     // ---- Constants ----
     const DAYS = ['sun','mon','tue','wed','thu','fri','sat'];
@@ -824,7 +825,10 @@
       try {
         const res = await fetch('/api/save', {
           method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tdx-Session': TDX_SESSION,
+          },
           body:    JSON.stringify(payload)
         });
         if (!res.ok) {
@@ -852,7 +856,14 @@
       status.textContent = 'Cancelling...';
 
       try {
-        await fetch('/api/cancel', { method: 'POST' });
+        await fetch('/api/cancel', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tdx-Session': TDX_SESSION,
+          },
+          body: '{}',
+        });
       } catch(_) {
         // server may close the connection; that's fine
       }
