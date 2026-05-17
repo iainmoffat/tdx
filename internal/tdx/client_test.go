@@ -276,3 +276,29 @@ func TestClient_PreservesQueryString(t *testing.T) {
 	require.Equal(t, "2026-04-01", seenStart)
 	require.Equal(t, "2026-04-30", seenEnd)
 }
+
+func TestNewClient_AcceptsHTTPS(t *testing.T) {
+	_, err := NewClient("https://example.com", "tok")
+	require.NoError(t, err)
+}
+
+func TestNewClient_AcceptsLoopbackHTTP(t *testing.T) {
+	for _, u := range []string{"http://127.0.0.1:8080", "http://localhost:8080", "http://[::1]:8080"} {
+		t.Run(u, func(t *testing.T) {
+			_, err := NewClient(u, "tok")
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestNewClient_RejectsHTTPNonLoopback(t *testing.T) {
+	_, err := NewClient("http://attacker.example", "tok")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "must use https")
+}
+
+func TestNewClient_RejectsExoticScheme(t *testing.T) {
+	_, err := NewClient("ftp://example.com", "tok")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "must use https")
+}
