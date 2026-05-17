@@ -36,7 +36,8 @@ func NewClient(baseURL, token string) (*Client, error) {
 	if u.Scheme == "" || u.Host == "" {
 		return nil, fmt.Errorf("base url must be absolute: %q", baseURL)
 	}
-	if u.Scheme != "https" && !(u.Scheme == "http" && isLoopbackHost(u.Hostname())) {
+	allowed := u.Scheme == "https" || (u.Scheme == "http" && isLoopbackHost(u.Hostname()))
+	if !allowed {
 		return nil, fmt.Errorf("base url must use https: %q", baseURL)
 	}
 	return &Client{
