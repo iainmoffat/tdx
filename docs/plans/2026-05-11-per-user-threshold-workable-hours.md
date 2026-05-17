@@ -90,7 +90,7 @@ tdx auth status        # confirm valid
 Then dump the field-list on the authenticated user:
 
 ```bash
-TOKEN=$(grep "default:" ~/.config/tdx/credentials.yaml | awk '{print $2}')
+TOKEN="${TDX_WALKTHROUGH_TOKEN:?set TDX_WALKTHROUGH_TOKEN to a valid TD bearer JWT first}"
 MY_UID=$(./tdx auth status 2>&1 | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' || curl -s -H "Authorization: Bearer $TOKEN" "https://demotemplate.teamdynamix.com/TDWebApi/api/auth/getuser" | python3 -c "import json,sys; print(json.load(sys.stdin)['UID'])")
 curl -s -H "Authorization: Bearer $TOKEN" "https://demotemplate.teamdynamix.com/TDWebApi/api/people/$MY_UID" | python3 -c "
 import json,sys
