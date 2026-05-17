@@ -2,12 +2,16 @@ package editor
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/subtle"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/iainmoffat/tdx/internal/tui/editor"
@@ -18,9 +22,11 @@ type SaveFn func(editor.Sheet) error
 
 // server holds the state for a single edit session.
 type server struct {
-	sheet    editor.Sheet
-	save     SaveFn
-	shutdown chan result
+	sheet      editor.Sheet
+	save       SaveFn
+	shutdown   chan result
+	nonce      string // 43-char base64url-encoded 32-byte random; required on every /api/* request
+	listenAddr string // "127.0.0.1:PORT" — captured after net.Listen; used in Host/Origin checks
 }
 
 type result struct {
@@ -77,7 +83,15 @@ func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	html, err := injectTemplateData(editorHTML, s.toResponse())
+	// Validate ?s= query param (constant-time). Browser navigation does not
+	// send Origin / custom headers, so this is the gate that establishes the
+	// session for the JS.
+	got := r.URL.Query().Get("s")
+	if subtle.ConstantTimeCompare([]byte(got), []byte(s.nonce)) != 1 {
+		http.Error(w, "forbidden: invalid session", http.StatusForbidden)
+		return
+	}
+	html, err := injectTemplateData(editorHTML, s.toResponse(), s.nonce)
 	if err != nil {
 		http.Error(w, "failed to render editor", http.StatusInternalServerError)
 		return
@@ -86,7 +100,46 @@ func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(html))
 }
 
+// checkAPIRequest validates that an /api/* request comes from the
+// session-authorized browser tab opened by Run(). Writes a 403 and returns
+// false on any failure; otherwise returns true.
+//
+// Reject reasons are deliberately terse — same one-liner shape on each
+// failure mode so an attacker probing the gate cannot learn which check
+// failed.
+func (s *server) checkAPIRequest(w http.ResponseWriter, r *http.Request, requireJSON bool) bool {
+	if r.Host != s.listenAddr {
+		http.Error(w, "forbidden: host mismatch", http.StatusForbidden)
+		return false
+	}
+	if r.Header.Get("Origin") != "http://"+s.listenAddr {
+		http.Error(w, "forbidden: origin mismatch", http.StatusForbidden)
+		return false
+	}
+	if subtle.ConstantTimeCompare(
+		[]byte(r.Header.Get("X-Tdx-Session")),
+		[]byte(s.nonce),
+	) != 1 {
+		http.Error(w, "forbidden: invalid session", http.StatusForbidden)
+		return false
+	}
+	if requireJSON {
+		ct := r.Header.Get("Content-Type")
+		if i := strings.IndexByte(ct, ';'); i >= 0 {
+			ct = strings.TrimSpace(ct[:i])
+		}
+		if ct != "application/json" {
+			http.Error(w, "forbidden: content-type must be application/json", http.StatusForbidden)
+			return false
+		}
+	}
+	return true
+}
+
 func (s *server) handleGetSheet(w http.ResponseWriter, r *http.Request) {
+	if !s.checkAPIRequest(w, r, false) {
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(s.toResponse())
 }
@@ -103,6 +156,9 @@ type saveRow struct {
 func (s *server) handleSave(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "POST required", http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.checkAPIRequest(w, r, true) {
 		return
 	}
 
@@ -148,6 +204,9 @@ func (s *server) handleCancel(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "POST required", http.StatusMethodNotAllowed)
 		return
 	}
+	if !s.checkAPIRequest(w, r, true) {
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 	select {
 	case s.shutdown <- result{saved: false}:
@@ -160,13 +219,19 @@ func (s *server) handleCancel(w http.ResponseWriter, r *http.Request) {
 func Run(sheet editor.Sheet, save SaveFn) (Result, error) {
 	srv := newServer(sheet, save)
 
-	listener, err := net.Listen("tcp", "localhost:0")
+	nonce := make([]byte, 32)
+	if _, err := rand.Read(nonce); err != nil {
+		return Result{}, fmt.Errorf("nonce: %w", err)
+	}
+	srv.nonce = base64.RawURLEncoding.EncodeToString(nonce)
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return Result{}, fmt.Errorf("listen: %w", err)
 	}
+	srv.listenAddr = listener.Addr().String()
 
-	addr := listener.Addr().String()
-	url := "http://" + addr
+	url := fmt.Sprintf("http://%s/?s=%s", srv.listenAddr, srv.nonce)
 
 	httpSrv := &http.Server{Handler: srv.handler()}
 	go func() { _ = httpSrv.Serve(listener) }()

@@ -33,14 +33,27 @@ type hoursJSON struct {
 	Sat float64 `json:"sat"`
 }
 
-// injectTemplateData replaces the placeholder in the HTML with actual
-// template JSON data.
-func injectTemplateData(html string, resp templateResponse) (string, error) {
+// injectTemplateData replaces the placeholders in the HTML with actual
+// template JSON data and the per-session nonce.
+func injectTemplateData(html string, resp templateResponse, nonce string) (string, error) {
 	data, err := json.Marshal(resp)
 	if err != nil {
 		return "", err
 	}
 	escaped := strings.ReplaceAll(string(data), `\`, `\\`)
 	escaped = strings.ReplaceAll(escaped, `"`, `\"`)
-	return strings.Replace(html, `"__TEMPLATE_JSON__"`, `"`+escaped+`"`, 1), nil
+	out := strings.Replace(html, `"__TEMPLATE_JSON__"`, `"`+escaped+`"`, 1)
+	out = strings.Replace(out, `__TDX_SESSION__`, htmlAttrEscape(nonce), 1)
+	return out, nil
+}
+
+// htmlAttrEscape escapes a string for use inside a double-quoted HTML
+// attribute. The nonce is base64-RawURL (A-Za-z0-9_-) so no replacements
+// occur in practice, but the helper exists to make the safety property
+// explicit and future-proof.
+func htmlAttrEscape(s string) string {
+	s = strings.ReplaceAll(s, `&`, `&amp;`)
+	s = strings.ReplaceAll(s, `"`, `&quot;`)
+	s = strings.ReplaceAll(s, `<`, `&lt;`)
+	return s
 }
