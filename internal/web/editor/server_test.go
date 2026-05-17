@@ -2,6 +2,7 @@ package editor
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -34,9 +35,44 @@ func testSheet() editor.Sheet {
 	}
 }
 
+const (
+	testNonce      = "test-nonce"
+	testListenAddr = "127.0.0.1:8080"
+)
+
+// newServerWithNonce constructs a server for testing with deterministic
+// nonce and listenAddr so the handler-level helpers can be exercised
+// without going through Run().
+func newServerWithNonce(t *testing.T, sheet editor.Sheet, save SaveFn) *server {
+	t.Helper()
+	s := newServer(sheet, save)
+	s.nonce = testNonce
+	s.listenAddr = testListenAddr
+	return s
+}
+
+// newAPIRequest builds a request to /api/* with the headers an authorized
+// browser session would send. Individual reject-path tests override one
+// field at a time.
+func newAPIRequest(t *testing.T, method, path, body string) *http.Request {
+	t.Helper()
+	var rdr io.Reader
+	if body != "" {
+		rdr = strings.NewReader(body)
+	}
+	r := httptest.NewRequest(method, path, rdr)
+	r.Host = testListenAddr
+	r.Header.Set("Origin", "http://"+testListenAddr)
+	r.Header.Set("X-Tdx-Session", testNonce)
+	if method == http.MethodPost {
+		r.Header.Set("Content-Type", "application/json")
+	}
+	return r
+}
+
 func TestGetIndex_ServesHTML(t *testing.T) {
-	srv := newServer(testSheet(), nil)
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	srv := newServerWithNonce(t, testSheet(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/?s="+testNonce, nil)
 	w := httptest.NewRecorder()
 	srv.handler().ServeHTTP(w, req)
 
@@ -47,8 +83,8 @@ func TestGetIndex_ServesHTML(t *testing.T) {
 }
 
 func TestGetSheet_ReturnsJSON(t *testing.T) {
-	srv := newServer(testSheet(), nil)
-	req := httptest.NewRequest(http.MethodGet, "/api/template", nil)
+	srv := newServerWithNonce(t, testSheet(), nil)
+	req := newAPIRequest(t, http.MethodGet, "/api/template", "")
 	w := httptest.NewRecorder()
 	srv.handler().ServeHTTP(w, req)
 
@@ -70,14 +106,13 @@ func TestPostSave_UpdatesSheet(t *testing.T) {
 		saved = &copy
 		return nil
 	}
-	srv := newServer(testSheet(), saveFn)
+	srv := newServerWithNonce(t, testSheet(), saveFn)
 
 	body := `{"rows":[
 		{"id":"row-01","hours":{"sun":0,"mon":4,"tue":4,"wed":4,"thu":4,"fri":4,"sat":0}},
 		{"id":"row-02","hours":{"sun":0,"mon":0,"tue":2,"wed":0,"thu":0,"fri":0,"sat":0}}
 	]}`
-	req := httptest.NewRequest(http.MethodPost, "/api/save", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+	req := newAPIRequest(t, http.MethodPost, "/api/save", body)
 	w := httptest.NewRecorder()
 	srv.handler().ServeHTTP(w, req)
 
@@ -93,9 +128,10 @@ func TestPostCancel_NoSave(t *testing.T) {
 		saveCalled = true
 		return nil
 	}
-	srv := newServer(testSheet(), saveFn)
+	srv := newServerWithNonce(t, testSheet(), saveFn)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/cancel", nil)
+	// Cancel now sends a JSON body so Content-Type check passes when Task 3 lands.
+	req := newAPIRequest(t, http.MethodPost, "/api/cancel", "{}")
 	w := httptest.NewRecorder()
 	srv.handler().ServeHTTP(w, req)
 

@@ -2,6 +2,8 @@ package editor
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -18,9 +20,11 @@ type SaveFn func(editor.Sheet) error
 
 // server holds the state for a single edit session.
 type server struct {
-	sheet    editor.Sheet
-	save     SaveFn
-	shutdown chan result
+	sheet      editor.Sheet
+	save       SaveFn
+	shutdown   chan result
+	nonce      string // 43-char base64url-encoded 32-byte random; required on every /api/* request
+	listenAddr string // "127.0.0.1:PORT" — captured after net.Listen; used in Host/Origin checks
 }
 
 type result struct {
@@ -160,13 +164,19 @@ func (s *server) handleCancel(w http.ResponseWriter, r *http.Request) {
 func Run(sheet editor.Sheet, save SaveFn) (Result, error) {
 	srv := newServer(sheet, save)
 
-	listener, err := net.Listen("tcp", "localhost:0")
+	nonce := make([]byte, 32)
+	if _, err := rand.Read(nonce); err != nil {
+		return Result{}, fmt.Errorf("nonce: %w", err)
+	}
+	srv.nonce = base64.RawURLEncoding.EncodeToString(nonce)
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return Result{}, fmt.Errorf("listen: %w", err)
 	}
+	srv.listenAddr = listener.Addr().String()
 
-	addr := listener.Addr().String()
-	url := "http://" + addr
+	url := fmt.Sprintf("http://%s/?s=%s", srv.listenAddr, srv.nonce)
 
 	httpSrv := &http.Server{Handler: srv.handler()}
 	go func() { _ = httpSrv.Serve(listener) }()
