@@ -164,3 +164,97 @@ func TestGetIndex_AcceptsValidSessionQuery(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 	require.Contains(t, w.Body.String(), `<meta name="tdx-session" content="`+testNonce+`">`)
 }
+
+func TestPostSave_RejectsMissingSession(t *testing.T) {
+	srv := newServerWithNonce(t, testSheet(), nil)
+	req := newAPIRequest(t, http.MethodPost, "/api/save", `{"rows":[]}`)
+	req.Header.Del("X-Tdx-Session")
+	w := httptest.NewRecorder()
+	srv.handler().ServeHTTP(w, req)
+	require.Equal(t, http.StatusForbidden, w.Code)
+	require.Contains(t, w.Body.String(), "invalid session")
+}
+
+func TestPostSave_RejectsWrongSession(t *testing.T) {
+	srv := newServerWithNonce(t, testSheet(), nil)
+	req := newAPIRequest(t, http.MethodPost, "/api/save", `{"rows":[]}`)
+	req.Header.Set("X-Tdx-Session", "wrong")
+	w := httptest.NewRecorder()
+	srv.handler().ServeHTTP(w, req)
+	require.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestPostSave_RejectsMissingOrigin(t *testing.T) {
+	srv := newServerWithNonce(t, testSheet(), nil)
+	req := newAPIRequest(t, http.MethodPost, "/api/save", `{"rows":[]}`)
+	req.Header.Del("Origin")
+	w := httptest.NewRecorder()
+	srv.handler().ServeHTTP(w, req)
+	require.Equal(t, http.StatusForbidden, w.Code)
+	require.Contains(t, w.Body.String(), "origin mismatch")
+}
+
+func TestPostSave_RejectsWrongOrigin(t *testing.T) {
+	srv := newServerWithNonce(t, testSheet(), nil)
+	req := newAPIRequest(t, http.MethodPost, "/api/save", `{"rows":[]}`)
+	req.Header.Set("Origin", "http://evil.example")
+	w := httptest.NewRecorder()
+	srv.handler().ServeHTTP(w, req)
+	require.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestPostSave_RejectsWrongHost(t *testing.T) {
+	srv := newServerWithNonce(t, testSheet(), nil)
+	req := newAPIRequest(t, http.MethodPost, "/api/save", `{"rows":[]}`)
+	req.Host = "evil.example"
+	w := httptest.NewRecorder()
+	srv.handler().ServeHTTP(w, req)
+	require.Equal(t, http.StatusForbidden, w.Code)
+	require.Contains(t, w.Body.String(), "host mismatch")
+}
+
+func TestPostSave_RejectsNonJSON(t *testing.T) {
+	srv := newServerWithNonce(t, testSheet(), nil)
+	req := newAPIRequest(t, http.MethodPost, "/api/save", `{"rows":[]}`)
+	req.Header.Set("Content-Type", "text/plain")
+	w := httptest.NewRecorder()
+	srv.handler().ServeHTTP(w, req)
+	require.Equal(t, http.StatusForbidden, w.Code)
+	require.Contains(t, w.Body.String(), "content-type")
+}
+
+func TestPostSave_AcceptsJSONWithCharset(t *testing.T) {
+	srv := newServerWithNonce(t, testSheet(), func(editor.Sheet) error { return nil })
+	req := newAPIRequest(t, http.MethodPost, "/api/save", `{"rows":[]}`)
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	w := httptest.NewRecorder()
+	srv.handler().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestPostCancel_RejectsMissingSession(t *testing.T) {
+	srv := newServerWithNonce(t, testSheet(), nil)
+	req := newAPIRequest(t, http.MethodPost, "/api/cancel", `{}`)
+	req.Header.Del("X-Tdx-Session")
+	w := httptest.NewRecorder()
+	srv.handler().ServeHTTP(w, req)
+	require.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestPostCancel_RejectsMissingContentType(t *testing.T) {
+	srv := newServerWithNonce(t, testSheet(), nil)
+	req := newAPIRequest(t, http.MethodPost, "/api/cancel", `{}`)
+	req.Header.Del("Content-Type")
+	w := httptest.NewRecorder()
+	srv.handler().ServeHTTP(w, req)
+	require.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestGetSheet_RejectsMissingSession(t *testing.T) {
+	srv := newServerWithNonce(t, testSheet(), nil)
+	req := newAPIRequest(t, http.MethodGet, "/api/template", "")
+	req.Header.Del("X-Tdx-Session")
+	w := httptest.NewRecorder()
+	srv.handler().ServeHTTP(w, req)
+	require.Equal(t, http.StatusForbidden, w.Code)
+}

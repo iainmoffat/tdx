@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/iainmoffat/tdx/internal/tui/editor"
@@ -99,7 +100,46 @@ func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(html))
 }
 
+// checkAPIRequest validates that an /api/* request comes from the
+// session-authorized browser tab opened by Run(). Writes a 403 and returns
+// false on any failure; otherwise returns true.
+//
+// Reject reasons are deliberately terse — same one-liner shape on each
+// failure mode so an attacker probing the gate cannot learn which check
+// failed.
+func (s *server) checkAPIRequest(w http.ResponseWriter, r *http.Request, requireJSON bool) bool {
+	if r.Host != s.listenAddr {
+		http.Error(w, "forbidden: host mismatch", http.StatusForbidden)
+		return false
+	}
+	if r.Header.Get("Origin") != "http://"+s.listenAddr {
+		http.Error(w, "forbidden: origin mismatch", http.StatusForbidden)
+		return false
+	}
+	if subtle.ConstantTimeCompare(
+		[]byte(r.Header.Get("X-Tdx-Session")),
+		[]byte(s.nonce),
+	) != 1 {
+		http.Error(w, "forbidden: invalid session", http.StatusForbidden)
+		return false
+	}
+	if requireJSON {
+		ct := r.Header.Get("Content-Type")
+		if i := strings.IndexByte(ct, ';'); i >= 0 {
+			ct = strings.TrimSpace(ct[:i])
+		}
+		if ct != "application/json" {
+			http.Error(w, "forbidden: content-type must be application/json", http.StatusForbidden)
+			return false
+		}
+	}
+	return true
+}
+
 func (s *server) handleGetSheet(w http.ResponseWriter, r *http.Request) {
+	if !s.checkAPIRequest(w, r, false) {
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(s.toResponse())
 }
@@ -116,6 +156,9 @@ type saveRow struct {
 func (s *server) handleSave(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "POST required", http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.checkAPIRequest(w, r, true) {
 		return
 	}
 
@@ -159,6 +202,9 @@ func (s *server) handleSave(w http.ResponseWriter, r *http.Request) {
 func (s *server) handleCancel(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "POST required", http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.checkAPIRequest(w, r, true) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
