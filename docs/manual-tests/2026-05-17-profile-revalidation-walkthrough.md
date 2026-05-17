@@ -27,7 +27,10 @@ Expected:
 
 Edit `tenantBaseURL` to `file:///etc/passwd`. Run `tdx auth status` again.
 
-Expected: same warning shape; same failure.
+Expected: same warning shape; same failure. Note the specific reason
+differs — `file:///` is rejected for missing host (`url.Parse` returns
+`host=""`) rather than for a non-HTTPS scheme. The outcome is identical:
+the profile is skipped and the command fails.
 
 ## Step 3: Restore — everything works
 
