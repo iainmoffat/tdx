@@ -138,3 +138,29 @@ func TestPostCancel_NoSave(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 	require.False(t, saveCalled)
 }
+
+func TestGetIndex_RejectsMissingSessionQuery(t *testing.T) {
+	srv := newServerWithNonce(t, testSheet(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+	srv.handler().ServeHTTP(w, req)
+	require.Equal(t, http.StatusForbidden, w.Code)
+	require.Contains(t, w.Body.String(), "invalid session")
+}
+
+func TestGetIndex_RejectsWrongSessionQuery(t *testing.T) {
+	srv := newServerWithNonce(t, testSheet(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/?s=wrong", nil)
+	w := httptest.NewRecorder()
+	srv.handler().ServeHTTP(w, req)
+	require.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestGetIndex_AcceptsValidSessionQuery(t *testing.T) {
+	srv := newServerWithNonce(t, testSheet(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/?s="+testNonce, nil)
+	w := httptest.NewRecorder()
+	srv.handler().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Contains(t, w.Body.String(), `<meta name="tdx-session" content="`+testNonce+`">`)
+}

@@ -3,6 +3,7 @@ package editor
 import (
 	"context"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -81,7 +82,15 @@ func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	html, err := injectTemplateData(editorHTML, s.toResponse())
+	// Validate ?s= query param (constant-time). Browser navigation does not
+	// send Origin / custom headers, so this is the gate that establishes the
+	// session for the JS.
+	got := r.URL.Query().Get("s")
+	if subtle.ConstantTimeCompare([]byte(got), []byte(s.nonce)) != 1 {
+		http.Error(w, "forbidden: invalid session", http.StatusForbidden)
+		return
+	}
+	html, err := injectTemplateData(editorHTML, s.toResponse(), s.nonce)
 	if err != nil {
 		http.Error(w, "failed to render editor", http.StatusInternalServerError)
 		return
