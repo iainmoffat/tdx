@@ -130,7 +130,7 @@ func TestPostCancel_NoSave(t *testing.T) {
 	}
 	srv := newServerWithNonce(t, testSheet(), saveFn)
 
-	// Cancel now sends a JSON body so Content-Type check passes when Task 3 lands.
+	// Cancel sends a JSON body so the Content-Type check in checkAPIRequest passes.
 	req := newAPIRequest(t, http.MethodPost, "/api/cancel", "{}")
 	w := httptest.NewRecorder()
 	srv.handler().ServeHTTP(w, req)

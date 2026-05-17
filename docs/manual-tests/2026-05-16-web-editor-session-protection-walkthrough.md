@@ -24,7 +24,7 @@ In a separate terminal, while the editor is open, copy the address (e.g. `127.0.
 
     curl -i -X POST http://127.0.0.1:53219/api/save -d '{"rows":[]}'
 
-Expected: HTTP/1.1 403 Forbidden; body contains `host mismatch` or `origin mismatch` (whichever check fires first — both are absent on a bare curl).
+Expected: HTTP/1.1 403 Forbidden; body contains `origin mismatch` (curl always sends a Host header so Host matches; Origin is absent so the Origin check fires first).
 
 ## Step 4: Curl with all headers but wrong session → 403
 
