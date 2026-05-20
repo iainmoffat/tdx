@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -11,6 +12,15 @@ import (
 	"github.com/iainmoffat/tdx/internal/domain"
 	"github.com/stretchr/testify/require"
 )
+
+// TestMain defaults TDX_TOKEN_BACKEND=yaml for this package so tests never
+// touch the dev's real OS keychain.
+func TestMain(m *testing.M) {
+	if os.Getenv("TDX_TOKEN_BACKEND") == "" {
+		_ = os.Setenv("TDX_TOKEN_BACKEND", "yaml")
+	}
+	os.Exit(m.Run())
+}
 
 type harness struct {
 	paths  config.Paths

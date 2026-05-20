@@ -4,120 +4,125 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"runtime"
+	"sync"
 
 	"github.com/iainmoffat/tdx/internal/domain"
-	"gopkg.in/yaml.v3"
 )
 
-// credentialsFile is the on-disk shape of credentials.yaml.
-// Tokens are keyed by profile name.
-type credentialsFile struct {
-	Tokens map[string]string `yaml:"tokens"`
-}
-
-// CredentialsStore persists bearer tokens per profile with 0600 perms.
+// CredentialsStore persists bearer tokens per profile. It selects a backend
+// at construction time based on TDX_TOKEN_BACKEND (auto / keychain / yaml).
+// On Get miss under a non-YAML backend, the store attempts a one-time
+// migration from credentials.yaml — see credentials_migration_test.go.
 type CredentialsStore struct {
-	paths Paths
+	backend tokenBackend
+	yaml    *yamlBackend // always set, used for auto-migration
+
+	initErr error
+
+	// migrationNoticed records profiles already announced as migrated this
+	// process so the stderr notice prints at most once per profile per run.
+	mu               sync.Mutex
+	migrationNoticed map[string]bool
 }
 
-// NewCredentialsStore constructs a store rooted at the given paths.
+// NewCredentialsStore constructs a store. If TDX_TOKEN_BACKEND holds an
+// invalid value the store stores the error and surfaces it on the first
+// Get/Set/Clear call.
 func NewCredentialsStore(paths Paths) *CredentialsStore {
-	return &CredentialsStore{paths: paths}
+	backend, err := selectBackend(paths)
+	return &CredentialsStore{
+		backend:          backend,
+		yaml:             newYAMLBackend(paths),
+		initErr:          err,
+		migrationNoticed: map[string]bool{},
+	}
 }
 
 // GetToken returns the token for the named profile, or ErrNoCredentials.
+// Under a non-YAML backend, a YAML token found here is auto-migrated.
 func (s *CredentialsStore) GetToken(profile string) (string, error) {
-	cf, err := s.load()
-	if err != nil {
+	if s.initErr != nil {
+		return "", s.initErr
+	}
+	token, err := s.backend.Get(profile)
+	if err == nil {
+		return token, nil
+	}
+	if !errors.Is(err, domain.ErrNoCredentials) {
 		return "", err
 	}
-	token, ok := cf.Tokens[profile]
-	if !ok || token == "" {
-		return "", fmt.Errorf("%w: %s", domain.ErrNoCredentials, profile)
+	// Backend miss. If the active backend isn't yaml AND yaml has a token,
+	// migrate.
+	if s.backend.Name() == "yaml" {
+		return "", err
 	}
-	return token, nil
+	yamlToken, yerr := s.yaml.Get(profile)
+	if yerr != nil {
+		// No YAML token either — propagate the original miss.
+		return "", err
+	}
+	return s.migrate(profile, yamlToken)
 }
 
-// SetToken writes or replaces the token for the named profile.
+// migrate moves a token from yaml to the active backend with rollback-safe
+// semantics. See the spec's "Migration semantics" section for invariants.
+func (s *CredentialsStore) migrate(profile, yamlToken string) (string, error) {
+	// 1. Write to active backend.
+	if err := s.backend.Set(profile, yamlToken); err != nil {
+		// Leave YAML untouched; bubble the error.
+		return "", fmt.Errorf("migrate %q to %s: %w", profile, s.backend.Name(), err)
+	}
+	// 2. Read back; if it differs, defensive abort.
+	readBack, err := s.backend.Get(profile)
+	if err != nil || readBack != yamlToken {
+		return "", fmt.Errorf("migrate %q to %s: round-trip mismatch", profile, s.backend.Name())
+	}
+	// 3. Clear from YAML.
+	if cerr := s.yaml.Clear(profile); cerr != nil {
+		// Token now in BOTH places. Warn but return the token so the
+		// command can proceed.
+		fmt.Fprintf(os.Stderr,
+			"warning: token migrated to %s but YAML cleanup failed: %v (re-run will retry)\n",
+			s.backend.Name(), cerr)
+		return yamlToken, nil
+	}
+	// 4. Print one-time notice per profile per process.
+	s.mu.Lock()
+	already := s.migrationNoticed[profile]
+	s.migrationNoticed[profile] = true
+	s.mu.Unlock()
+	if !already {
+		fmt.Fprintf(os.Stderr,
+			"notice: migrated token for profile %q from credentials.yaml to OS keychain\n",
+			profile)
+	}
+	return yamlToken, nil
+}
+
+// SetToken writes or replaces the token via the active backend.
 func (s *CredentialsStore) SetToken(profile, token string) error {
-	cf, err := s.load()
-	if err != nil {
-		return err
+	if s.initErr != nil {
+		return s.initErr
 	}
-	if cf.Tokens == nil {
-		cf.Tokens = make(map[string]string)
-	}
-	cf.Tokens[profile] = token
-	return s.save(cf)
+	return s.backend.Set(profile, token)
 }
 
-// ClearToken removes the token for the named profile. Missing is not an error.
+// ClearToken removes the token from the active backend AND from yaml. Missing
+// entries on either side are ignored so logout always produces a clean state.
 func (s *CredentialsStore) ClearToken(profile string) error {
-	cf, err := s.load()
-	if err != nil {
-		return err
+	if s.initErr != nil {
+		return s.initErr
 	}
-	if _, ok := cf.Tokens[profile]; !ok {
-		return nil
+	// Clear active backend first.
+	bErr := s.backend.Clear(profile)
+	// Always also clear YAML — even when it IS the active backend, this is a
+	// safe no-op (yamlBackend.Clear handles missing entries).
+	yErr := s.yaml.Clear(profile)
+	if bErr != nil && !errors.Is(bErr, domain.ErrNoCredentials) {
+		return bErr
 	}
-	delete(cf.Tokens, profile)
-	return s.save(cf)
-}
-
-func (s *CredentialsStore) load() (credentialsFile, error) {
-	data, err := os.ReadFile(s.paths.CredentialsFile)
-	if errors.Is(err, os.ErrNotExist) {
-		return credentialsFile{Tokens: map[string]string{}}, nil
-	}
-	if err != nil {
-		return credentialsFile{}, fmt.Errorf("read credentials: %w", err)
-	}
-	if err := enforcePerms(s.paths.CredentialsFile); err != nil {
-		return credentialsFile{}, err
-	}
-	var cf credentialsFile
-	if err := yaml.Unmarshal(data, &cf); err != nil {
-		return credentialsFile{}, fmt.Errorf("parse credentials: %w", err)
-	}
-	if cf.Tokens == nil {
-		cf.Tokens = map[string]string{}
-	}
-	return cf, nil
-}
-
-func (s *CredentialsStore) save(cf credentialsFile) error {
-	if err := s.paths.EnsureRoot(); err != nil {
-		return err
-	}
-	data, err := yaml.Marshal(cf)
-	if err != nil {
-		return fmt.Errorf("marshal credentials: %w", err)
-	}
-	tmp := s.paths.CredentialsFile + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
-		return fmt.Errorf("write credentials: %w", err)
-	}
-	if err := os.Rename(tmp, s.paths.CredentialsFile); err != nil {
-		return fmt.Errorf("finalize credentials: %w", err)
-	}
-	return nil
-}
-
-// enforcePerms narrows the credentials file permissions if they are too open.
-// Windows perms are not meaningfully enforceable here, so it is a no-op there.
-func enforcePerms(path string) error {
-	if runtime.GOOS == "windows" {
-		return nil
-	}
-	info, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-	if info.Mode().Perm() != 0o600 {
-		if err := os.Chmod(path, 0o600); err != nil {
-			return fmt.Errorf("tighten credentials perms: %w", err)
-		}
+	if yErr != nil && !errors.Is(yErr, domain.ErrNoCredentials) {
+		return yErr
 	}
 	return nil
 }

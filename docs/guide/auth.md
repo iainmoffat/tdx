@@ -102,3 +102,31 @@ tdx time entry list --profile personal
 ```bash
 tdx auth profile remove personal
 ```
+
+---
+
+## Credential storage
+
+By default, `tdx` stores your bearer token in the OS keychain:
+
+- **macOS** — Keychain Access.app, under the "tdx" service.
+- **Linux** — Secret Service (GNOME Keyring, KWallet) via D-Bus.
+- **Windows** — Credential Manager, target name `tdx:<profile>`.
+
+This replaces the older plaintext `~/.config/tdx/credentials.yaml`. If you upgrade from a previous tdx version that wrote tokens to YAML, the next `tdx` command auto-migrates each token into the keychain and prints a one-time notice to stderr. The YAML file is removed when it becomes empty.
+
+### Choosing the backend
+
+Set `TDX_TOKEN_BACKEND` in your shell:
+
+- `auto` (default, or unset) — try keychain; fall back to YAML if the keychain isn't available (headless servers, etc.). A stderr notice fires on every fallback so you know to opt in explicitly.
+- `keychain` — keychain only. The command fails if the keychain isn't available, rather than silently writing plaintext.
+- `yaml` — YAML only, no keychain. Use this on headless servers, in CI, or when you've deliberately decided plaintext-with-0600 is the right trade-off for your environment.
+
+### Logout / clear
+
+`tdx auth logout` clears the token from both the active backend and the YAML fallback, so there's no stale entry left behind from a previous migration.
+
+### Token scope and rotation
+
+Bearer tokens issued by TeamDynamix are JWTs with a 24-hour lifetime and no refresh mechanism. When `tdx auth status` reports the token as expired, re-run `tdx auth login` (or `tdx auth login --sso`) to mint a fresh one.

@@ -9,6 +9,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestMain defaults TDX_TOKEN_BACKEND=yaml for the entire config package so
+// tests never touch the dev's real keychain. Individual tests that need to
+// exercise a different backend override the env var via t.Setenv.
+func TestMain(m *testing.M) {
+	if os.Getenv("TDX_TOKEN_BACKEND") == "" {
+		_ = os.Setenv("TDX_TOKEN_BACKEND", "yaml")
+	}
+	os.Exit(m.Run())
+}
+
 func TestCredentialsStore_MissingFileReturnsNoCredentials(t *testing.T) {
 	p := writablePaths(t)
 	s := NewCredentialsStore(p)
