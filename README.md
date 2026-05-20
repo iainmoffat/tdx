@@ -165,7 +165,7 @@ tdx stores configuration in `~/.config/tdx/`:
 | Path | Contents |
 |------|----------|
 | `config.yaml` | Profiles and default profile |
-| `credentials.yaml` | Authentication tokens (per profile) |
+| `credentials.yaml` | Fallback authentication tokens (per profile); default is the OS keychain |
 | `templates/` | Legacy templates (migrated to per-profile on upgrade) |
 | `profiles/<profile>/templates/` | Per-profile templates |
 | `profiles/<profile>/weeks/<YYYY-MM-DD>/<name>.yaml` | Local week drafts |
