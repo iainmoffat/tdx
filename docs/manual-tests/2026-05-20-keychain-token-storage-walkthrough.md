@@ -40,13 +40,15 @@ Expected: each command does what its echo says.
 
 ## Step 4: Force yaml backend
 
-    TDX_TOKEN_BACKEND=yaml tdx auth status
+After Step 3 the token lives only in the keychain — the YAML file is gone.
+To exercise yaml mode you must seed it explicitly:
 
-Expected: normal output. Then:
+    TDX_TOKEN_BACKEND=yaml tdx auth login   # paste a fresh JWT
+    ls -la ~/.config/tdx/credentials.yaml   # file exists, contains the token
+    TDX_TOKEN_BACKEND=yaml tdx auth status  # normal output, reading from YAML
 
-    ls -la ~/.config/tdx/credentials.yaml
-
-Expected: file exists (yaml backend reads from it for THIS process only — keychain still has the canonical token).
+The keychain still has its own copy from Step 3 — unset `TDX_TOKEN_BACKEND`
+and tdx reads from keychain again. The two backends are independent.
 
 ## Step 5: Force keychain strict mode
 
