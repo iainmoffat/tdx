@@ -14,7 +14,7 @@ import (
 // exercise a different backend override the env var via t.Setenv.
 func TestMain(m *testing.M) {
 	if os.Getenv("TDX_TOKEN_BACKEND") == "" {
-		os.Setenv("TDX_TOKEN_BACKEND", "yaml")
+		_ = os.Setenv("TDX_TOKEN_BACKEND", "yaml")
 	}
 	os.Exit(m.Run())
 }
