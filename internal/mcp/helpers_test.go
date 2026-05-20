@@ -1,10 +1,20 @@
 package mcp
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+// TestMain defaults TDX_TOKEN_BACKEND=yaml for this package so tests never
+// touch the dev's real OS keychain.
+func TestMain(m *testing.M) {
+	if os.Getenv("TDX_TOKEN_BACKEND") == "" {
+		os.Setenv("TDX_TOKEN_BACKEND", "yaml")
+	}
+	os.Exit(m.Run())
+}
 
 func TestConfirmGate_NotConfirmed(t *testing.T) {
 	result, ok := confirmGate(false, "Please confirm.")

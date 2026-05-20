@@ -1,6 +1,7 @@
 package template
 
 import (
+	"os"
 	"testing"
 
 	"github.com/iainmoffat/tdx/internal/config"
@@ -8,6 +9,15 @@ import (
 	"github.com/iainmoffat/tdx/internal/svc/tmplsvc"
 	"github.com/stretchr/testify/require"
 )
+
+// TestMain defaults TDX_TOKEN_BACKEND=yaml for this package so tests never
+// touch the dev's real OS keychain.
+func TestMain(m *testing.M) {
+	if os.Getenv("TDX_TOKEN_BACKEND") == "" {
+		os.Setenv("TDX_TOKEN_BACKEND", "yaml")
+	}
+	os.Exit(m.Run())
+}
 
 // seedTemplateDir sets TDX_CONFIG_HOME to a temp dir with a profile and token,
 // returning the dir so the caller can pre-populate templates.
