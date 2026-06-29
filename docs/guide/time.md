@@ -708,6 +708,15 @@ Use `--name` to create a named alternate instead of the default:
 tdx time week new 2026-04-27 --name staging --from-template my-week
 ```
 
+By default `new` refuses to overwrite an existing draft at the same
+profile/week/name slot. Pass `--force` to replace it; the draft being
+overwritten is snapshotted first (op `pre-overwrite`) so it can be recovered
+with `tdx time week restore`:
+
+```bash
+tdx time week new 2026-05-10 --from-draft 2026-05-17 --force
+```
+
 ### tdx time week copy
 
 Clones a draft to a new ref without removing the source:

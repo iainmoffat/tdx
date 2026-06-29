@@ -34,6 +34,9 @@ const (
 	OpPreRename OpTag = "pre-rename"
 	// OpPreReset tags a snapshot taken before discarding local edits.
 	OpPreReset OpTag = "pre-reset"
+	// OpPreOverwrite tags a snapshot taken before a `new --force` clobbers an
+	// existing draft at the same (profile, weekStart, name) slot.
+	OpPreOverwrite OpTag = "pre-overwrite"
 	// OpPreResolve tags a snapshot taken before applying conflict picks via
 	// tdx time week resolve.
 	OpPreResolve OpTag = "pre-resolve"

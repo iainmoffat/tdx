@@ -13,7 +13,7 @@ func TestService_NewBlank(t *testing.T) {
 	s := newServiceWithTimeWriter(paths, &mockTimeWriter{})
 	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
 
-	d, err := s.NewBlank("work", week, "default")
+	d, err := s.NewBlank("work", week, "default", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,8 +27,64 @@ func TestService_NewBlank(t *testing.T) {
 		t.Errorf("blank draft has %d rows, want 0", len(d.Rows))
 	}
 
-	if _, err := s.NewBlank("work", week, "default"); err == nil {
+	if _, err := s.NewBlank("work", week, "default", false); err == nil {
 		t.Errorf("NewBlank should refuse on collision")
+	}
+}
+
+func TestService_NewBlank_ForceOverwritesAndSnapshots(t *testing.T) {
+	paths := config.Paths{Root: t.TempDir()}
+	s := newServiceWithTimeWriter(paths, &mockTimeWriter{})
+	week := time.Date(2026, 5, 3, 0, 0, 0, 0, domain.EasternTZ)
+
+	// Seed an existing draft with a row so we can prove it was replaced.
+	existing := domain.WeekDraft{
+		SchemaVersion: 1, Profile: "work", Name: "default", WeekStart: week,
+		Provenance: domain.DraftProvenance{Kind: domain.ProvenanceBlank},
+		Rows: []domain.DraftRow{{
+			ID:    "row-01",
+			Cells: []domain.DraftCell{{Day: time.Monday, Hours: 4}},
+		}},
+	}
+	if err := s.store.Save(existing); err != nil {
+		t.Fatal(err)
+	}
+
+	// force=true overwrites the existing draft with a fresh blank one.
+	d, err := s.NewBlank("work", week, "default", true)
+	if err != nil {
+		t.Fatalf("force NewBlank failed: %v", err)
+	}
+	if len(d.Rows) != 0 {
+		t.Errorf("overwritten draft has %d rows, want 0 (blank)", len(d.Rows))
+	}
+
+	// On disk, the draft is the new blank one.
+	reloaded, err := s.store.Load("work", week, "default")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(reloaded.Rows) != 0 {
+		t.Errorf("on-disk draft has %d rows, want 0", len(reloaded.Rows))
+	}
+
+	// A pre-overwrite snapshot of the clobbered draft must exist, with its row.
+	snaps, err := s.snapshots.List("work", week, "default")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snaps) != 1 {
+		t.Fatalf("snapshots = %d, want 1", len(snaps))
+	}
+	if snaps[0].Op != OpPreOverwrite {
+		t.Errorf("snapshot Op = %q, want %q", snaps[0].Op, OpPreOverwrite)
+	}
+	snapDraft, err := s.snapshots.Load("work", week, "default", snaps[0].Sequence)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapDraft.Rows) != 1 {
+		t.Errorf("snapshot preserved %d rows, want 1 (the clobbered draft)", len(snapDraft.Rows))
 	}
 }
 
@@ -47,7 +103,7 @@ func TestService_NewFromTemplate(t *testing.T) {
 		},
 	}
 
-	d, err := s.NewFromTemplate("work", week, "default", tmpl)
+	d, err := s.NewFromTemplate("work", week, "default", tmpl, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +139,7 @@ func TestService_NewFromDraft(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d, err := s.NewFromDraft("work", dstWeek, "default", "work", srcWeek, "default")
+	d, err := s.NewFromDraft("work", dstWeek, "default", "work", srcWeek, "default", false)
 	if err != nil {
 		t.Fatal(err)
 	}

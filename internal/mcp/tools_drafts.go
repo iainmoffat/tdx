@@ -285,6 +285,7 @@ type createDraftArgs struct {
 	Name      string `json:"name,omitempty"`
 	From      string `json:"from,omitempty" jsonschema:"blank | template:<n> | draft:<date>[/<n>]"`
 	ShiftDays int    `json:"shiftDays,omitempty"`
+	Force     bool   `json:"force,omitempty" jsonschema:"overwrite an existing draft at the same slot (auto-snapshots first)"`
 	Confirm   bool   `json:"confirm"`
 }
 
@@ -657,14 +658,14 @@ func createDraftHandler(svcs Services) func(context.Context, *sdkmcp.CallToolReq
 		var draft domain.WeekDraft
 		switch {
 		case args.From == "" || args.From == "blank":
-			draft, err = svcs.Drafts.NewBlank(profile, weekStart, name)
+			draft, err = svcs.Drafts.NewBlank(profile, weekStart, name, args.Force)
 		case strings.HasPrefix(args.From, "template:"):
 			tname := strings.TrimPrefix(args.From, "template:")
 			tmpl, terr := svcs.Template.Store().Load(profile, tname)
 			if terr != nil {
 				return errorResult(fmt.Sprintf("load template: %v", terr)), nil, nil
 			}
-			draft, err = svcs.Drafts.NewFromTemplate(profile, weekStart, name, tmpl)
+			draft, err = svcs.Drafts.NewFromTemplate(profile, weekStart, name, tmpl, args.Force)
 		case strings.HasPrefix(args.From, "draft:"):
 			ref := strings.TrimPrefix(args.From, "draft:")
 			srcDate, srcName, perr := parseDraftRefMCP(ref)
@@ -674,7 +675,7 @@ func createDraftHandler(svcs Services) func(context.Context, *sdkmcp.CallToolReq
 			if args.ShiftDays != 0 {
 				srcDate = srcDate.AddDate(0, 0, -args.ShiftDays)
 			}
-			draft, err = svcs.Drafts.NewFromDraft(profile, weekStart, name, profile, srcDate, srcName)
+			draft, err = svcs.Drafts.NewFromDraft(profile, weekStart, name, profile, srcDate, srcName, args.Force)
 		default:
 			return errorResult(fmt.Sprintf("unknown from value: %q", args.From)), nil, nil
 		}

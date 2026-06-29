@@ -23,6 +23,13 @@ func TestNewResultJSON_Schema(t *testing.T) {
 	}
 }
 
+func TestNewCmd_HasForceFlag(t *testing.T) {
+	cmd := newNewCmd()
+	if cmd.Flags().Lookup("force") == nil {
+		t.Errorf("new command missing --force flag")
+	}
+}
+
 func TestParseShift(t *testing.T) {
 	cases := []struct {
 		in   string
