@@ -24,6 +24,7 @@ type newFlags struct {
 	fromTemplate string
 	fromDraft    string
 	shift        string
+	force        bool
 	json         bool
 }
 
@@ -51,6 +52,7 @@ func newNewCmd() *cobra.Command {
 	cmd.Flags().StringVar(&f.fromTemplate, "from-template", "", "seed rows from this template")
 	cmd.Flags().StringVar(&f.fromDraft, "from-draft", "", "clone this draft (date or date/name)")
 	cmd.Flags().StringVar(&f.shift, "shift", "", "with --from-draft, shift the source by this duration (e.g. 7d, -7d)")
+	cmd.Flags().BoolVar(&f.force, "force", false, "overwrite an existing draft at the same slot (snapshots it first)")
 	cmd.Flags().BoolVar(&f.json, "json", false, "JSON output")
 	return cmd
 }
@@ -92,7 +94,7 @@ func runNew(cmd *cobra.Command, f newFlags, dateRef string) error {
 		if err != nil {
 			return err
 		}
-		draft, err = drafts.NewFromTemplate(profileName, weekStart, name, tmpl)
+		draft, err = drafts.NewFromTemplate(profileName, weekStart, name, tmpl, f.force)
 		if err != nil {
 			return err
 		}
@@ -109,12 +111,12 @@ func runNew(cmd *cobra.Command, f newFlags, dateRef string) error {
 			// --shift Nd means: source is at (weekStart - Nd), produce a draft at weekStart.
 			srcWeek = weekStart.Add(-d)
 		}
-		draft, err = drafts.NewFromDraft(profileName, weekStart, name, profileName, srcWeek, srcName)
+		draft, err = drafts.NewFromDraft(profileName, weekStart, name, profileName, srcWeek, srcName, f.force)
 		if err != nil {
 			return err
 		}
 	default:
-		draft, err = drafts.NewBlank(profileName, weekStart, name)
+		draft, err = drafts.NewBlank(profileName, weekStart, name, f.force)
 		if err != nil {
 			return err
 		}

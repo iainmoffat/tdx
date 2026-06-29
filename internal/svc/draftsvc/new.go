@@ -7,9 +7,29 @@ import (
 	"github.com/iainmoffat/tdx/internal/domain"
 )
 
+// saveCreated persists a freshly created draft. When force is false it refuses
+// to clobber an existing draft at the same (profile, weekStart, name) slot.
+// When force is true and a draft already exists there, it takes a pre-overwrite
+// snapshot of the existing draft before overwriting it, so the clobbered draft
+// can be recovered via `tdx time week restore`.
+func (s *Service) saveCreated(d domain.WeekDraft, force bool) error {
+	if force && s.store.Exists(d.Profile, d.WeekStart, d.Name) {
+		existing, err := s.store.Load(d.Profile, d.WeekStart, d.Name)
+		if err != nil {
+			return fmt.Errorf("load existing for snapshot: %w", err)
+		}
+		if _, err := s.snapshots.Take(existing, OpPreOverwrite, ""); err != nil {
+			return fmt.Errorf("snapshot existing: %w", err)
+		}
+		return s.store.Save(d)
+	}
+	return s.store.SaveNew(d)
+}
+
 // NewBlank creates an empty dated draft. Refuses if (profile, weekStart, name)
-// already exists.
-func (s *Service) NewBlank(profile string, weekStart time.Time, name string) (domain.WeekDraft, error) {
+// already exists unless force is true, in which case the existing draft is
+// snapshotted and overwritten.
+func (s *Service) NewBlank(profile string, weekStart time.Time, name string, force bool) (domain.WeekDraft, error) {
 	if name == "" {
 		name = "default"
 	}
@@ -23,7 +43,7 @@ func (s *Service) NewBlank(profile string, weekStart time.Time, name string) (do
 		CreatedAt:     now,
 		ModifiedAt:    now,
 	}
-	if err := s.store.SaveNew(d); err != nil {
+	if err := s.saveCreated(d, force); err != nil {
 		return domain.WeekDraft{}, fmt.Errorf("new blank: %w", err)
 	}
 	return d, nil
@@ -31,7 +51,8 @@ func (s *Service) NewBlank(profile string, weekStart time.Time, name string) (do
 
 // NewFromTemplate creates a draft seeded from a template's rows.
 // Cells are placed on weekdays where the template's WeekHours has non-zero hours.
-func (s *Service) NewFromTemplate(profile string, weekStart time.Time, name string, tmpl domain.Template) (domain.WeekDraft, error) {
+// Refuses to clobber an existing draft unless force is true.
+func (s *Service) NewFromTemplate(profile string, weekStart time.Time, name string, tmpl domain.Template, force bool) (domain.WeekDraft, error) {
 	if name == "" {
 		name = "default"
 	}
@@ -74,7 +95,7 @@ func (s *Service) NewFromTemplate(profile string, weekStart time.Time, name stri
 		ModifiedAt: now,
 		Rows:       rows,
 	}
-	if err := s.store.SaveNew(d); err != nil {
+	if err := s.saveCreated(d, force); err != nil {
 		return domain.WeekDraft{}, fmt.Errorf("new from template: %w", err)
 	}
 	return d, nil
@@ -83,8 +104,9 @@ func (s *Service) NewFromTemplate(profile string, weekStart time.Time, name stri
 // NewFromDraft clones an existing draft into a new (profile, weekStart, name).
 // SourceEntryIDs are intentionally cleared — the cloned draft is fresh, not a
 // snapshot of remote state. Provenance records the shift in days from src.
+// Refuses to clobber an existing destination draft unless force is true.
 func (s *Service) NewFromDraft(profile string, weekStart time.Time, name string,
-	srcProfile string, srcWeekStart time.Time, srcName string) (domain.WeekDraft, error) {
+	srcProfile string, srcWeekStart time.Time, srcName string, force bool) (domain.WeekDraft, error) {
 	if name == "" {
 		name = "default"
 	}
@@ -130,7 +152,7 @@ func (s *Service) NewFromDraft(profile string, weekStart time.Time, name string,
 		ModifiedAt: now,
 		Rows:       rows,
 	}
-	if err := s.store.SaveNew(d); err != nil {
+	if err := s.saveCreated(d, force); err != nil {
 		return domain.WeekDraft{}, fmt.Errorf("new from draft: %w", err)
 	}
 	return d, nil
