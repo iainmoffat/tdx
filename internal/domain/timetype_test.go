@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -40,4 +41,55 @@ func TestTimeType_FindByNameCaseInsensitive(t *testing.T) {
 
 	_, ok = FindTimeTypeByName(types, "missing")
 	require.False(t, ok)
+}
+
+func TestDefaultTimeOffType_SingleMatch(t *testing.T) {
+	types := []TimeType{
+		{ID: 1, Name: "Standard Activities", Active: true},
+		{ID: 3, Name: "Leave", Active: true, IsTimeOff: true},
+	}
+	got, err := DefaultTimeOffType(types)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.ID != 3 {
+		t.Errorf("ID = %d, want 3", got.ID)
+	}
+}
+
+func TestDefaultTimeOffType_NoMatch(t *testing.T) {
+	types := []TimeType{{ID: 1, Name: "Standard Activities", Active: true}}
+	if _, err := DefaultTimeOffType(types); err == nil {
+		t.Errorf("expected an error when no time-off type exists")
+	}
+}
+
+func TestDefaultTimeOffType_MultipleMatches(t *testing.T) {
+	types := []TimeType{
+		{ID: 3, Name: "Leave", Active: true, IsTimeOff: true},
+		{ID: 4, Name: "Holiday", Active: true, IsTimeOff: true},
+	}
+	_, err := DefaultTimeOffType(types)
+	if err == nil {
+		t.Fatalf("expected an error when multiple time-off types exist")
+	}
+	// The error must name the candidates so the user knows what to pass to --type.
+	msg := err.Error()
+	if !strings.Contains(msg, "Leave") || !strings.Contains(msg, "Holiday") {
+		t.Errorf("error %q should name both candidates", msg)
+	}
+}
+
+func TestDefaultTimeOffType_IgnoresInactive(t *testing.T) {
+	types := []TimeType{
+		{ID: 3, Name: "Leave", Active: true, IsTimeOff: true},
+		{ID: 9, Name: "Old Leave", Active: false, IsTimeOff: true},
+	}
+	got, err := DefaultTimeOffType(types)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.ID != 3 {
+		t.Errorf("ID = %d, want 3 (inactive type must be ignored)", got.ID)
+	}
 }
