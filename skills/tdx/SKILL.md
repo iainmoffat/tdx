@@ -28,6 +28,10 @@ decision tree and the scope note under "The Week-Draft Loop".
   → `tdx time entry list --json` (add `--week YYYY-MM-DD`, `--from/--to`, `--user`, `--ticket N --app M`, or `--project N`)
 - "I forgot to log a few hours" / "add 4h to ticket 542034 for Tuesday" / "log time I haven't logged yet"
   → `tdx time entry add` for each entry — this is the path for **brand-new** time. First get a valid time type with `tdx time type for ticket <id>` (or `tdx time type list`), then e.g. `tdx time entry add --ticket 542034 --date 2026-06-30 --hours 4 --type "<type>" -d "..."` (preview with `--dry-run` first). `--ticket` uses the profile's default app unless you pass `--app`.
+- "log PTO / vacation / sick leave" / "I took time off Thursday"
+  → `tdx time entry add --time-off --date <YYYY-MM-DD> --hours N` — the time-off
+    ID and the Leave time type are auto-resolved (`--time-off-id N` overrides the
+    ID; `--type` overrides the type). Preview with `--dry-run`.
 - "change / delete an entry I already logged"
   → `tdx time entry update <id> ...`; `tdx time entry delete <id> --yes` (preview with `--dry-run`)
 - "clean up / fix / rebalance my whole week" / "I logged the wrong hours all week" / "redistribute my time"
