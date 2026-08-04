@@ -119,13 +119,28 @@ func DefaultTimeOffType(types []TimeType) (TimeType, error)
     surface *"--type is required (could not pick a default time-off type)"*.
   - If `--time-off` is not set → `--type` remains required exactly as today.
 
-### 4. MCP parity (`add_time_entry`)
+### 4. MCP parity (`create_time_entry`)
 
-- Add `timeOff bool` and `timeOffId int` inputs to the tool's args struct.
-- Mirror the CLI target-build + `ResolveTimeOffItemID` + type-defaulting logic.
+**Correction after code review:** the tool is named `create_time_entry` (not
+`add_time_entry`), and it already builds its target generically —
+`domain.Target{Kind: domain.TargetKind(args.Kind), ItemID: args.ItemID, ...}`
+(`internal/mcp/tools_entry.go`). So `kind: "timeoff"` with a known `itemID`
+**already works today**; `domain.Target.Validate` accepts timeoff without an
+AppID. No new boolean inputs are needed, and adding `timeOff`/`timeOffId` would
+duplicate the existing generic shape.
+
+The real MCP gaps are discoverability and the ID:
+
+- `kind` is documented as `"target kind (ticket/project/workspace)"` — update the
+  jsonschema description to include `timeoff` (and the other supported kinds) so
+  agents know it exists.
+- When `kind == "timeoff"` and `itemID == 0`, call `ResolveTimeOffItemID` to
+  auto-discover, matching the CLI's zero-config behavior. A non-zero `itemID` is
+  used verbatim (the override path).
 - The existing `confirm: true` gate is unchanged.
-- Reuse the same domain/service helpers so behavior cannot drift between CLI and
-  MCP.
+
+This yields exact parity: CLI `--time-off` ≡ MCP `kind:"timeoff"` with no
+`itemID`; CLI `--time-off-id N` ≡ MCP `kind:"timeoff", itemID:N`.
 
 ### 5. Error handling (summary)
 
@@ -197,7 +212,8 @@ test: `tdx time entry add --time-off --date <d> --hours 2 --dry-run` previews a
 - `internal/domain/timetype.go` — `IsTimeOff` field, `DefaultTimeOffType`.
 - `internal/svc/timesvc/` — `ResolveTimeOffItemID`, `ErrTimeOffIDUnknown`,
   populate `IsTimeOff` in the time-type decode.
-- `internal/mcp/tools_time*.go` — `timeOff`/`timeOffId` inputs on `add_time_entry`.
+- `internal/mcp/tools_entry.go` — `kind` jsonschema description includes
+  `timeoff`; auto-resolve `itemID` when `kind=="timeoff"` and `itemID==0`.
 - Docs: `docs/guide/time.md` (entry add reference), `README.md` if the command
   tree notes targets.
 - Tests across the above packages.
