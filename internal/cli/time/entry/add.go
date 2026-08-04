@@ -1,6 +1,7 @@
 package entry
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -28,6 +29,8 @@ type addFlags struct {
 	task        int
 	issue       int
 	workspace   int
+	timeOff     bool
+	timeOffID   int
 	dryRun      bool
 	json        bool
 }
@@ -61,6 +64,8 @@ func newAddCmd() *cobra.Command {
 	cmd.Flags().IntVar(&f.task, "task", 0, "task ID (requires --ticket, or --project with --plan)")
 	cmd.Flags().IntVar(&f.issue, "issue", 0, "issue ID (requires --project)")
 	cmd.Flags().IntVar(&f.workspace, "workspace", 0, "workspace ID")
+	cmd.Flags().BoolVar(&f.timeOff, "time-off", false, "log time off / leave (time-off ID is auto-discovered from your recent leave entries)")
+	cmd.Flags().IntVar(&f.timeOffID, "time-off-id", 0, "override the time-off item ID (requires --time-off)")
 	cmd.Flags().BoolVar(&f.dryRun, "dry-run", false, "preview without creating the entry")
 	cmd.Flags().BoolVar(&f.json, "json", false, "emit JSON output")
 
@@ -95,11 +100,13 @@ func runAdd(cmd *cobra.Command, f addFlags) error {
 		return fmt.Errorf("duration must be positive")
 	}
 
-	if f.typeName == "" {
+	// --type may be omitted for --time-off: the tenant's single time-off type
+	// is used. Every other target still requires it.
+	if f.typeName == "" && !f.timeOff {
 		return fmt.Errorf("--type is required")
 	}
 
-	// Target validation: exactly one of --ticket, --project, --workspace.
+	// Target validation: exactly one of --ticket, --project, --workspace, --time-off.
 	targetCount := 0
 	if f.ticket > 0 {
 		targetCount++
@@ -110,8 +117,21 @@ func runAdd(cmd *cobra.Command, f addFlags) error {
 	if f.workspace > 0 {
 		targetCount++
 	}
+	if f.timeOff {
+		targetCount++
+	}
 	if targetCount != 1 {
-		return fmt.Errorf("exactly one of --ticket, --project, or --workspace is required")
+		if !f.timeOff {
+			return fmt.Errorf("exactly one of --ticket, --project, or --workspace is required")
+		}
+		return fmt.Errorf("exactly one of --ticket, --project, --workspace, or --time-off is required")
+	}
+
+	if f.timeOffID > 0 && !f.timeOff {
+		return fmt.Errorf("--time-off-id requires --time-off")
+	}
+	if f.timeOff && (f.app > 0 || f.plan > 0 || f.task > 0 || f.issue > 0) {
+		return fmt.Errorf("--time-off cannot be combined with --app, --plan, --task, or --issue")
 	}
 
 	// Companion flag validation.
@@ -162,9 +182,34 @@ func runAdd(cmd *cobra.Command, f addFlags) error {
 	if err != nil {
 		return fmt.Errorf("lookup time types: %w", err)
 	}
-	tt, ok := domain.FindTimeTypeByName(types, f.typeName)
-	if !ok {
-		return fmt.Errorf("no time type named %q", f.typeName)
+	var tt domain.TimeType
+	if f.typeName != "" {
+		var ok bool
+		tt, ok = domain.FindTimeTypeByName(types, f.typeName)
+		if !ok {
+			return fmt.Errorf("no time type named %q", f.typeName)
+		}
+		if f.timeOff && !tt.IsTimeOff {
+			return fmt.Errorf("time type %q is not a time-off type", tt.Name)
+		}
+	} else {
+		// Only reachable with --time-off (validated above).
+		var derr error
+		tt, derr = domain.DefaultTimeOffType(types)
+		if derr != nil {
+			return fmt.Errorf("--type is required (could not pick a default time-off type): %w", derr)
+		}
+	}
+
+	if f.timeOff {
+		itemID, rerr := tsvc.ResolveTimeOffItemID(cmd.Context(), profileName, user.UID, f.timeOffID)
+		if rerr != nil {
+			if errors.Is(rerr, domain.ErrTimeOffIDUnknown) {
+				return fmt.Errorf("couldn't determine your time-off ID — log one leave entry in the TD web UI first, or pass --time-off-id N")
+			}
+			return rerr
+		}
+		f.timeOffID = itemID
 	}
 
 	// ---- 3. Build target from flags ----
@@ -247,6 +292,12 @@ func runAdd(cmd *cobra.Command, f addFlags) error {
 // wire ProjectID (used only for projectTask / projectIssue).
 func buildTarget(f addFlags) domain.Target {
 	switch {
+	case f.timeOff:
+		return domain.Target{
+			Kind:   domain.TargetTimeOff,
+			ItemID: f.timeOffID,
+		}
+
 	case f.ticket > 0 && f.task > 0:
 		return domain.Target{
 			Kind:   domain.TargetTicketTask,
@@ -310,6 +361,8 @@ func targetSummary(t domain.Target) string {
 		return fmt.Sprintf("issue %d", t.ItemID)
 	case domain.TargetWorkspace:
 		return fmt.Sprintf("workspace %d", t.ItemID)
+	case domain.TargetTimeOff:
+		return fmt.Sprintf("time-off (id %d)", t.ItemID)
 	default:
 		return fmt.Sprintf("item %d", t.ItemID)
 	}

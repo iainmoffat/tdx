@@ -331,3 +331,136 @@ func TestResolveTicketAppIDZeroWhenNeitherSet(t *testing.T) {
 		t.Errorf("should return 0 when neither is set; got %d", got)
 	}
 }
+
+func TestAddCmd_TimeOffRequiresOneTarget(t *testing.T) {
+	// --time-off together with --ticket is two selectors: must be rejected
+	// before any network call, so no server is needed.
+	seedProfile(t, "http://127.0.0.1:1")
+
+	var out bytes.Buffer
+	cmd := NewCmd()
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{
+		"add", "--date", "2026-04-11", "--hours", "2",
+		"--time-off", "--ticket", "100", "--app", "5",
+	})
+	err := cmd.Execute()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "exactly one of")
+}
+
+func TestAddCmd_TimeOffIDRequiresTimeOff(t *testing.T) {
+	seedProfile(t, "http://127.0.0.1:1")
+
+	var out bytes.Buffer
+	cmd := NewCmd()
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{
+		"add", "--date", "2026-04-11", "--hours", "2",
+		"--ticket", "100", "--app", "5", "--type", "Development",
+		"--time-off-id", "52",
+	})
+	err := cmd.Execute()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "--time-off-id requires --time-off")
+}
+
+func TestAddCmd_TimeOffRejectsCompanionFlags(t *testing.T) {
+	seedProfile(t, "http://127.0.0.1:1")
+
+	var out bytes.Buffer
+	cmd := NewCmd()
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{
+		"add", "--date", "2026-04-11", "--hours", "2",
+		"--time-off", "--app", "5",
+	})
+	err := cmd.Execute()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "--time-off cannot be combined")
+}
+
+func TestAddCmd_TimeOffDryRunUsesOverrideAndDefaultsType(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/TDWebApi/api/auth/getuser":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"ReferenceID":42,"UID":"user-abc","FullName":"Test User","PrimaryEmail":"test@example.com"}`))
+
+		case r.URL.Path == "/TDWebApi/api/time/types":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[
+				{"ID":1,"Name":"Standard Activities","IsActive":true,"IsBillable":false},
+				{"ID":3,"Name":"Leave","IsActive":true,"IsBillable":false,"IsTimeOffTimeType":true}
+			]`))
+
+		case r.URL.Path == "/TDWebApi/api/time/locked":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[]`))
+
+		case strings.HasPrefix(r.URL.Path, "/TDWebApi/api/time/report/"):
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"ID":1,"PeriodStartDate":"2026-04-05T00:00:00Z","PeriodEndDate":"2026-04-11T00:00:00Z","Status":0,"Times":[],"TimeReportUid":"user-abc","UserFullName":"Test User","MinutesBillable":0,"MinutesNonBillable":0,"MinutesTotal":0,"TimeEntriesCount":0}`))
+
+		default:
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	seedProfile(t, srv.URL)
+
+	var out bytes.Buffer
+	cmd := NewCmd()
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{
+		"add", "--date", "2026-04-11", "--hours", "2",
+		"--time-off", "--time-off-id", "52", "--dry-run",
+	})
+	require.NoError(t, cmd.Execute())
+
+	got := out.String()
+	require.Contains(t, got, "time-off (id 52)")
+	require.Contains(t, got, "kind=timeoff")
+	// --type omitted: the single IsTimeOffTimeType type must be chosen.
+	require.Contains(t, got, "Leave")
+}
+
+func TestAddCmd_TimeOffRejectsNonTimeOffType(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/TDWebApi/api/auth/getuser":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"ReferenceID":42,"UID":"user-abc","FullName":"Test User","PrimaryEmail":"test@example.com"}`))
+		case r.URL.Path == "/TDWebApi/api/time/types":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[
+				{"ID":1,"Name":"Standard Activities","IsActive":true,"IsBillable":false},
+				{"ID":3,"Name":"Leave","IsActive":true,"IsBillable":false,"IsTimeOffTimeType":true}
+			]`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	seedProfile(t, srv.URL)
+
+	var out bytes.Buffer
+	cmd := NewCmd()
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{
+		"add", "--date", "2026-04-11", "--hours", "2",
+		"--time-off", "--time-off-id", "52",
+		"--type", "Standard Activities", "--dry-run",
+	})
+	err := cmd.Execute()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "is not a time-off type")
+}
