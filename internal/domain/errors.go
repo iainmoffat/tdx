@@ -32,6 +32,10 @@ var (
 	// already been submitted for approval.
 	ErrWeekSubmitted = errors.New("week already submitted")
 
+	// ErrTimeOffIDUnknown indicates tdx could not determine the tenant's
+	// time-off ItemID from the user's recent entries and no override was given.
+	ErrTimeOffIDUnknown = errors.New("time-off id unknown")
+
 	// ErrPermission indicates the API rejected the request because the
 	// caller lacks the necessary role/app/approver relationship.
 	ErrPermission = errors.New("permission denied")
