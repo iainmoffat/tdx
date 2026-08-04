@@ -35,8 +35,8 @@ type createEntryArgs struct {
 	Hours       float64 `json:"hours,omitempty" jsonschema:"duration in hours"`
 	Minutes     int     `json:"minutes,omitempty" jsonschema:"duration in minutes"`
 	TypeID      int     `json:"typeID" jsonschema:"time type ID"`
-	Kind        string  `json:"kind" jsonschema:"target kind (ticket/project/workspace)"`
-	ItemID      int     `json:"itemID" jsonschema:"work item ID"`
+	Kind        string  `json:"kind" jsonschema:"target kind: ticket, ticketTask, project, projectTask, projectIssue, workspace, or timeoff"`
+	ItemID      int     `json:"itemID,omitempty" jsonschema:"work item ID; optional for kind=timeoff (auto-discovered from your recent leave entries when omitted)"`
 	AppID       int     `json:"appID,omitempty"`
 	TaskID      int     `json:"taskID,omitempty"`
 	ProjectID   int     `json:"projectID,omitempty" jsonschema:"project ID (required for projectTask/projectIssue)"`
@@ -194,9 +194,18 @@ func createEntryHandler(svcs Services) func(context.Context, *sdkmcp.CallToolReq
 			return errorResult(fmt.Sprintf("auth: %v", err)), nil, nil
 		}
 
+		itemID := args.ItemID
+		if domain.TargetKind(args.Kind) == domain.TargetTimeOff && itemID == 0 {
+			resolved, rerr := svcs.Time.ResolveTimeOffItemID(ctx, profile, user.UID, 0)
+			if rerr != nil {
+				return errorResult("couldn't determine the time-off ID — log one leave entry in the TD web UI first, or pass itemID explicitly."), nil, nil
+			}
+			itemID = resolved
+		}
+
 		target := domain.Target{
 			Kind:      domain.TargetKind(args.Kind),
-			ItemID:    args.ItemID,
+			ItemID:    itemID,
 			AppID:     args.AppID,
 			TaskID:    args.TaskID,
 			ProjectID: args.ProjectID,

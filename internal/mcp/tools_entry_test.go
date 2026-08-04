@@ -184,6 +184,59 @@ func TestCreateEntry_WithoutConfirm(t *testing.T) {
 	require.Contains(t, text, "confirm")
 }
 
+func TestCreateEntry_TimeOffAutoDiscoversItemID(t *testing.T) {
+	var postedComponent, postedProjectID int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/TDWebApi/api/auth/getuser":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"ReferenceID":42,"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@example.com"}`))
+
+		// Discovery: one prior time-off entry (Component 17) carrying ProjectID 52.
+		case r.URL.Path == "/TDWebApi/api/time/search":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[
+				{"TimeID":7,"Component":17,"ProjectID":52,"TimeDate":"2026-05-14T00:00:00Z","Minutes":120,"TimeTypeID":3,"TimeTypeName":"Leave","Uid":"uid-abc","Status":0}
+			]`))
+
+		case r.URL.Path == "/TDWebApi/api/time" && r.Method == "POST":
+			var body []map[string]any
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			require.Len(t, body, 1)
+			postedComponent = int(body[0]["Component"].(float64))
+			postedProjectID = int(body[0]["ProjectID"].(float64))
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"Succeeded":[{"Index":0,"ID":777}],"Failed":[]}`))
+
+		case r.URL.Path == "/TDWebApi/api/time/777" && r.Method == "GET":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"TimeID":777,"Component":17,"ProjectID":52,"TimeDate":"2026-06-11T00:00:00Z","Minutes":120,"Description":"PTO","TimeTypeID":3,"TimeTypeName":"Leave","Status":0,"Billable":false}`))
+
+		default:
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	svcs := mcpHarness(t, srv.URL)
+	handler := createEntryHandler(svcs)
+	result, _, err := handler(context.Background(), nil, createEntryArgs{
+		Date:   "2026-06-11",
+		Hours:  2.0,
+		TypeID: 3,
+		Kind:   "timeoff",
+		// ItemID deliberately omitted: it must be auto-discovered.
+		Confirm: true,
+	})
+	require.NoError(t, err)
+	require.False(t, result.IsError, "expected success, got: %v", extractText(t, result))
+
+	// TimeOff encodes as Component 17 with the item ID carried in ProjectID.
+	require.Equal(t, 17, postedComponent)
+	require.Equal(t, 52, postedProjectID, "itemID should have been auto-discovered as 52")
+}
+
 func TestUpdateEntry_WithConfirm(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
