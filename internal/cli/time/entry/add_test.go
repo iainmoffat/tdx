@@ -220,7 +220,7 @@ func TestAddCmd_MissingRequiredFlags(t *testing.T) {
 		{
 			name:    "no target",
 			args:    []string{"add", "--date", "2026-04-11", "--hours", "1", "--type", "Dev"},
-			wantErr: "exactly one of --ticket, --project, or --workspace",
+			wantErr: "exactly one of --ticket, --project, --workspace, or --time-off is required",
 		},
 		{
 			name:    "ticket without app",

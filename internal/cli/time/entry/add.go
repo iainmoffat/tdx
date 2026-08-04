@@ -121,9 +121,7 @@ func runAdd(cmd *cobra.Command, f addFlags) error {
 		targetCount++
 	}
 	if targetCount != 1 {
-		if !f.timeOff {
-			return fmt.Errorf("exactly one of --ticket, --project, or --workspace is required")
-		}
+		// List all four selectors so --time-off is discoverable.
 		return fmt.Errorf("exactly one of --ticket, --project, --workspace, or --time-off is required")
 	}
 

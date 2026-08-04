@@ -1778,7 +1778,7 @@ func TestAddCmdMissingRequiredFlags(t *testing.T) {
 		{
 			name: "no target",
 			args: []string{"add", "--date", "2026-04-11", "--hours", "1", "--type", "Dev"},
-			want: "exactly one of --ticket, --project, or --workspace is required",
+			want: "exactly one of --ticket, --project, --workspace, or --time-off is required",
 		},
 		{
 			name: "ticket without app",
@@ -2018,7 +2018,7 @@ func runAdd(cmd *cobra.Command, f addFlags) error {
 	if f.project > 0 { targetCount++ }
 	if f.workspace > 0 { targetCount++ }
 	if targetCount != 1 {
-		return fmt.Errorf("exactly one of --ticket, --project, or --workspace is required")
+		return fmt.Errorf("exactly one of --ticket, --project, --workspace, or --time-off is required")
 	}
 
 	var target domain.Target
