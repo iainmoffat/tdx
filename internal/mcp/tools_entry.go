@@ -34,9 +34,9 @@ type createEntryArgs struct {
 	Date        string  `json:"date" jsonschema:"entry date YYYY-MM-DD"`
 	Hours       float64 `json:"hours,omitempty" jsonschema:"duration in hours"`
 	Minutes     int     `json:"minutes,omitempty" jsonschema:"duration in minutes"`
-	TypeID      int     `json:"typeID" jsonschema:"time type ID"`
-	Kind        string  `json:"kind" jsonschema:"target kind (ticket/project/workspace)"`
-	ItemID      int     `json:"itemID" jsonschema:"work item ID"`
+	TypeID      int     `json:"typeID,omitempty" jsonschema:"time type ID; optional for kind=timeoff (defaults to the tenant's time-off type), required otherwise"`
+	Kind        string  `json:"kind" jsonschema:"target kind: ticket, ticketTask, project, projectTask, projectIssue, workspace, or timeoff"`
+	ItemID      int     `json:"itemID,omitempty" jsonschema:"work item ID; optional for kind=timeoff (auto-discovered from your recent leave entries when omitted)"`
 	AppID       int     `json:"appID,omitempty"`
 	TaskID      int     `json:"taskID,omitempty"`
 	ProjectID   int     `json:"projectID,omitempty" jsonschema:"project ID (required for projectTask/projectIssue)"`
@@ -194,9 +194,51 @@ func createEntryHandler(svcs Services) func(context.Context, *sdkmcp.CallToolReq
 			return errorResult(fmt.Sprintf("auth: %v", err)), nil, nil
 		}
 
+		typeID := args.TypeID
+		if domain.TargetKind(args.Kind) != domain.TargetTimeOff {
+			if typeID == 0 {
+				return errorResult(fmt.Sprintf("typeID is required for kind %s", args.Kind)), nil, nil
+			}
+		} else {
+			types, terr := svcs.Time.ListTimeTypes(ctx, profile)
+			if terr != nil {
+				return errorResult(fmt.Sprintf("list time types: %v", terr)), nil, nil
+			}
+			if typeID == 0 {
+				tt, derr := domain.DefaultTimeOffType(types)
+				if derr != nil {
+					return errorResult(fmt.Sprintf("typeID is required (could not pick a default time-off type): %v", derr)), nil, nil
+				}
+				typeID = tt.ID
+			} else {
+				tt, ok := domain.FindTimeTypeByID(types, typeID)
+				if !ok {
+					return errorResult(fmt.Sprintf("time type %d not found", typeID)), nil, nil
+				}
+				if !tt.IsTimeOff {
+					return errorResult(fmt.Sprintf("time type %d is not a time-off type", typeID)), nil, nil
+				}
+			}
+		}
+
+		itemID := args.ItemID
+		if domain.TargetKind(args.Kind) == domain.TargetTimeOff && itemID == 0 {
+			resolved, rerr := svcs.Time.ResolveTimeOffItemID(ctx, profile, user.UID, 0)
+			if rerr != nil {
+				if errors.Is(rerr, domain.ErrTimeOffIDUnknown) {
+					return errorResult("couldn't determine the time-off ID — log one leave entry in the TD web UI first, or pass itemID explicitly."), nil, nil
+				}
+				return errorResult(rerr.Error()), nil, nil
+			}
+			itemID = resolved
+		}
+		if domain.TargetKind(args.Kind) != domain.TargetTimeOff && itemID == 0 {
+			return errorResult(fmt.Sprintf("itemID is required for kind %s", args.Kind)), nil, nil
+		}
+
 		target := domain.Target{
 			Kind:      domain.TargetKind(args.Kind),
-			ItemID:    args.ItemID,
+			ItemID:    itemID,
 			AppID:     args.AppID,
 			TaskID:    args.TaskID,
 			ProjectID: args.ProjectID,
@@ -206,7 +248,7 @@ func createEntryHandler(svcs Services) func(context.Context, *sdkmcp.CallToolReq
 			UserUID:     user.UID,
 			Date:        date,
 			Minutes:     mins,
-			TimeTypeID:  args.TypeID,
+			TimeTypeID:  typeID,
 			Billable:    args.Billable,
 			Target:      target,
 			Description: args.Description,

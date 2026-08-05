@@ -83,6 +83,7 @@ tdx time entry add \
 - `--ticket <id>` and optionally `--app <id>` (if no profile default app is set, `--app` is required; see `tdx ticket app use`)
 - `--project <id>` (optionally with `--plan <id> --task <id>`)
 - `--workspace <id> --app <id>`
+- `--time-off` (instead of a work target; see below)
 
 With a profile default ticket app (set via `tdx ticket app use <id>`), `--app` is no longer needed:
 
@@ -95,6 +96,34 @@ Preview without creating:
 ```bash
 tdx time entry add --date 2026-04-07 --hours 2 --type Dev --project 54 --dry-run
 ```
+
+#### Logging time off
+
+Use `--time-off` instead of a work target to log leave / PTO:
+
+```bash
+tdx time entry add --time-off --date 2026-06-11 --hours 2
+```
+
+`--time-off` is mutually exclusive with `--ticket`, `--project`, and
+`--workspace`, and cannot be combined with `--app`, `--plan`, `--task`, or
+`--issue`.
+
+Two things are resolved for you:
+
+- **The time type.** Omit `--type` and tdx picks the tenant's single active
+  time-off type (commonly named `Leave`). Pass `--type` explicitly if your tenant
+  has more than one; passing a non-time-off type is rejected.
+- **The time-off ID.** TD models time off as a tenant-specific pseudo-project.
+  tdx discovers yours from your most recent leave entry in the last 180 days.
+  If you have never logged leave, tdx cannot guess it — log one entry in the TD
+  web UI, or pass it directly:
+
+```bash
+tdx time entry add --time-off --time-off-id 52 --date 2026-06-11 --hours 2
+```
+
+Preview first with `--dry-run`, as with any other target.
 
 ### tdx time entry update
 

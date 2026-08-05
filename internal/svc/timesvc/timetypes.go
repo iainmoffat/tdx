@@ -35,6 +35,7 @@ func decodeTimeType(w wireTimeType) domain.TimeType {
 		Billable:    w.IsBillable,
 		Limited:     w.IsLimited,
 		Active:      w.IsActive,
+		IsTimeOff:   w.IsTimeOffTimeType,
 	}
 }
 

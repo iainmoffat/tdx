@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -182,6 +183,212 @@ func TestCreateEntry_WithoutConfirm(t *testing.T) {
 	require.True(t, result.IsError)
 	text := extractText(t, result)
 	require.Contains(t, text, "confirm")
+}
+
+func TestCreateEntry_NonTimeOffRequiresItemID(t *testing.T) {
+	var postCalled atomic.Bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/TDWebApi/api/auth/getuser":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User"}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/TDWebApi/api/time":
+			postCalled.Store(true)
+			w.WriteHeader(http.StatusInternalServerError)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	svcs := mcpHarness(t, srv.URL)
+	handler := createEntryHandler(svcs)
+	result, _, err := handler(context.Background(), nil, createEntryArgs{
+		Date:    "2026-04-07",
+		Hours:   1,
+		TypeID:  1,
+		Kind:    "ticket",
+		Confirm: true,
+	})
+	require.NoError(t, err)
+	require.True(t, result.IsError)
+	require.Contains(t, extractText(t, result), "itemID is required for kind ticket")
+	require.False(t, postCalled.Load(), "missing itemID must not POST")
+}
+
+func TestCreateEntry_TimeOffDiscoveryFailureSurfacesError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/TDWebApi/api/auth/getuser":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User"}`))
+		case "/TDWebApi/api/time/types":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[{"ID":3,"Name":"Leave","IsActive":true,"IsTimeOffTimeType":true}]`))
+		case "/TDWebApi/api/time/search":
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"error":"search service unavailable"}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	svcs := mcpHarness(t, srv.URL)
+	handler := createEntryHandler(svcs)
+	result, _, err := handler(context.Background(), nil, createEntryArgs{
+		Date:    "2026-04-07",
+		Hours:   1,
+		TypeID:  3,
+		Kind:    "timeoff",
+		Confirm: true,
+	})
+	require.NoError(t, err)
+	require.True(t, result.IsError)
+	text := extractText(t, result)
+	require.Contains(t, text, "500")
+	require.NotContains(t, text, "log one leave entry")
+}
+
+func TestCreateEntry_TimeOffRejectsNonTimeOffType(t *testing.T) {
+	var postCalled atomic.Bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/TDWebApi/api/auth/getuser":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User"}`))
+		case "/TDWebApi/api/time/types":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[{"ID":1,"Name":"Development","IsActive":true,"IsTimeOffTimeType":false}]`))
+		case "/TDWebApi/api/time":
+			postCalled.Store(true)
+			w.WriteHeader(http.StatusInternalServerError)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	svcs := mcpHarness(t, srv.URL)
+	handler := createEntryHandler(svcs)
+	result, _, err := handler(context.Background(), nil, createEntryArgs{
+		Date:    "2026-04-07",
+		Hours:   1,
+		TypeID:  1,
+		Kind:    "timeoff",
+		ItemID:  52,
+		Confirm: true,
+	})
+	require.NoError(t, err)
+	require.True(t, result.IsError)
+	require.Contains(t, extractText(t, result), "not a time-off type")
+	require.False(t, postCalled.Load(), "invalid time-off type must not POST")
+}
+
+func TestCreateEntry_TimeOffDefaultsType(t *testing.T) {
+	var postedTypeID int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/TDWebApi/api/auth/getuser":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"UID":"uid-abc","FullName":"Test User"}`))
+		case r.URL.Path == "/TDWebApi/api/time/types":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[
+				{"ID":1,"Name":"Development","IsActive":true,"IsTimeOffTimeType":false},
+				{"ID":3,"Name":"Leave","IsActive":true,"IsTimeOffTimeType":true}
+			]`))
+		case r.Method == http.MethodPost && r.URL.Path == "/TDWebApi/api/time":
+			var body []map[string]any
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			require.Len(t, body, 1)
+			value, ok := body[0]["TimeTypeID"].(float64)
+			require.True(t, ok, "TimeTypeID missing or not a number")
+			postedTypeID = int(value)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"Succeeded":[{"Index":0,"ID":777}],"Failed":[]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/time/777":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"TimeID":777,"Component":17,"ProjectID":52,"TimeDate":"2026-06-11T00:00:00Z","Minutes":60,"TimeTypeID":3,"TimeTypeName":"Leave","Status":0,"Billable":false}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	svcs := mcpHarness(t, srv.URL)
+	handler := createEntryHandler(svcs)
+	result, _, err := handler(context.Background(), nil, createEntryArgs{
+		Date:    "2026-06-11",
+		Hours:   1,
+		Kind:    "timeoff",
+		ItemID:  52,
+		Confirm: true,
+	})
+	require.NoError(t, err)
+	require.False(t, result.IsError, "expected success, got: %v", extractText(t, result))
+	require.Equal(t, 3, postedTypeID)
+}
+
+func TestCreateEntry_TimeOffAutoDiscoversItemID(t *testing.T) {
+	var postedComponent, postedProjectID int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/TDWebApi/api/auth/getuser":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"ReferenceID":42,"UID":"uid-abc","FullName":"Test User","PrimaryEmail":"test@example.com"}`))
+
+		case r.URL.Path == "/TDWebApi/api/time/types":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[{"ID":3,"Name":"Leave","IsActive":true,"IsTimeOffTimeType":true}]`))
+
+		// Discovery: one prior time-off entry (Component 17) carrying ProjectID 52.
+		case r.URL.Path == "/TDWebApi/api/time/search":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[
+				{"TimeID":7,"Component":17,"ProjectID":52,"TimeDate":"2026-05-14T00:00:00Z","Minutes":120,"TimeTypeID":3,"TimeTypeName":"Leave","Uid":"uid-abc","Status":0}
+			]`))
+
+		case r.URL.Path == "/TDWebApi/api/time" && r.Method == "POST":
+			var body []map[string]any
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			require.Len(t, body, 1)
+			comp, ok := body[0]["Component"].(float64)
+			require.True(t, ok, "Component missing or not a number")
+			postedComponent = int(comp)
+			projectID, ok := body[0]["ProjectID"].(float64)
+			require.True(t, ok, "ProjectID missing or not a number")
+			postedProjectID = int(projectID)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"Succeeded":[{"Index":0,"ID":777}],"Failed":[]}`))
+
+		case r.URL.Path == "/TDWebApi/api/time/777" && r.Method == "GET":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"TimeID":777,"Component":17,"ProjectID":52,"TimeDate":"2026-06-11T00:00:00Z","Minutes":120,"Description":"PTO","TimeTypeID":3,"TimeTypeName":"Leave","Status":0,"Billable":false}`))
+
+		default:
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	svcs := mcpHarness(t, srv.URL)
+	handler := createEntryHandler(svcs)
+	result, _, err := handler(context.Background(), nil, createEntryArgs{
+		Date:   "2026-06-11",
+		Hours:  2.0,
+		TypeID: 3,
+		Kind:   "timeoff",
+		// ItemID deliberately omitted: it must be auto-discovered.
+		Confirm: true,
+	})
+	require.NoError(t, err)
+	require.False(t, result.IsError, "expected success, got: %v", extractText(t, result))
+
+	// TimeOff encodes as Component 17 with the item ID carried in ProjectID.
+	require.Equal(t, 17, postedComponent)
+	require.Equal(t, 52, postedProjectID, "itemID should have been auto-discovered as 52")
 }
 
 func TestUpdateEntry_WithConfirm(t *testing.T) {
