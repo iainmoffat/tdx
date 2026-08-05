@@ -112,7 +112,7 @@ tdx time entry add --time-off --date 2026-06-11 --hours 2
 Two things are resolved for you:
 
 - **The time type.** Omit `--type` and tdx picks the tenant's single active
-  time-off type (on UF that is `Leave`). Pass `--type` explicitly if your tenant
+  time-off type (commonly named `Leave`). Pass `--type` explicitly if your tenant
   has more than one; passing a non-time-off type is rejected.
 - **The time-off ID.** TD models time off as a tenant-specific pseudo-project.
   tdx discovers yours from your most recent leave entry in the last 180 days.

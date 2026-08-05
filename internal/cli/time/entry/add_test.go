@@ -433,11 +433,11 @@ func TestAddCmd_TimeOffDryRunUsesOverrideAndDefaultsType(t *testing.T) {
 
 func TestAddCmd_TimeOffRejectsNonTimeOffType(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/TDWebApi/api/auth/getuser":
+		switch r.URL.Path {
+		case "/TDWebApi/api/auth/getuser":
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"ReferenceID":42,"UID":"user-abc","FullName":"Test User","PrimaryEmail":"test@example.com"}`))
-		case r.URL.Path == "/TDWebApi/api/time/types":
+		case "/TDWebApi/api/time/types":
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`[
 				{"ID":1,"Name":"Standard Activities","IsActive":true,"IsBillable":false},

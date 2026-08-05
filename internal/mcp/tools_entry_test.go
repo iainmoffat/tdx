@@ -203,8 +203,12 @@ func TestCreateEntry_TimeOffAutoDiscoversItemID(t *testing.T) {
 			var body []map[string]any
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 			require.Len(t, body, 1)
-			postedComponent = int(body[0]["Component"].(float64))
-			postedProjectID = int(body[0]["ProjectID"].(float64))
+			comp, ok := body[0]["Component"].(float64)
+			require.True(t, ok, "Component missing or not a number")
+			postedComponent = int(comp)
+			projectID, ok := body[0]["ProjectID"].(float64)
+			require.True(t, ok, "ProjectID missing or not a number")
+			postedProjectID = int(projectID)
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"Succeeded":[{"Index":0,"ID":777}],"Failed":[]}`))
 
