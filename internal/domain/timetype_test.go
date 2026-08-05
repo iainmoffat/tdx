@@ -49,19 +49,14 @@ func TestDefaultTimeOffType_SingleMatch(t *testing.T) {
 		{ID: 3, Name: "Leave", Active: true, IsTimeOff: true},
 	}
 	got, err := DefaultTimeOffType(types)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if got.ID != 3 {
-		t.Errorf("ID = %d, want 3", got.ID)
-	}
+	require.NoError(t, err)
+	require.Equal(t, 3, got.ID)
 }
 
 func TestDefaultTimeOffType_NoMatch(t *testing.T) {
 	types := []TimeType{{ID: 1, Name: "Standard Activities", Active: true}}
-	if _, err := DefaultTimeOffType(types); err == nil {
-		t.Errorf("expected an error when no time-off type exists")
-	}
+	_, err := DefaultTimeOffType(types)
+	require.Error(t, err)
 }
 
 func TestDefaultTimeOffType_MultipleMatches(t *testing.T) {
@@ -70,14 +65,11 @@ func TestDefaultTimeOffType_MultipleMatches(t *testing.T) {
 		{ID: 4, Name: "Holiday", Active: true, IsTimeOff: true},
 	}
 	_, err := DefaultTimeOffType(types)
-	if err == nil {
-		t.Fatalf("expected an error when multiple time-off types exist")
-	}
+	require.Error(t, err)
 	// The error must name the candidates so the user knows what to pass to --type.
 	msg := err.Error()
-	if !strings.Contains(msg, "Leave") || !strings.Contains(msg, "Holiday") {
-		t.Errorf("error %q should name both candidates", msg)
-	}
+	require.True(t, strings.Contains(msg, "Leave") && strings.Contains(msg, "Holiday"),
+		"error %q should name both candidates", msg)
 }
 
 func TestDefaultTimeOffType_IgnoresInactive(t *testing.T) {
@@ -86,10 +78,6 @@ func TestDefaultTimeOffType_IgnoresInactive(t *testing.T) {
 		{ID: 9, Name: "Old Leave", Active: false, IsTimeOff: true},
 	}
 	got, err := DefaultTimeOffType(types)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if got.ID != 3 {
-		t.Errorf("ID = %d, want 3 (inactive type must be ignored)", got.ID)
-	}
+	require.NoError(t, err)
+	require.Equal(t, 3, got.ID, "inactive type must be ignored")
 }

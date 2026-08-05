@@ -2,6 +2,7 @@ package entry
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -429,6 +430,66 @@ func TestAddCmd_TimeOffDryRunUsesOverrideAndDefaultsType(t *testing.T) {
 	require.Contains(t, got, "kind=timeoff")
 	// --type omitted: the single IsTimeOffTimeType type must be chosen.
 	require.Contains(t, got, "Leave")
+}
+
+func TestAddCmd_TimeOffDiscoversItemID(t *testing.T) {
+	var postedProjectID int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/TDWebApi/api/auth/getuser":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"ReferenceID":42,"UID":"user-abc","FullName":"Test User","PrimaryEmail":"test@example.com"}`))
+
+		case r.URL.Path == "/TDWebApi/api/time/types":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[{"ID":3,"Name":"Leave","IsActive":true,"IsBillable":false,"IsTimeOffTimeType":true}]`))
+
+		case r.URL.Path == "/TDWebApi/api/time/search":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[
+				{"TimeID":7,"Component":17,"ProjectID":52,"TimeDate":"2026-07-01T00:00:00Z","Minutes":120,"TimeTypeID":3,"TimeTypeName":"Leave","Uid":"user-abc","Status":0}
+			]`))
+
+		case r.URL.Path == "/TDWebApi/api/time/locked":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[]`))
+
+		case strings.HasPrefix(r.URL.Path, "/TDWebApi/api/time/report/"):
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"ID":1,"PeriodStartDate":"2026-08-02T00:00:00Z","PeriodEndDate":"2026-08-08T00:00:00Z","Status":0,"Times":[],"TimeReportUid":"user-abc","UserFullName":"Test User","MinutesBillable":0,"MinutesNonBillable":0,"MinutesTotal":0,"TimeEntriesCount":0}`))
+
+		case r.Method == http.MethodPost && r.URL.Path == "/TDWebApi/api/time":
+			var body []map[string]any
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			require.Len(t, body, 1)
+			value, ok := body[0]["ProjectID"].(float64)
+			require.True(t, ok, "ProjectID missing or not a number")
+			postedProjectID = int(value)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"Succeeded":[{"Index":0,"ID":999}],"Failed":[]}`))
+
+		case r.Method == http.MethodGet && r.URL.Path == "/TDWebApi/api/time/999":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"TimeID":999,"Component":17,"ProjectID":52,"TimeDate":"2026-08-03T00:00:00Z","Minutes":120,"Description":"PTO","TimeTypeID":3,"TimeTypeName":"Leave","Status":0,"Billable":false}`))
+
+		default:
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	seedProfile(t, srv.URL)
+	var out bytes.Buffer
+	cmd := NewCmd()
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{
+		"add", "--date", "2026-08-03", "--hours", "2", "--time-off",
+	})
+	require.NoError(t, cmd.Execute())
+	require.Equal(t, 52, postedProjectID)
+	require.Contains(t, out.String(), "created entry 999")
 }
 
 func TestAddCmd_TimeOffRejectsNonTimeOffType(t *testing.T) {

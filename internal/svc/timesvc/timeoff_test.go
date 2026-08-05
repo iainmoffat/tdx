@@ -2,6 +2,7 @@ package timesvc
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -54,6 +55,31 @@ func TestResolveTimeOffItemID_DiscoversMostRecent(t *testing.T) {
 		{"TimeID":2,"Component":17,"ProjectID":52,"TimeDate":"2026-05-14T00:00:00Z","Minutes":60,"TimeTypeID":3,"Uid":"uid-abc","Status":0},
 		{"TimeID":3,"Component":9,"TicketID":900,"ItemID":900,"TimeDate":"2026-05-20T00:00:00Z","Minutes":60,"TimeTypeID":1,"Uid":"uid-abc","Status":0}
 	]`)
+	defer srv.Close()
+	svc, profile := harness(t, srv.URL)
+
+	got, err := svc.ResolveTimeOffItemID(context.Background(), profile, "uid-abc", 0)
+	require.NoError(t, err)
+	require.Equal(t, 52, got)
+}
+
+func TestResolveTimeOffItemID_SearchScopesToUser(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/TDWebApi/api/time/search" {
+			var body struct {
+				PersonUIDs []string `json:"PersonUIDs"`
+			}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			require.Equal(t, []string{"uid-abc"}, body.PersonUIDs)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[
+				{"TimeID":7,"Component":17,"ProjectID":52,"TimeDate":"2026-05-14T00:00:00Z","Minutes":120,"TimeTypeID":3,"TimeTypeName":"Leave","Uid":"uid-abc","Status":0}
+			]`))
+			return
+		}
+		t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		w.WriteHeader(http.StatusNotFound)
+	}))
 	defer srv.Close()
 	svc, profile := harness(t, srv.URL)
 
